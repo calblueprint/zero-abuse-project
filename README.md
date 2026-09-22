@@ -1,4 +1,4 @@
-# \[Insert Project Name\]
+# Zero Abuse Project
 
 [//]: # "Delete this section when done!"
 
@@ -52,15 +52,15 @@ Additional resources:
    1. Clone this repo
       - using SSH (recommended)
         ```bash
-        git clone git@github.com:calblueprint/[insert-project-repo.git]
+        git clone git@github.com:calblueprint/zero-abuse-project.git
         ```
       - using HTTPS
         ```bash
-        git clone https://github.com/calblueprint/[insert-project-repo.git]
+        git clone https://github.com/calblueprint/zero-abuse-project.git
         ```
    2. Enter the cloned directory
       ```bash
-      cd [insert-project-name]
+      cd zero-abuse-project
       ```
    3. Install project dependencies. This command installs all packages from [`package.json`](package.json).
       ```bash
@@ -68,7 +68,7 @@ Additional resources:
       ```
 
 2. Set up secrets:
-   1. In the project's root directory (`[insert-project-name]/`), create a new file named `.env.local`
+   1. In the project's root directory (`zero-abuse-project/`), create a new file named `.env.local`
    2. Copy the credentials from Supabase ([e.g. Blueprint's internal Notion](https://app.notion.com/p/calblueprint/rose-environment-setup-279669c1807580cbbb03dc7a08f8a7d9?source=copy_link#27f669c18075808987facd37d36ab8bd) ) and paste any API keys into the `.env.local` file.
 
 **Helpful resources**
@@ -79,7 +79,7 @@ Additional resources:
 ### Development environment
 
 - **[VSCode](https://code.visualstudio.com/) (recommended)**
-  1. Open the `[insert-project-name]` project in VSCode.
+  1. Open the `zero-abuse-project` project in VSCode.
   2. Install recommended workspace VSCode extensions. You should see a pop-up on the bottom right to "install the recommended extensions for this repository".
 
 ### Running the app
