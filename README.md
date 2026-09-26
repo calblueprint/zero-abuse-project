@@ -89,3 +89,52 @@ pnpm dev
 ```
 
 Then, navigate to http://localhost:3000 to launch the web application.
+
+## Database development with Drizzle
+
+[Supabase](https://supabase.com/) hosts the PostgreSQL database and also
+provides services such as authentication, storage, realtime updates, and a
+browser-safe Data API. [Drizzle](https://orm.drizzle.team/) is the typed
+TypeScript layer used by our server code to define the database schema, write
+SQL-like queries, and create repeatable SQL migrations. Drizzle does not replace
+Supabase; it connects to the PostgreSQL database that Supabase manages.
+
+The two clients in this project have different jobs:
+
+- `actions/supabase/client.ts` uses the Supabase Data API. It is appropriate
+  when a request should use Supabase Auth and Row Level Security.
+- `db/index.ts` uses Drizzle over a direct PostgreSQL connection. It is for
+  trusted server-side code only. The connection can bypass Row Level Security,
+  so every server action or route using it must enforce authorization.
+
+### Schema and migrations
+
+1. Define and export tables in `db/schema.ts`.
+2. Generate a SQL migration from the schema changes:
+
+   ```bash
+   pnpm db:generate
+   ```
+
+3. Review the generated SQL in `drizzle/`, then apply it:
+
+   ```bash
+   pnpm db:migrate
+   ```
+
+Commit both the schema change and its generated migration. Useful commands:
+
+```bash
+pnpm db:check    # validate generated migrations
+pnpm db:studio   # open Drizzle Studio to inspect data
+pnpm db:push     # push a schema directly; use only for disposable/local work
+```
+
+Import `db` only from server-side modules:
+
+```ts
+import { db } from "@/db";
+import { items } from "@/db/schema";
+
+const allItems = await db.select().from(items);
+```
