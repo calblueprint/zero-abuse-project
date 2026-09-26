@@ -11,6 +11,7 @@
     "tsc": "pnpm exec tsc --noEmit",
     "prettier": "pnpm exec prettier --check .",
     "prettier:fix": "pnpm exec prettier --write .",
+    "db:pull": "drizzle-kit pull",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",

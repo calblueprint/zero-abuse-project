@@ -14,12 +14,24 @@ if (!databaseUrl) {
   );
 }
 
+// Drizzle Kit introspection currently fails against Supabase's transaction
+// pooler. Use the same shared pooler in session mode for schema operations.
+const migrationUrl = new URL(databaseUrl);
+
+if (migrationUrl.port === "6543") {
+  migrationUrl.port = "5432";
+}
+
 export default defineConfig({
   dialect: "postgresql",
   schema: "./db/schema.ts",
   out: "./drizzle",
+  schemaFilter: ["public"],
+  introspect: {
+    casing: "camel",
+  },
   dbCredentials: {
-    url: databaseUrl,
+    url: migrationUrl.toString(),
   },
   strict: true,
   verbose: true,

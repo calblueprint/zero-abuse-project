@@ -92,7 +92,15 @@ The two clients in this project have different jobs:
 
 ### Schema and migrations
 
-1. Define and export tables in `db/schema.ts`.
+The current `db/schema.ts` and `db/relations.ts` were introspected from the
+existing Supabase tables. The initial migration in `drizzle/` is a commented
+baseline: it describes the pre-existing tables but will not recreate them.
+Run `pnpm db:migrate` once to record that baseline in Drizzle's migration log.
+
+From now on, treat the Drizzle schema in the repository as the source of truth:
+
+1. Change and export tables in `db/schema.ts` rather than editing them manually
+   in the Supabase dashboard.
 2. Generate a SQL migration from the schema changes:
 
    ```bash
@@ -109,6 +117,7 @@ Commit both the schema change and its generated migration. Useful commands:
 
 ```bash
 pnpm db:check    # validate generated migrations
+pnpm db:pull     # re-introspect tables created manually outside Drizzle
 pnpm db:studio   # open Drizzle Studio to inspect data
 pnpm db:push     # push a schema directly; use only for disposable/local work
 ```

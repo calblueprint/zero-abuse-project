@@ -1,7 +1,8 @@
 import "server-only";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import * as schema from "./schema";
+import * as relations from "./relations";
+import * as tables from "./schema";
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -21,6 +22,11 @@ const client = postgres(databaseUrl, {
   ssl: isLocalDatabase ? false : "require",
 });
 
-export const db = drizzle(client, { schema });
+export const db = drizzle(client, {
+  schema: {
+    ...tables,
+    ...relations,
+  },
+});
 
 export type Database = typeof db;
