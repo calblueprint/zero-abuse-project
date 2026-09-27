@@ -12,6 +12,7 @@ export type OnboardingErrors = {
   email?: string;
   phone?: string;
   organization?: string;
+  form?: string;
 };
 
 export type OnboardingState = {

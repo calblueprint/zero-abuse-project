@@ -16,7 +16,17 @@ export async function submitOnboarding(
     organization: String(formData.get("organization") ?? ""),
   };
   const userId = getCurrentUserId(); // TODO: replace with supabase.auth.getUser() once auth lands
-  const result = await completeOnboarding(userId, fields);
+  let result;
+
+  try {
+    result = await completeOnboarding(userId, fields);
+  } catch (error) {
+    console.error("Onboarding failed:", error);
+    return {
+      fields,
+      errors: { form: "Something went wrong. Please try again." },
+    };
+  }
 
   if (!result.success) {
     return { fields, errors: result.errors };
