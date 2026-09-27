@@ -14,6 +14,11 @@ export type OnboardingErrors = {
   organization?: string;
 };
 
+export type OnboardingState = {
+  fields?: OnboardingFields;
+  errors?: OnboardingErrors;
+};
+
 export function normalizePhoneNumber(phone: string): string {
   const digits = phone.replace(/[\s\-().]/g, "");
   return digits.replace(/^\+?1(?=\d{10}$)/, "");
