@@ -8,6 +8,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { authUsers } from "drizzle-orm/supabase/rls";
 
 export const savedGroups = pgTable(
   "saved_groups",
@@ -31,11 +32,15 @@ export const savedGroups = pgTable(
 ).enableRLS();
 
 export const users = pgTable("users", {
-  userId: uuid("user_id").defaultRandom().primaryKey().notNull(),
-  name: varchar().notNull(),
-  email: varchar(),
-  phone: varchar(),
-  affiliation: varchar(),
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => authUsers.id, { onDelete: "cascade" }),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  organization: varchar("organization"),
+  onboardingComplete: boolean("onboarding_complete").default(false).notNull(),
   isAdmin: boolean("is_admin"),
   approvalStatus: varchar("approval_status"),
   recentlyAccessed: json("recently_accessed"),
