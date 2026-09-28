@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
-import { getUserProfile } from "@/actions/supabase/profile";
-import { requireVerifiedAuthUser } from "@/lib/auth";
+import { requireApprovedUser } from "@/actions/auth/access";
 
 type ApprovedLayoutProps = {
   children: ReactNode;
@@ -10,12 +8,7 @@ type ApprovedLayoutProps = {
 export default async function ApprovedLayout({
   children,
 }: ApprovedLayoutProps) {
-  const user = await requireVerifiedAuthUser();
-  const profile = await getUserProfile(user.id);
-
-  if (!profile?.onboardingComplete) {
-    redirect("/onboarding");
-  }
+  await requireApprovedUser();
 
   return children;
 }
