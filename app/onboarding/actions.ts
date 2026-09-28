@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { completeOnboarding } from "@/actions/supabase/profile";
+import { getCurrentUserId } from "@/lib/auth";
 import { OnboardingFields, OnboardingState } from "@/lib/validation";
 
 export async function submitOnboarding(
@@ -15,7 +16,7 @@ export async function submitOnboarding(
     phone: String(formData.get("phone") ?? ""),
     organization: String(formData.get("organization") ?? ""),
   };
-  const userId = getCurrentUserId(); // TODO: replace with supabase.auth.getUser() once auth lands
+  const userId = await getCurrentUserId(); // TODO: replace with supabase.auth.getUser() once auth lands
   let result;
 
   try {
@@ -33,9 +34,4 @@ export async function submitOnboarding(
   } else {
     redirect("/");
   }
-}
-
-function getCurrentUserId() {
-  return "123e4567-e89b-12d3-a456-426614174000";
-  // Test Id
 }
