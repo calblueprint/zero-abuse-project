@@ -59,14 +59,13 @@ export default function Login() {
   const handleSignOut = async () => {
     setMessage("");
 
-    const {error} = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
 
     if (error) {
       setMessage(error.message);
       return;
     }
     setMessage("Sign out successful");
-    
   };
 
   // Sprint addition: a new function here, in the same shape as handleSignOut.
