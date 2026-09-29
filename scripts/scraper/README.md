@@ -6,11 +6,19 @@ Install the Python dependencies from the repository root:
 python -m pip install -r scripts/requirements.txt
 ```
 
-Run the example scraper for calblueprint.org:
+Run the fixed-URL example in `example.py`:
 
 ```bash
-python -m scripts.scraper.script_test
+python -m scripts.scraper.example
 ```
+
+Try the scraper on a URL of your choice:
+
+```bash
+python -m scripts.scraper.test_scrape https://example.com/article
+```
+
+The command prints the extracted title, text, author, date, and URL as JSON.
 
 Application code can use the same flow directly:
 
