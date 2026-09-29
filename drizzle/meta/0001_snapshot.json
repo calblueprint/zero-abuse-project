@@ -119,12 +119,8 @@
           "name": "itel_items_source_id_fkey",
           "tableFrom": "itel_items",
           "tableTo": "sources",
-          "columnsFrom": [
-            "source_id"
-          ],
-          "columnsTo": [
-            "source_id"
-          ],
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["source_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -184,12 +180,8 @@
           "name": "saved_groups_created_by_fkey",
           "tableFrom": "saved_groups",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["user_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -298,12 +290,8 @@
           "name": "trend_metrics_trend_id_fkey",
           "tableFrom": "trend_metrics",
           "tableTo": "trends",
-          "columnsFrom": [
-            "trend_id"
-          ],
-          "columnsTo": [
-            "trend_id"
-          ],
+          "columnsFrom": ["trend_id"],
+          "columnsTo": ["trend_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -393,12 +381,8 @@
           "name": "trends_reviewed_by_fkey",
           "tableFrom": "trends",
           "tableTo": "users",
-          "columnsFrom": [
-            "reviewed_by"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
+          "columnsFrom": ["reviewed_by"],
+          "columnsTo": ["user_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -406,12 +390,8 @@
           "name": "trends_triggered_by_fkey",
           "tableFrom": "trends",
           "tableTo": "users",
-          "columnsFrom": [
-            "triggered_by"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
+          "columnsFrom": ["triggered_by"],
+          "columnsTo": ["user_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
