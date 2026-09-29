@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD CONSTRAINT "users_approval_status_check" CHECK ("users"."approval_status" IN ('pending', 'approved', 'rejected'));

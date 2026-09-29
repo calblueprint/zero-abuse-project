@@ -11,6 +11,8 @@ export default function Home() {
   );
 }
 
+// CSS styles
+
 const mainStyles: CSSProperties = {
   width: "100%",
   height: "100vh",
