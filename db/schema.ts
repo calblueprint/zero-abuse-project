@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   foreignKey,
   json,
   pgTable,
@@ -30,16 +32,25 @@ export const savedGroups = pgTable(
   ],
 ).enableRLS();
 
-export const users = pgTable("users", {
-  userId: uuid("user_id").defaultRandom().primaryKey().notNull(),
-  name: varchar().notNull(),
-  email: varchar(),
-  phone: varchar(),
-  affiliation: varchar(),
-  isAdmin: boolean("is_admin"),
-  approvalStatus: varchar("approval_status"),
-  recentlyAccessed: json("recently_accessed"),
-}).enableRLS();
+export const users = pgTable(
+  "users",
+  {
+    userId: uuid("user_id").defaultRandom().primaryKey().notNull(),
+    name: varchar().notNull(),
+    email: varchar(),
+    phone: varchar(),
+    affiliation: varchar(),
+    isAdmin: boolean("is_admin"),
+    approvalStatus: varchar("approval_status"),
+    recentlyAccessed: json("recently_accessed"),
+  },
+  table => [
+    check(
+      "users_approval_status_check",
+      sql`${table.approvalStatus} IN ('pending', 'approved', 'rejected')`,
+    ),
+  ],
+).enableRLS();
 
 export const trends = pgTable(
   "trends",

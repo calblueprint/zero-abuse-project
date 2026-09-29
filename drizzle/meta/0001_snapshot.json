@@ -1,284 +1,9 @@
 {
-  "id": "00000000-0000-0000-0000-000000000000",
-  "prevId": "",
+  "id": "936fb07d-4c32-48c8-9ccb-a79e96770614",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.saved_groups": {
-      "name": "saved_groups",
-      "schema": "",
-      "columns": {
-        "group_id": {
-          "name": "group_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "item_ids": {
-          "name": "item_ids",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "saved_groups_created_by_fkey": {
-          "name": "saved_groups_created_by_fkey",
-          "tableFrom": "saved_groups",
-          "tableTo": "users",
-          "schemaTo": "public",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["user_id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": true
-    },
-    "public.users": {
-      "name": "users",
-      "schema": "",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "email": {
-          "name": "email",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "phone": {
-          "name": "phone",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "affiliation": {
-          "name": "affiliation",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_admin": {
-          "name": "is_admin",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "approval_status": {
-          "name": "approval_status",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "recently_accessed": {
-          "name": "recently_accessed",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": true
-    },
-    "public.trends": {
-      "name": "trends",
-      "schema": "",
-      "columns": {
-        "trend_id": {
-          "name": "trend_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "emerged_at": {
-          "name": "emerged_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "signal_status": {
-          "name": "signal_status",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "evidence_status": {
-          "name": "evidence_status",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "item_ids": {
-          "name": "item_ids",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "triggered_by": {
-          "name": "triggered_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reviewed_by": {
-          "name": "reviewed_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "why_surfaced": {
-          "name": "why_surfaced",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "visibility": {
-          "name": "visibility",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "pattern_type": {
-          "name": "pattern_type",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "trends_reviewed_by_fkey": {
-          "name": "trends_reviewed_by_fkey",
-          "tableFrom": "trends",
-          "tableTo": "users",
-          "schemaTo": "public",
-          "columnsFrom": ["reviewed_by"],
-          "columnsTo": ["user_id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "trends_triggered_by_fkey": {
-          "name": "trends_triggered_by_fkey",
-          "tableFrom": "trends",
-          "tableTo": "users",
-          "schemaTo": "public",
-          "columnsFrom": ["triggered_by"],
-          "columnsTo": ["user_id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": true
-    },
-    "public.trend_metrics": {
-      "name": "trend_metrics",
-      "schema": "",
-      "columns": {
-        "trend_id": {
-          "name": "trend_id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "metric_name": {
-          "name": "metric_name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "metric_value": {
-          "name": "metric_value",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "trend_metrics_trend_id_fkey": {
-          "name": "trend_metrics_trend_id_fkey",
-          "tableFrom": "trend_metrics",
-          "tableTo": "trends",
-          "schemaTo": "public",
-          "columnsFrom": ["trend_id"],
-          "columnsTo": ["trend_id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": true
-    },
     "public.itel_items": {
       "name": "itel_items",
       "schema": "",
@@ -394,7 +119,6 @@
           "name": "itel_items_source_id_fkey",
           "tableFrom": "itel_items",
           "tableTo": "sources",
-          "schemaTo": "public",
           "columnsFrom": ["source_id"],
           "columnsTo": ["source_id"],
           "onDelete": "no action",
@@ -403,8 +127,69 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {},
       "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.saved_groups": {
+      "name": "saved_groups",
+      "schema": "",
+      "columns": {
+        "group_id": {
+          "name": "group_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "item_ids": {
+          "name": "item_ids",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "saved_groups_created_by_fkey": {
+          "name": "saved_groups_created_by_fkey",
+          "tableFrom": "saved_groups",
+          "tableTo": "users",
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["user_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": true
     },
     "public.sources": {
@@ -465,8 +250,223 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {},
       "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.trend_metrics": {
+      "name": "trend_metrics",
+      "schema": "",
+      "columns": {
+        "trend_id": {
+          "name": "trend_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "metric_name": {
+          "name": "metric_name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "metric_value": {
+          "name": "metric_value",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "trend_metrics_trend_id_fkey": {
+          "name": "trend_metrics_trend_id_fkey",
+          "tableFrom": "trend_metrics",
+          "tableTo": "trends",
+          "columnsFrom": ["trend_id"],
+          "columnsTo": ["trend_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.trends": {
+      "name": "trends",
+      "schema": "",
+      "columns": {
+        "trend_id": {
+          "name": "trend_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "emerged_at": {
+          "name": "emerged_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "signal_status": {
+          "name": "signal_status",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evidence_status": {
+          "name": "evidence_status",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "item_ids": {
+          "name": "item_ids",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "triggered_by": {
+          "name": "triggered_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_by": {
+          "name": "reviewed_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "why_surfaced": {
+          "name": "why_surfaced",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visibility": {
+          "name": "visibility",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pattern_type": {
+          "name": "pattern_type",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "trends_reviewed_by_fkey": {
+          "name": "trends_reviewed_by_fkey",
+          "tableFrom": "trends",
+          "tableTo": "users",
+          "columnsFrom": ["reviewed_by"],
+          "columnsTo": ["user_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "trends_triggered_by_fkey": {
+          "name": "trends_triggered_by_fkey",
+          "tableFrom": "trends",
+          "tableTo": "users",
+          "columnsFrom": ["triggered_by"],
+          "columnsTo": ["user_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "affiliation": {
+          "name": "affiliation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_admin": {
+          "name": "is_admin",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_status": {
+          "name": "approval_status",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recently_accessed": {
+          "name": "recently_accessed",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "users_approval_status_check": {
+          "name": "users_approval_status_check",
+          "value": "\"users\".\"approval_status\" IN ('pending', 'approved', 'rejected')"
+        }
+      },
       "isRLSEnabled": true
     }
   },
@@ -477,11 +477,8 @@
   "policies": {},
   "views": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
-  },
-  "internal": {
     "tables": {}
   }
 }
