@@ -3,3 +3,6 @@ overrides:
 onlyBuiltDependencies:
   - sharp
   - unrs-resolver
+allowBuilds:
+  esbuild: set this to true or false
+  unrs-resolver: set this to true or false
