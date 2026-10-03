@@ -46,6 +46,9 @@ def extract_page(html: str, url: str) -> ScrapedPage:
         include_comments=False,
         include_tables=True,
         favor_precision=True,
+        # Disable Trafilatura's fallback parser: on sparse pages it can treat
+        # a lone navigation label as the page's main content.
+        fast=True,
     )
     if not extracted:
         raise ExtractionError(f"No extractable main content found at {url!r}.")

@@ -1,5 +1,6 @@
 """Fetch HTML pages over HTTP."""
 
+import re
 from urllib.parse import urlsplit
 
 import requests
@@ -54,6 +55,11 @@ def fetch_page(
             headers={"User-Agent": USER_AGENT},
         )
         response.raise_for_status()
+        content_type = response.headers.get("Content-Type", "")
+        if not re.search(r"\bcharset\s*=", content_type, flags=re.IGNORECASE):
+            # Requests defaults text/* responses without a declared charset to
+            # ISO-8859-1. Prefer its detected encoding when the server omits one.
+            response.encoding = response.apparent_encoding
         return response.text
     except requests.RequestException as exc:
         raise FetchError(f"Failed to fetch {url!r}: {exc}") from exc

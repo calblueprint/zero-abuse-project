@@ -33,3 +33,13 @@ print(page.title, page.text)
 author, and publication date. JavaScript-rendered content may not be included.
 The scraper does not bypass authentication, paywalls, CAPTCHAs, or other access
 controls.
+
+The extractor uses Trafilatura's precision-oriented parser without its fallback
+parser. This avoids treating a lone navigation label as page content, though
+unusual page layouts may be harder to extract. A local article fixture with
+navigation and footer text retained the article body; a navigation/footer-only
+fixture produced the expected no-content error. Invalid URL and simulated
+request failure handling were also checked. A live run against the Python
+documentation tutorial returned its title, publication date, and article text.
+When a response omits its character set, the fetcher uses Requests' detected
+encoding because Requests otherwise defaults to ISO-8859-1 for HTML responses.
