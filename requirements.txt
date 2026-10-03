@@ -1,4 +1,8 @@
 charset-normalizer==3.5.2
+httpx==0.28.1
+instructor==1.17.0
+openai==3.3.0
 pydantic==2.13.5
+python-dotenv==1.2.3
 requests==2.34.2
 trafilatura==2.3.0
