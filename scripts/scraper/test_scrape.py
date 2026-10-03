@@ -2,7 +2,7 @@
 
 Run from the repository root, for example:
 
-    python -m scripts.scraper.try_url https://example.com/article
+    python -m scripts.scraper.test_scrape https://example.com/article
 
 The scraper can only extract content that is available in the fetched HTML.
 """
