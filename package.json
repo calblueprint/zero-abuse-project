@@ -17,6 +17,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:check": "drizzle-kit check",
+    "db:seed:intelligence-library": "node --env-file=.env.local scripts/seed-intelligence-library.mjs",
     "prepare": "husky",
     "pre-commit": "concurrently \"pnpm run tsc\" \"pnpm run lint\" \"pnpm run prettier\""
   },
