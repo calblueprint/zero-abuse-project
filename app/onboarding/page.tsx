@@ -1,20 +1,20 @@
 import { redirect } from "next/navigation";
 import { getUserProfile } from "@/actions/supabase/profile";
 import OnboardingForm from "@/app/onboarding/OnboardingForm";
-import { getCurrentUserId } from "@/lib/auth";
+import { requireVerifiedAuthUser } from "@/lib/auth";
 
 export default async function OnboardingPage() {
-  const userId = await getCurrentUserId();
-  const profile = await getUserProfile(userId);
+  const user = await requireVerifiedAuthUser();
+  const profile = await getUserProfile(user.id);
 
-  if (profile && profile.onboardingComplete) {
-    redirect("/"); // Redirect to the main app if onboarding is already complete
+  if (profile?.onboardingComplete) {
+    redirect("/");
   }
 
   return (
     <main>
       <h1>Complete your profile</h1>
-      <OnboardingForm />
+      <OnboardingForm email={user.email} />
     </main>
   );
 }

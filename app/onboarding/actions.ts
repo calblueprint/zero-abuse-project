@@ -1,9 +1,9 @@
 "use server";
 
+import type { OnboardingFields, OnboardingState } from "@/lib/validation";
 import { redirect } from "next/navigation";
 import { completeOnboarding } from "@/actions/supabase/profile";
-import { getCurrentUserId } from "@/lib/auth";
-import { OnboardingFields, OnboardingState } from "@/lib/validation";
+import { requireVerifiedAuthUser } from "@/lib/auth";
 
 export async function submitOnboarding(
   _prevState: OnboardingState,
@@ -12,15 +12,14 @@ export async function submitOnboarding(
   const fields: OnboardingFields = {
     firstName: String(formData.get("firstName") ?? ""),
     lastName: String(formData.get("lastName") ?? ""),
-    email: String(formData.get("email") ?? ""),
     phone: String(formData.get("phone") ?? ""),
     organization: String(formData.get("organization") ?? ""),
   };
-  const userId = await getCurrentUserId(); // TODO: replace with supabase.auth.getUser() once auth lands
+  const user = await requireVerifiedAuthUser();
   let result;
 
   try {
-    result = await completeOnboarding(userId, fields);
+    result = await completeOnboarding(user, fields);
   } catch (error) {
     console.error("Onboarding failed:", error);
     return {
@@ -31,7 +30,7 @@ export async function submitOnboarding(
 
   if (!result.success) {
     return { fields, errors: result.errors };
-  } else {
-    redirect("/");
   }
+
+  redirect("/");
 }

@@ -6,7 +6,7 @@ export default function Home() {
   return (
     <main style={mainStyles}>
       <Image style={imageStyles} src={BPLogo} alt="Blueprint Logo" />
-      <p>Home page, done onboarding</p>
+      <p>Open up app/page.tsx to get started!</p>
     </main>
   );
 }

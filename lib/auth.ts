@@ -1,6 +1,34 @@
 import "server-only";
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/actions/supabase/server";
 
-// TODO: replace with supabase.auth.getUser() once auth lands
-export async function getCurrentUserId() {
-  return "123e4567-e89b-12d3-a456-426614174000";
+export type VerifiedAuthUser = {
+  id: string;
+  email: string;
+};
+
+export async function getVerifiedAuthUser(): Promise<VerifiedAuthUser | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.getClaims();
+  const email = data?.claims.email;
+
+  if (error || !data || typeof email !== "string") {
+    return null;
+  }
+
+  return { id: data.claims.sub, email };
+}
+
+export async function requireVerifiedAuthUser(): Promise<VerifiedAuthUser> {
+  const user = await getVerifiedAuthUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  return user;
+}
+
+export async function getCurrentUserId(): Promise<string> {
+  return (await requireVerifiedAuthUser()).id;
 }

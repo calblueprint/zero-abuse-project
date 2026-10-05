@@ -1,4 +1,5 @@
 import "server-only";
+import type { VerifiedAuthUser } from "@/lib/auth";
 import type { OnboardingErrors, OnboardingFields } from "@/lib/validation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -14,17 +15,16 @@ export async function getUserProfile(userId: string) {
     .from(users)
     .where(eq(users.userId, userId))
     .limit(1);
-  return rows[0];
+  return rows[0] ?? null;
 }
 
 export async function completeOnboarding(
-  userId: string,
+  user: VerifiedAuthUser,
   fields: OnboardingFields,
 ) {
   const profile: OnboardingFields = {
     firstName: fields.firstName.trim(),
     lastName: fields.lastName.trim(),
-    email: fields.email.trim(),
     phone: normalizePhoneNumber(fields.phone),
     organization: fields.organization.trim(),
   };
@@ -38,7 +38,7 @@ export async function completeOnboarding(
   const values = {
     firstName: profile.firstName,
     lastName: profile.lastName,
-    email: profile.email,
+    email: user.email.trim().toLowerCase(),
     phone: profile.phone,
     organization: profile.organization,
     onboardingComplete: true,
@@ -47,7 +47,7 @@ export async function completeOnboarding(
   await db
     .insert(users)
     .values({
-      userId: userId,
+      userId: user.id,
       ...values,
     })
     .onConflictDoUpdate({ target: users.userId, set: values });
