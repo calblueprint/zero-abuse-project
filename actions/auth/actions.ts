@@ -1,6 +1,5 @@
 "use server";
 
-import type { AuthActionState } from "@/actions/auth/state";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
@@ -13,21 +12,13 @@ function validEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function credentials(formData: FormData, minimumPasswordLength = 1) {
-  const email = formValue(formData, "email").trim().toLowerCase();
-  const password = formValue(formData, "password");
-
-  if (!validEmail(email)) {
-    return { error: "Enter a valid email address." } as const;
-  }
-
-  if (password.length < minimumPasswordLength) {
-    return {
-      error: `Password must be at least ${minimumPasswordLength} characters.`,
-    } as const;
-  }
-
-  return { email, password } as const;
+function redirectWithCode(
+  path: string,
+  key: "error" | "message",
+  code: string,
+) {
+  const searchParams = new URLSearchParams({ [key]: code });
+  redirect(`${path}?${searchParams}`);
 }
 
 async function siteUrl() {
@@ -40,69 +31,94 @@ async function siteUrl() {
   return (await headers()).get("origin") ?? "http://localhost:3000";
 }
 
-export async function signIn(
-  _previousState: AuthActionState,
-  formData: FormData,
-): Promise<AuthActionState> {
-  const values = credentials(formData);
+export async function signIn(formData: FormData) {
+  const email = formValue(formData, "email").trim().toLowerCase();
+  const password = formValue(formData, "password");
 
-  if ("error" in values) {
-    return { status: "error", message: values.error };
+  if (!validEmail(email)) {
+    redirectWithCode("/login", "error", "invalid-email");
+  }
+
+  if (!password) {
+    redirectWithCode("/login", "error", "missing-password");
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword(values);
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return {
-      status: "error",
-      message: "The email or password is incorrect.",
-    };
+    redirectWithCode("/login", "error", "invalid-credentials");
   }
 
   redirect("/");
 }
 
-export async function signUp(
-  _previousState: AuthActionState,
-  formData: FormData,
-): Promise<AuthActionState> {
-  const values = credentials(formData, 8);
+export async function signUp(formData: FormData) {
+  const email = formValue(formData, "email").trim().toLowerCase();
+  const password = formValue(formData, "password");
+  const confirmPassword = formValue(formData, "confirmPassword");
 
-  if ("error" in values) {
-    return { status: "error", message: values.error };
+  if (!validEmail(email)) {
+    redirectWithCode("/sign-up", "error", "invalid-email");
+  }
+
+  if (password.length < 8) {
+    redirectWithCode("/sign-up", "error", "short-password");
+  }
+
+  if (password !== confirmPassword) {
+    redirectWithCode("/sign-up", "error", "password-mismatch");
   }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signUp({
-    ...values,
+    email,
+    password,
     options: {
       emailRedirectTo: `${await siteUrl()}/auth/callback`,
     },
   });
 
   if (error) {
-    return { status: "error", message: error.message };
+    redirectWithCode("/sign-up", "error", "signup-failed");
   }
 
   if (data.session) {
     redirect("/");
   }
 
-  return {
-    status: "success",
-    message: "Check your email to confirm your account.",
-  };
+  const searchParams = new URLSearchParams({ email });
+  redirect(`/verification-needed?${searchParams}`);
 }
 
-export async function requestPasswordReset(
-  _previousState: AuthActionState,
-  formData: FormData,
-): Promise<AuthActionState> {
+export async function resendVerification(formData: FormData) {
   const email = formValue(formData, "email").trim().toLowerCase();
 
   if (!validEmail(email)) {
-    return { status: "error", message: "Enter a valid email address." };
+    redirect("/sign-up");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${await siteUrl()}/auth/callback`,
+    },
+  });
+  const searchParams = new URLSearchParams({
+    email,
+    ...(error ? { error: "resend-failed" } : { message: "resent" }),
+  });
+
+  redirect(`/verification-needed?${searchParams}`);
+}
+
+export async function requestPasswordReset(formData: FormData) {
+  const email = formValue(formData, "email").trim().toLowerCase();
+
+  if (!validEmail(email)) {
+    redirectWithCode("/reset-password", "error", "invalid-email");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -111,44 +127,41 @@ export async function requestPasswordReset(
   });
 
   if (error) {
-    return {
-      status: "error",
-      message: "Unable to send a reset email right now. Please try again.",
-    };
+    redirectWithCode("/reset-password", "error", "reset-failed");
   }
 
-  return {
-    status: "success",
-    message: "If an account exists for that email, a reset link is on its way.",
-  };
+  redirectWithCode("/reset-password", "message", "email-sent");
 }
 
-export async function updatePassword(
-  _previousState: AuthActionState,
-  formData: FormData,
-): Promise<AuthActionState> {
+export async function updatePassword(formData: FormData) {
   const password = formValue(formData, "password");
-  const confirmation = formValue(formData, "confirmPassword");
+  const confirmPassword = formValue(formData, "confirmPassword");
 
   if (password.length < 8) {
-    return {
-      status: "error",
-      message: "Password must be at least 8 characters.",
-    };
+    redirectWithCode("/update-password", "error", "short-password");
   }
 
-  if (password !== confirmation) {
-    return { status: "error", message: "Passwords do not match." };
+  if (password !== confirmPassword) {
+    redirectWithCode("/update-password", "error", "password-mismatch");
   }
 
   const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirectWithCode("/login", "error", "expired-session");
+  }
+
   const { error } = await supabase.auth.updateUser({ password });
 
   if (error) {
-    return { status: "error", message: error.message };
+    redirectWithCode("/update-password", "error", "update-failed");
   }
 
-  return { status: "success", message: "Your password has been updated." };
+  await supabase.auth.signOut({ scope: "global" });
+  redirectWithCode("/login", "message", "password-updated");
 }
 
 export async function signOut() {
