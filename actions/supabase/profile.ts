@@ -1,13 +1,16 @@
 import "server-only";
+import type {
+  OnboardingErrors,
+  OnboardingFields,
+} from "@/actions/onboarding/validation";
 import type { VerifiedAuthUser } from "@/lib/auth";
-import type { OnboardingErrors, OnboardingFields } from "@/lib/validation";
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { users } from "@/db/schema";
 import {
   normalizePhoneNumber,
   validateOnboardingFields,
-} from "@/lib/validation";
+} from "@/actions/onboarding/validation";
+import { db } from "@/db";
+import { users } from "@/db/schema";
 
 export async function getUserProfile(userId: string) {
   const rows = await db

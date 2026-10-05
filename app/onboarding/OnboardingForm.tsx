@@ -1,9 +1,9 @@
 "use client";
 
-import type { OnboardingState } from "@/lib/validation";
+import type { OnboardingState } from "@/actions/onboarding/validation";
 import { useActionState } from "react";
-import { submitOnboarding } from "@/app/onboarding/actions";
-import { onboardingFieldLimits } from "@/lib/validation";
+import { submitOnboarding } from "@/actions/onboarding/actions";
+import { onboardingFieldLimits } from "@/actions/onboarding/validation";
 
 type OnboardingFormProps = {
   email: string;

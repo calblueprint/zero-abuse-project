@@ -1,6 +1,9 @@
 "use server";
 
-import type { OnboardingFields, OnboardingState } from "@/lib/validation";
+import type {
+  OnboardingFields,
+  OnboardingState,
+} from "@/actions/onboarding/validation";
 import { redirect } from "next/navigation";
 import { completeOnboarding } from "@/actions/supabase/profile";
 import { requireVerifiedAuthUser } from "@/lib/auth";
