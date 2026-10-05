@@ -1,4 +1,4 @@
-import { CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import BPLogo from "@/assets/images/bp-logo.png";
 
@@ -10,8 +10,6 @@ export default function Home() {
     </main>
   );
 }
-
-// CSS styles
 
 const mainStyles: CSSProperties = {
   width: "100%",
