@@ -48,9 +48,6 @@ Additional resources:
    2. Copy `example.env` into `.env.local` and fill in the Supabase values.
    3. Get `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from the Supabase project settings (or from [Blueprint's internal Notion](https://app.notion.com/p/calblueprint/rose-environment-setup-279669c1807580cbbb03dc7a08f8a7d9?source=copy_link#27f669c18075808987facd37d36ab8bd)).
    4. Set `NEXT_PUBLIC_SITE_URL` to `http://localhost:3000` locally and to the deployed origin in production.
-   5. In Supabase **Authentication → URL Configuration**, add `<site-url>/auth/callback` to the allowed redirect URLs.
-   6. In the Supabase dashboard, open **Connect**, select the **Transaction pooler**, copy its URI, replace the password placeholder, and save it as `DATABASE_URL`. URL-encode any special characters in the password.
-
    `DATABASE_URL` is a privileged server secret. Never rename it with a
    `NEXT_PUBLIC_` prefix or import the Drizzle client into a Client Component.
 
