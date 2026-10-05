@@ -6,7 +6,8 @@ from unittest.mock import patch
 import requests
 
 from scripts.scraper.crawler import crawl_site, discover_links, is_article_url, normalize_url
-from scripts.scraper.fetcher import FetchError, fetch_page_html, fetch_page_result
+from scripts.scraper.fetcher import FetchError, fetch_page_result
+from scripts.scraper.scraper import scrape_url
 
 ROOT = "https://site.test"
 
@@ -60,7 +61,7 @@ class CrawlerTests(unittest.TestCase):
 
     def test_breadth_first_page_budget_and_duplicate_links(self):
         pages = {
-            ROOT + "/blog": article(links=["/blog/a#heading", "/blog/b", "/blog/a", "https://other.test/blog/x", "/about", "/blog/file.pdf"]),
+            ROOT + "/blog": article(links=["/blog/a#heading", "/blog/b", "/blog/a", "https://other.test/blog/x", "/login", "/blog/file.pdf"]),
             ROOT + "/blog/a": article(links=["/blog/c", "/blog/b"]),
             ROOT + "/blog/b": article(links=["/blog/d"]),
             ROOT + "/blog/c": article(links=["/blog/e"]),
@@ -82,6 +83,16 @@ class CrawlerTests(unittest.TestCase):
         self.assertEqual(len(result.pages), 2)
         result, _ = self.crawl(pages, max_depth=0)
         self.assertEqual(len(result.visited_urls), 1)
+
+    def test_each_page_is_scraped_through_scrape_url(self):
+        pages = {
+            ROOT + "/blog": article(links=["/blog/story"]),
+            ROOT + "/blog/story": article(),
+        }
+        with patch("scripts.scraper.crawler.scrape_url", wraps=scrape_url) as scrape:
+            result, _ = self.crawl(pages)
+        self.assertEqual([call.args[0] for call in scrape.call_args_list], result.visited_urls)
+        self.assertEqual(len(result.pages), 2)
 
     def test_fetch_failure_counts_towards_budget_and_does_not_stop_crawl(self):
         pages = {
@@ -182,22 +193,53 @@ class LinkAndFetcherTests(unittest.TestCase):
         self.assertFalse(is_article_url(ROOT + "/news/tags/topic"))
         self.assertFalse(is_article_url(ROOT + "/news/file.pdf"))
 
-    def test_encoding_detection_and_compatible_single_page_fetch(self):
+    def test_encoding_detection(self):
         session = FixtureSession({ROOT + "/story": "<html><body>Unicode: café …</body></html>"})
-        self.assertIn("café …", fetch_page_html(ROOT + "/story", session=session))
+        self.assertIn("café …", fetch_page_result(ROOT + "/story", session=session).html)
 
     def test_fetcher_closes_owned_session_only(self):
         session = FixtureSession({ROOT + "/story": article()})
-        fetch_page_html(ROOT + "/story", session=session)
+        fetch_page_result(ROOT + "/story", session=session)
         self.assertFalse(session.closed)
         with patch("scripts.scraper.fetcher.requests.Session", return_value=session):
-            fetch_page_html(ROOT + "/story")
+            fetch_page_result(ROOT + "/story")
         self.assertTrue(session.closed)
 
     def test_redirect_limit_is_a_fetch_error(self):
         session = FixtureSession({ROOT + "/loop": (302, {"Location": "/loop"}, "")})
         with self.assertRaises(FetchError):
             fetch_page_result(ROOT + "/loop", session=session, max_redirects=1)
+
+
+class ScraperTests(unittest.TestCase):
+    def test_success_returns_html_content_and_final_url(self):
+        html = article("Final article")
+        session = FixtureSession({
+            ROOT + "/old": (302, {"Location": "/story"}, ""),
+            ROOT + "/story": html,
+        })
+        checked = []
+        result = scrape_url(ROOT + "/old", session=session, before_request=checked.append)
+        self.assertEqual(checked, [ROOT + "/old", ROOT + "/story"])
+        self.assertEqual(result.url, ROOT + "/story")
+        self.assertEqual(result.html, html)
+        self.assertEqual(result.page.url, result.url)
+        self.assertEqual(result.page.title, "Final article")
+        self.assertIsNone(result.extraction_error)
+
+    def test_extraction_failure_preserves_html_for_links(self):
+        html = '<html><body><nav><a href="/blog/story">Menu</a></nav></body></html>'
+        session = FixtureSession({ROOT + "/blog": html})
+        result = scrape_url(ROOT + "/blog", session=session)
+        self.assertEqual(result.html, html)
+        self.assertIsNone(result.page)
+        self.assertTrue(result.extraction_error)
+        self.assertEqual(discover_links(result.html, result.url), [ROOT + "/blog/story"])
+
+    def test_request_and_non_html_failures_raise_fetch_error(self):
+        for response in [requests.ConnectionError("fixture failure"), (200, {"Content-Type": "application/pdf"}, "PDF")]:
+            with self.subTest(response=response), self.assertRaises(FetchError):
+                scrape_url(ROOT + "/story", session=FixtureSession({ROOT + "/story": response}))
 
 
 if __name__ == "__main__":

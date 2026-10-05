@@ -12,7 +12,6 @@ import json
 import sys
 from dataclasses import asdict
 
-from .extractor import ExtractionError
 from .fetcher import FetchError
 from .scraper import scrape_url
 
@@ -24,12 +23,16 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        page = scrape_url(args.url)
-    except (ValueError, FetchError, ExtractionError) as exc:
+        result = scrape_url(args.url)
+    except (ValueError, FetchError) as exc:
         print(f"Scrape failed: {exc}", file=sys.stderr)
         return 1
 
-    print(json.dumps(asdict(page), ensure_ascii=False, indent=2))
+    if result.page is None:
+        print(f"Scrape failed: {result.extraction_error}", file=sys.stderr)
+        return 1
+
+    print(json.dumps(asdict(result.page), ensure_ascii=False, indent=2))
     return 0
 
 

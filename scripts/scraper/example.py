@@ -11,7 +11,6 @@ import json
 import sys
 from dataclasses import asdict
 
-from .extractor import ExtractionError
 from .fetcher import FetchError
 from .scraper import scrape_url
 
@@ -21,12 +20,16 @@ EXAMPLE_URL = "https://calblueprint.org/"
 def main() -> int:
     """Fetch the example page and print its extracted fields as JSON."""
     try:
-        page = scrape_url(EXAMPLE_URL)
-    except (ValueError, FetchError, ExtractionError) as exc:
+        result = scrape_url(EXAMPLE_URL)
+    except (ValueError, FetchError) as exc:
         print(f"Scrape failed: {exc}", file=sys.stderr)
         return 1
 
-    print(json.dumps(asdict(page), ensure_ascii=False, indent=2))
+    if result.page is None:
+        print(f"Scrape failed: {result.extraction_error}", file=sys.stderr)
+        return 1
+
+    print(json.dumps(asdict(result.page), ensure_ascii=False, indent=2))
     return 0
 
 

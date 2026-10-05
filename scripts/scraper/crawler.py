@@ -11,9 +11,9 @@ from urllib.robotparser import RobotFileParser
 
 import requests
 
-from .extractor import ExtractionError, extract_page
-from .fetcher import DEFAULT_TIMEOUT_SECONDS, USER_AGENT, FetchError, fetch_page_result
+from .fetcher import DEFAULT_TIMEOUT_SECONDS, USER_AGENT, FetchError
 from .models import CrawlFailure, CrawlResult
+from .scraper import scrape_url
 
 
 class _AccessError(FetchError):
@@ -95,7 +95,7 @@ def is_article_url(url: str) -> bool:
         "blog", "blogs", "news", "article", "articles", "post", "posts",
         "report", "reports", "press", "weblog",
     }
-    return True # remove later
+    return True # remove later (this makes it so that it doesn't have to be an article)
     return any(part in sections for part in segments[:-1]) or bool(
         re.search(r"/(?:19|20)\d{2}/\d{1,2}/", path)
     )
@@ -213,7 +213,7 @@ def crawl_site(
                 continue
             result.visited_urls.append(url)
             try:
-                fetched = fetch_page_result(
+                scraped = scrape_url(
                     url, timeout=timeout, session=client, before_request=rules.before_request,
                 )
             except _AlreadyVisited:
@@ -222,18 +222,16 @@ def crawl_site(
                 stage = "access" if isinstance(exc, _AccessError) else "fetch"
                 result.failures.append(CrawlFailure(url, stage, str(exc)))
                 continue
-            final_url = normalize_url(fetched.url)
-            media_type = fetched.content_type.split(";", 1)[0].strip().lower()
-            if media_type and media_type not in {"text/html", "application/xhtml+xml"}:
-                result.failures.append(CrawlFailure(final_url, "fetch", "Response is not HTML"))
-                continue
-            try:
-                result.pages.append(extract_page(fetched.html, final_url))
-            except ExtractionError as exc:
-                result.failures.append(CrawlFailure(final_url, "extract", str(exc)))
+            final_url = normalize_url(scraped.url)
+            if scraped.page is not None:
+                result.pages.append(scraped.page)
+            else:
+                result.failures.append(CrawlFailure(
+                    final_url, "extract", scraped.extraction_error or "No extractable content",
+                ))
             if depth >= max_depth:
                 continue
-            for link in discover_links(fetched.html, final_url):
+            for link in discover_links(scraped.html, final_url):
                 if urlsplit(link).hostname != host or link in queued or link in rules.requested:
                     continue
                 if filter_link(link):

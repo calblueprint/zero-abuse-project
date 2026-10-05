@@ -27,6 +27,16 @@ class FetchedPage:
 
 
 @dataclass(frozen=True, slots=True)
+class ScrapeResult:
+    """Fetched HTML and the outcome of extracting its content."""
+
+    url: str
+    html: str
+    page: ScrapedPage | None
+    extraction_error: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class CrawlFailure:
     """A page that failed during access checks, fetching, or extraction."""
 

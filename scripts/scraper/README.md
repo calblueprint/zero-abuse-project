@@ -25,9 +25,19 @@ Application code can use the same flow directly:
 ```python
 from scripts.scraper import scrape_url
 
-page = scrape_url("https://example.com/article")
-print(page.title, page.text)
+result = scrape_url("https://example.com/article")
+if result.page is not None:
+    print(result.page.title, result.page.text)
+else:
+    print(result.extraction_error)
 ```
+
+`scrape_url()` returns a `ScrapeResult` with `url` (the final URL), `html`,
+`page` (the extracted `ScrapedPage` or `None`), and `extraction_error` (a message
+or `None`). The HTML is preserved if extraction fails so crawlers can still
+discover links. Invalid URLs raise `ValueError`; request failures and non-HTML
+responses raise `FetchError`. The single-page CLI prints only the extracted
+page fields and reports failures without dumping raw HTML.
 
 `requests` fetches the page, and Trafilatura extracts its main text, title,
 author, and publication date. JavaScript-rendered content may not be included.
@@ -67,7 +77,7 @@ for failure in result.failures:
 The crawler visits pages in breadth-first order on the starting hostname. The
 seed is depth 0; its links are depth 1. The page budget includes the seed and
 failed attempts, but excludes robots.txt and redirect requests. Each page is
-fetched once and its HTML is used both for extraction and link discovery.
+scraped through `scrape_url()` and its HTML is used for link discovery.
 Redirect destinations are checked before requesting them; an external redirect
 is recorded as an access failure. Successful page results use the final URL.
 
@@ -77,10 +87,9 @@ Each page has the same fields as the single-page result. Each failure has
 failure still permits link discovery, so a sparse index can lead to articles.
 The CLI exits with status 0 if at least one page was extracted, otherwise 1.
 
-By default, discovered URLs must contain an article-like section such as
-`blog`, `news`, `reports`, or a year/month path. Tag, category, author, archive,
+The current filter allows general page links. Tag, category, author, archive,
 pagination, login, and common file URLs are excluded. The seed is always
-attempted. Supply a `link_filter` function to adapt discovery to another site:
+attempted. Supply a `link_filter` function to narrow discovery for a site:
 
 ```python
 result = crawl_site(
@@ -93,7 +102,6 @@ URL normalization resolves relative links, removes fragments, lowercases the
 hostname, and removes default ports. Query parameters and trailing slashes
 remain distinct; canonical tags and equivalent tracking URLs are not merged.
 Discovery reads anchor links from static HTML. JavaScript links are not followed.
-The default article filter can miss unusual URLs or include listing pages.
 
 The crawler caches robots.txt rules per origin and respects disallowed paths
 and Crawl-delay. The default delay is one second between request starts,
@@ -107,6 +115,7 @@ robots.txt stop requests to that origin.
 | --- | --- |
 | `crawler.py` | Queue, URL normalization, link discovery/filtering, and crawl rules. |
 | `fetcher.py` | HTTP requests, redirects, and decoding. |
+| `scraper.py` | Shared fetch-and-extract entry point used by the crawler and single-page scripts. |
 | `extractor.py` | Main text and metadata extraction. |
 | `models.py` | Page and crawl result types. |
 | `crawl.py` | CLI options and JSON output. |

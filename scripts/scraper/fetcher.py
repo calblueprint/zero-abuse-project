@@ -32,22 +32,6 @@ def is_valid_url(url: str) -> bool:
     return parsed.scheme.lower() in {"http", "https"} and bool(parsed.hostname)
 
 
-def fetch_page_html(
-    url: str,
-    *,
-    timeout: float = DEFAULT_TIMEOUT_SECONDS,
-    session: requests.Session | None = None,
-) -> str:
-    """Fetch a page and return its HTML.
-
-    Raises:
-        ValueError: If ``url`` is not an absolute HTTP(S) URL.
-        FetchError: If the request fails or the server returns an unsuccessful
-            HTTP status. The original Requests exception is kept as the cause.
-    """
-    return fetch_page_result(url, timeout=timeout, session=session).html
-
-
 def fetch_page_result(
     url: str,
     *,
