@@ -6,6 +6,8 @@ type SignUpPageProps = {
 };
 
 const errorMessages: Record<string, string> = {
+  "email-already-registered":
+    "An account already exists with this email. Sign in instead.",
   "invalid-email": "Enter a valid email address.",
   "password-mismatch": "Passwords do not match.",
   "short-password": "Password must be at least 8 characters.",

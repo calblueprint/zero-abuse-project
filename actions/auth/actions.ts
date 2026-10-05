@@ -44,10 +44,21 @@ export async function signIn(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
   if (error) {
+    if (error.code === "email_not_confirmed") {
+      redirectWithCode("/login", "error", "email-not-confirmed");
+    }
+
     redirectWithCode("/login", "error", "invalid-credentials");
+  }
+
+  if (!data.session) {
+    redirectWithCode("/login", "error", "signin-failed");
   }
 
   redirect("/");
@@ -78,6 +89,14 @@ export async function signUp(formData: FormData) {
       emailRedirectTo: `${await siteUrl()}/auth/callback`,
     },
   });
+
+  if (
+    error?.code === "email_exists" ||
+    error?.code === "user_already_exists" ||
+    data.user?.identities?.length === 0
+  ) {
+    redirectWithCode("/sign-up", "error", "email-already-registered");
+  }
 
   if (error) {
     redirectWithCode("/sign-up", "error", "signup-failed");

@@ -1,22 +1,22 @@
 import "server-only";
-import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
 
-export type VerifiedAuthUser = User & { email: string };
+export type VerifiedAuthUser = {
+  id: string;
+  email: string;
+};
 
 export async function getVerifiedAuthUser(): Promise<VerifiedAuthUser | null> {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getClaims();
+  const email = data?.claims.email;
 
-  if (error || !user?.email || !user.email_confirmed_at) {
+  if (error || !data || typeof email !== "string") {
     return null;
   }
 
-  return { ...user, email: user.email };
+  return { id: data.claims.sub, email };
 }
 
 export async function requireVerifiedAuthUser(): Promise<VerifiedAuthUser> {

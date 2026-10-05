@@ -8,11 +8,14 @@ type LoginPageProps = {
 };
 
 const errorMessages: Record<string, string> = {
+  "email-not-confirmed":
+    "Verify your email address before signing in. Check your inbox for the verification link.",
   "expired-session": "Your session has expired. Please sign in again.",
   "invalid-auth-link": "The authentication link is invalid or has expired.",
   "invalid-credentials": "The email or password is incorrect.",
   "invalid-email": "Enter a valid email address.",
   "missing-password": "Enter your password.",
+  "signin-failed": "Unable to start your session. Please try again.",
 };
 
 const successMessages: Record<string, string> = {
