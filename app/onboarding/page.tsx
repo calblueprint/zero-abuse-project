@@ -14,7 +14,7 @@ export default async function OnboardingPage() {
   return (
     <main>
       <h1>Complete your profile</h1>
-      <OnboardingForm email={user.email} />
+      <OnboardingForm />
     </main>
   );
 }

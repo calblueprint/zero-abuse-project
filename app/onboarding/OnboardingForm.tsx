@@ -5,11 +5,7 @@ import { useActionState } from "react";
 import { submitOnboarding } from "@/actions/onboarding/actions";
 import { onboardingFieldLimits } from "@/actions/onboarding/validation";
 
-type OnboardingFormProps = {
-  email: string;
-};
-
-export default function OnboardingForm({ email }: OnboardingFormProps) {
+export default function OnboardingForm() {
   const initialState: OnboardingState = {};
 
   const [state, formAction, isPending] = useActionState(
@@ -54,16 +50,6 @@ export default function OnboardingForm({ email }: OnboardingFormProps) {
             {state.errors.lastName}
           </p>
         )}
-      </div>
-      <div>
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          readOnly
-        />
       </div>
       <div>
         <label htmlFor="phone">Phone</label>
