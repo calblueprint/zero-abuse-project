@@ -8,7 +8,13 @@ from unittest.mock import patch
 import requests
 
 from scripts.models import Article
-from scripts.scraper.crawler import crawl_site, discover_links, is_article_url, normalize_url
+from scripts.scraper.crawler import (
+    crawl_site,
+    discover_links,
+    is_article_url,
+    is_discovery_url,
+    normalize_url,
+)
 from scripts.scraper.extractor import ExtractionError, extract_page
 from scripts.scraper.fetcher import FetchError, UnsafeUrlError, fetch_page_result, is_valid_url
 from scripts.scraper.scraper import scrape_url
@@ -104,15 +110,75 @@ class CrawlerTests(PublicNetworkTestCase):
         self.assertFalse(result.failures)
         self.assertNotIn("Copyright", result.pages[0].article_text)
 
-    def test_depth_limit_and_custom_link_filter(self):
+    def test_depth_limit_and_custom_article_filter(self):
         pages = {
             ROOT + "/blog": article(links=["/features/story"]),
             ROOT + "/features/story": article(links=["/features/deeper"]),
         }
-        result, _ = self.crawl(pages, max_depth=1, link_filter=lambda url: "/features/" in url)
+        result, _ = self.crawl(
+            pages,
+            max_depth=1,
+            article_filter=lambda url: "/features/" in url,
+        )
         self.assertEqual(len(result.pages), 2)
         result, _ = self.crawl(pages, max_depth=0)
         self.assertEqual(len(result.visited_urls), 1)
+
+    def test_discovery_listing_reaches_articles_without_becoming_result(self):
+        seed = ROOT + "/investigations/ncmec"
+        listing = ROOT + "/newsroom/releases"
+        story = ROOT + "/newsroom/releases/2026/09/story"
+        session = FixtureSession({
+            seed: article("Seed page", links=[listing]),
+            listing: article("Release listing", links=[story]),
+            story: article("Release story"),
+        })
+
+        result = crawl_site(seed, session=session, request_delay=0, max_depth=2)
+
+        self.assertEqual(result.visited_urls, [seed, listing, story])
+        self.assertEqual(
+            [page.title for page in result.pages],
+            ["Seed page", "Release story"],
+        )
+        self.assertFalse(result.failures)
+
+    def test_discovery_page_extraction_failure_is_not_reported(self):
+        seed = ROOT + "/investigations/ncmec"
+        listing = ROOT + "/newsroom/releases"
+        story = ROOT + "/newsroom/releases/2026/09/story"
+        session = FixtureSession({
+            seed: article("Seed page", links=[listing]),
+            listing: f'<html><nav><a href="{story}">Release</a></nav></html>',
+            story: article("Release story"),
+        })
+
+        result = crawl_site(seed, session=session, request_delay=0, max_depth=2)
+
+        self.assertEqual([page.title for page in result.pages], ["Seed page", "Release story"])
+        self.assertFalse(result.failures)
+
+    def test_custom_follow_filter_can_traverse_source_specific_index(self):
+        seed = ROOT + "/start"
+        listing = ROOT + "/features"
+        story = ROOT + "/features/story"
+        session = FixtureSession({
+            seed: article("Seed page", links=[listing]),
+            listing: article("Feature listing", links=[story]),
+            story: article("Feature story"),
+        })
+
+        result = crawl_site(
+            seed,
+            session=session,
+            request_delay=0,
+            max_depth=2,
+            article_filter=lambda url: url.endswith("/story"),
+            follow_filter=lambda url: url.endswith("/features"),
+        )
+
+        self.assertEqual(result.visited_urls, [seed, listing, story])
+        self.assertEqual([page.title for page in result.pages], ["Seed page", "Feature story"])
 
     def test_each_page_is_scraped_through_scrape_url(self):
         pages = {
@@ -239,6 +305,9 @@ class LinkAndFetcherTests(PublicNetworkTestCase):
         self.assertFalse(is_article_url(ROOT + "/news/file.pdf"))
         self.assertFalse(is_article_url(ROOT + "/about"))
         self.assertFalse(is_article_url(ROOT + "/contact"))
+        self.assertTrue(is_discovery_url(ROOT + "/newsroom/releases"))
+        self.assertTrue(is_discovery_url(ROOT + "/about/news"))
+        self.assertFalse(is_discovery_url(ROOT + "/about"))
 
     def test_encoding_detection(self):
         session = FixtureSession({ROOT + "/story": "<html><body>Unicode: café …</body></html>"})

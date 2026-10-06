@@ -75,27 +75,35 @@ for failure in result.failures:
 
 The crawler visits pages in breadth-first order on the starting hostname. The
 seed is depth 0; its links are depth 1. The page budget includes the seed and
-failed attempts, but excludes robots.txt and redirect requests. Each page is
-scraped through `scrape_url()` and its HTML is used for link discovery.
+article or discovery-page attempts, but excludes robots.txt and redirect
+requests. Each page is scraped through `scrape_url()` and its HTML is used for
+link discovery.
 Redirect destinations are checked before requesting them; an external redirect
 is recorded as an access failure. Successful page results use the final URL.
 
 The JSON result has `seed_url`, `pages`, `failures`, and `visited_urls` fields.
 Each page has the same fields as the single-page result. Each failure has
 `url`, `stage` (`access`, `fetch`, or `extract`), and `message`. An extraction
-failure still permits link discovery, so a sparse index can lead to articles.
-The CLI exits with status 0 if at least one page was extracted, otherwise 1.
+failure on the seed or an article candidate still permits link discovery.
+Discovery-only index pages are not added to `pages`, and their extraction
+failures are not reported because their purpose is link traversal. The CLI
+exits with status 0 if at least one article was extracted, otherwise 1.
 
-The conservative default filter follows article-like paths under blog, news,
-article, post, report, press, and date-based sections. Tag, category, author,
-archive, pagination, login, common file, and unrelated top-level URLs are
-excluded. The seed is always attempted. Supply a `link_filter` function for a
-source with a different URL structure:
+The crawler has separate article and traversal policies. The conservative
+article policy recognizes paths under blog, news, article, post, report, press,
+and date-based sections. The traversal policy also permits common index paths
+such as newsroom, releases, resources, publications, and updates so the crawler
+can reach their articles without returning the indexes as results. Tag,
+category, author, archive, pagination, login, common file, and unrelated
+top-level URLs are excluded. The seed is always attempted.
+
+Supply separate filters for a source with a different URL structure:
 
 ```python
 result = crawl_site(
-    "https://example.com/features",
-    link_filter=lambda url: "/features/" in url,
+    "https://example.com/start",
+    article_filter=lambda url: "/features/story/" in url,
+    follow_filter=lambda url: url.endswith("/features"),
 )
 ```
 

@@ -32,6 +32,58 @@ class _AlreadyVisited(Exception):
 
 
 MAX_ROBOTS_BYTES = 1024 * 1024
+_NON_HTML_SUFFIXES = (
+    ".pdf",
+    ".zip",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".svg",
+    ".webp",
+    ".mp3",
+    ".mp4",
+    ".xml",
+    ".json",
+    ".css",
+    ".js",
+)
+_EXCLUDED_SEGMENTS = {
+    "tag",
+    "tags",
+    "category",
+    "categories",
+    "author",
+    "authors",
+    "search",
+    "login",
+    "signin",
+    "account",
+    "page",
+    "archive",
+    "archives",
+}
+_ARTICLE_SECTIONS = {
+    "blog",
+    "blogs",
+    "news",
+    "article",
+    "articles",
+    "post",
+    "posts",
+    "report",
+    "reports",
+    "press",
+    "weblog",
+}
+_DISCOVERY_SECTIONS = _ARTICLE_SECTIONS | {
+    "media",
+    "newsroom",
+    "publications",
+    "releases",
+    "resources",
+    "updates",
+}
 
 
 def normalize_url(url: str, base_url: str | None = None) -> str:
@@ -92,38 +144,24 @@ def is_article_url(url: str) -> bool:
     segments = [segment for segment in path.split("/") if segment]
     if not segments:
         return False
-    if path.endswith(
-        (
-            ".pdf",
-            ".zip",
-            ".jpg",
-            ".jpeg",
-            ".png",
-            ".gif",
-            ".svg",
-            ".webp",
-            ".mp3",
-            ".mp4",
-            ".xml",
-            ".json",
-            ".css",
-            ".js",
-        )
-    ):
+    if path.endswith(_NON_HTML_SUFFIXES):
         return False
-    excluded = {
-        "tag", "tags", "category", "categories", "author", "authors",
-        "search", "login", "signin", "account", "page", "archive", "archives",
-    }
-    if excluded.intersection(segments):
+    if _EXCLUDED_SEGMENTS.intersection(segments):
         return False
-    sections = {
-        "blog", "blogs", "news", "article", "articles", "post", "posts",
-        "report", "reports", "press", "weblog",
-    }
-    return any(part in sections for part in segments[:-1]) or bool(
+    return any(part in _ARTICLE_SECTIONS for part in segments[:-1]) or bool(
         re.search(r"/(?:19|20)\d{2}/\d{1,2}/", path)
     )
+
+
+def is_discovery_url(url: str) -> bool:
+    """Return whether a non-article URL is a useful listing or index page."""
+    path = urlsplit(url).path.lower()
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments or path.endswith(_NON_HTML_SUFFIXES):
+        return False
+    if _EXCLUDED_SEGMENTS.intersection(segments):
+        return False
+    return segments[-1] in _DISCOVERY_SECTIONS
 
 
 class _CrawlRules:
@@ -210,14 +248,18 @@ def crawl_site(
     request_delay: float = 1.0,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     max_response_bytes: int = DEFAULT_MAX_RESPONSE_BYTES,
-    link_filter: Callable[[str], bool] | None = None,
+    article_filter: Callable[[str], bool] | None = None,
+    follow_filter: Callable[[str], bool] | None = None,
     session: requests.Session | None = None,
 ) -> CrawlResult:
     """Crawl matching article links on the seed hostname in breadth-first order.
 
     The seed is always attempted at depth zero. ``max_pages`` counts attempted
     queued pages (including failures), excluding robots and redirect requests.
-    Access/fetch/extraction errors are recorded without aborting other pages.
+    Article pages are included in ``pages``. Listing pages allowed by
+    ``follow_filter`` are traversed without becoming results. Access and fetch
+    errors are always recorded; extraction errors are recorded for article
+    candidates and the seed.
     """
     seed = normalize_url(start_url)
     if isinstance(max_pages, bool) or not isinstance(max_pages, int) or max_pages < 1:
@@ -239,14 +281,15 @@ def crawl_site(
     assert host is not None
     client = session or requests.Session()
     rules = _CrawlRules(host, client, timeout, request_delay)
-    filter_link = is_article_url if link_filter is None else link_filter
-    queue = deque([(seed, 0)])
+    select_article = is_article_url if article_filter is None else article_filter
+    follow_link = is_discovery_url if follow_filter is None else follow_filter
+    queue = deque([(seed, 0, True)])
     queued = {seed}
     result = CrawlResult(seed_url=seed)
 
     try:
         while queue and len(result.visited_urls) < max_pages:
-            url, depth = queue.popleft()
+            url, depth, include_candidate = queue.popleft()
             if url in rules.requested:
                 continue
             result.visited_urls.append(url)
@@ -265,9 +308,10 @@ def crawl_site(
                 result.failures.append(CrawlFailure(url, stage, str(exc)))
                 continue
             final_url = normalize_url(scraped.url)
-            if scraped.page is not None:
+            include_page = include_candidate or select_article(final_url)
+            if scraped.page is not None and include_page:
                 result.pages.append(scraped.page)
-            else:
+            elif scraped.page is None and include_page:
                 result.failures.append(CrawlFailure(
                     final_url, "extract", scraped.extraction_error or "No extractable content",
                 ))
@@ -276,9 +320,10 @@ def crawl_site(
             for link in discover_links(scraped.html, final_url):
                 if urlsplit(link).hostname != host or link in queued or link in rules.requested:
                     continue
-                if filter_link(link):
+                article_candidate = select_article(link)
+                if article_candidate or follow_link(link):
                     queued.add(link)
-                    queue.append((link, depth + 1))
+                    queue.append((link, depth + 1, article_candidate))
     finally:
         if session is None:
             client.close()
