@@ -1,31 +1,35 @@
-"""Run the sample article with: python -m scripts.pipeline.main."""
+"""Extract structured intelligence from an article JSON file."""
 
+import argparse
 import logging
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-from scripts.models import Article
-from scripts.pipeline.pipeline import (
+from scripts.intelligence.extractor import (
     ConfigurationError,
     ExtractionError,
     create_client,
     extract_intelligence,
 )
+from scripts.models import Article
 
 logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_ARTICLE = Path(__file__).resolve().parent / "fixtures" / "sample_article.json"
 
-def main() -> int:
+
+def main(article_path: Path) -> int:
+    """Extract and print intelligence for a validated article JSON file."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     load_dotenv(PROJECT_ROOT / ".env.local")
 
     try:
-        article = Article.model_validate_json(DEFAULT_ARTICLE.read_text(encoding="utf-8"))
+        article = Article.model_validate_json(article_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        logger.error("Cannot load article from %s (%s).", DEFAULT_ARTICLE, type(exc).__name__)
+        logger.error(
+            "Cannot load article from %s (%s).", article_path, type(exc).__name__
+        )
         return 1
 
     client = None
@@ -43,5 +47,11 @@ def main() -> int:
     print(result.model_dump_json(indent=2))
     return 0
 
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    parser = argparse.ArgumentParser(
+        description="Extract structured intelligence from a scraped article JSON file."
+    )
+    parser.add_argument("article", type=Path, help="Path to an Article JSON file")
+    arguments = parser.parse_args()
+    raise SystemExit(main(arguments.article))

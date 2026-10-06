@@ -5,7 +5,8 @@ from instructor.core.exceptions import InstructorRetryException, ResponseParsing
 from openai import APIError, BadRequestError, OpenAI, RateLimitError
 from pydantic import ValidationError
 
-from scripts.models import Article, ExtractionResult, IntelligenceItem
+from scripts.intelligence.models import ExtractionResult, IntelligenceItem
+from scripts.models import Article
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +35,14 @@ Before returning, check every label against the article and remove unsupported o
 duplicate labels. Do not invent facts. Return all fields even when lists are empty.
 """
 
+
 class ConfigurationError(ValueError):
     """The caller has not supplied usable extraction configuration."""
 
+
 class ExtractionError(RuntimeError):
     """An expected provider or output-validation failure."""
+
 
 def create_client(api_key: str | None) -> instructor.Instructor:
     if not api_key or not api_key.strip():
@@ -53,6 +57,7 @@ def create_client(api_key: str | None) -> instructor.Instructor:
         mode=instructor.Mode.JSON_SCHEMA,
     )
 
+
 def _failure_message(cause: object) -> str:
     if isinstance(cause, RateLimitError):
         return "OpenRouter rate limit reached (HTTP 429); retry later."
@@ -66,13 +71,13 @@ def _failure_message(cause: object) -> str:
         return f"Provider request failed ({type(cause).__name__}, status={status})."
     return f"Model output could not be processed ({type(cause).__name__})."
 
+
 def extract_intelligence(
     article: Article,
     client: instructor.Instructor,
     model: str = "openrouter/free",
 ) -> ExtractionResult:
-    """Return validated intelligence or raise ExtractionError for expected failures.
-    """
+    """Return validated intelligence or raise ExtractionError for expected failures."""
     if not model.strip():
         raise ConfigurationError("Set the model to a structured-output model ID.")
 
@@ -88,11 +93,19 @@ def extract_intelligence(
                 extra_body={"provider": {"require_parameters": True}},
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": f"Extract intel from this text:\n\n{article.article_text}"},
+                    {
+                        "role": "user",
+                        "content": f"Extract intel from this text:\n\n{article.article_text}",
+                    },
                 ],
             )
             break
-        except (InstructorRetryException, APIError, ValidationError, ResponseParsingError) as exc:
+        except (
+            InstructorRetryException,
+            APIError,
+            ValidationError,
+            ResponseParsingError,
+        ) as exc:
             cause = exc
             if isinstance(exc, InstructorRetryException):
                 if exc.failed_attempts:
@@ -110,8 +123,12 @@ def extract_intelligence(
                 and "supported formats: json_object" in message
                 and isinstance(client.client, OpenAI)
             ):
-                logger.warning("Provider supports JSON only; retrying with JSON mode and Pydantic validation.")
-                client = instructor.from_openai(client.client, mode=instructor.Mode.JSON)
+                logger.warning(
+                    "Provider supports JSON only; retrying with JSON mode and Pydantic validation."
+                )
+                client = instructor.from_openai(
+                    client.client, mode=instructor.Mode.JSON
+                )
                 continue
 
             raise ExtractionError(_failure_message(cause)) from exc

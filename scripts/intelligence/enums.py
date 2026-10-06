@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ExploitationType(str, Enum):
     FINANCIAL_SEXTORTION = "financial sextortion"
     AI_GENERATED_CSAM = "AI-generated CSAM"
@@ -9,6 +10,7 @@ class ExploitationType(str, Enum):
     NIHILISTIC_VIOLENT_NETWORKS = "nihilistic violent networks"
     OTHER = "other"
 
+
 class Platform(str, Enum):
     ROBLOX = "Roblox"
     DISCORD = "Discord"
@@ -16,6 +18,7 @@ class Platform(str, Enum):
     SNAPCHAT = "Snapchat"
     INSTAGRAM = "Instagram"
     OTHER = "other"
+
 
 class Technology(str, Enum):
     GENERATIVE_AI = "generative AI"
@@ -27,6 +30,7 @@ class Technology(str, Enum):
     EMERGING_TECHNOLOGY = "emerging technology"
     OTHER = "other"
 
+
 class AffectedPopulation(str, Enum):
     CHILDREN = "children"
     ADOLESCENTS = "adolescents"
@@ -34,6 +38,7 @@ class AffectedPopulation(str, Enum):
     GIRLS = "girls"
     MALE_SURVIVORS = "male survivors"
     OTHER = "other"
+
 
 class OffenderTactic(str, Enum):
     GROOMING = "grooming"
@@ -46,6 +51,7 @@ class OffenderTactic(str, Enum):
     PAYMENT_DEMANDS = "payment demands"
     NETWORKED_OFFENDING = "networked offending"
     OTHER = "other"
+
 
 class IntelligenceType(str, Enum):
     RESEARCH_FINDING = "research finding"
