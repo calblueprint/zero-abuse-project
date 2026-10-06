@@ -1,8 +1,8 @@
-"""Try the scraper on any HTTP(S) page and print the extracted result.
+"""Scrape one HTTP(S) page and print the extracted result.
 
 Run from the repository root, for example:
 
-    python -m scripts.scraper.test_scrape https://example.com/article
+    python -m scripts.scraper.scrape_cli https://example.com/article
 
 The scraper can only extract content that is available in the fetched HTML.
 """
@@ -10,7 +10,6 @@ The scraper can only extract content that is available in the fetched HTML.
 import argparse
 import json
 import sys
-from dataclasses import asdict
 
 from .fetcher import FetchError
 from .scraper import scrape_url
@@ -32,7 +31,7 @@ def main() -> int:
         print(f"Scrape failed: {result.extraction_error}", file=sys.stderr)
         return 1
 
-    print(json.dumps(asdict(result.page), ensure_ascii=False, indent=2))
+    print(json.dumps(result.page.model_dump(mode="json"), ensure_ascii=False, indent=2))
     return 0
 
 

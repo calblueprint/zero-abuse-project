@@ -1,15 +1,24 @@
-"""Verify traversal, access rules, failures, and the shared fetcher offline."""
+"""Verify scraping, traversal, access rules, and failures offline."""
 
+import json
+import socket
 import unittest
 from unittest.mock import patch
 
 import requests
 
+from scripts.models import Article
 from scripts.scraper.crawler import crawl_site, discover_links, is_article_url, normalize_url
-from scripts.scraper.fetcher import FetchError, fetch_page_result
+from scripts.scraper.extractor import extract_page
+from scripts.scraper.fetcher import FetchError, UnsafeUrlError, fetch_page_result, is_valid_url
 from scripts.scraper.scraper import scrape_url
 
 ROOT = "https://site.test"
+
+
+def public_dns(_hostname, port, **_kwargs):
+    """Resolve fixture hostnames to a public address without using the network."""
+    return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port))]
 
 
 def article(title="Fixture article", links=()):
@@ -37,6 +46,8 @@ class FixtureSession:
         self.calls.append(url)
         if kwargs.get("allow_redirects") is not False:
             raise AssertionError("Redirects must be inspected before being followed")
+        if kwargs.get("stream") is not True:
+            raise AssertionError("Responses must be streamed so size limits can be enforced")
         value = self.pages[url]
         if isinstance(value, Exception):
             raise value
@@ -53,7 +64,17 @@ class FixtureSession:
         return response
 
 
-class CrawlerTests(unittest.TestCase):
+class PublicNetworkTestCase(unittest.TestCase):
+    """Provide deterministic public DNS for offline request tests."""
+
+    def setUp(self):
+        super().setUp()
+        resolver = patch("scripts.scraper.fetcher.socket.getaddrinfo", side_effect=public_dns)
+        resolver.start()
+        self.addCleanup(resolver.stop)
+
+
+class CrawlerTests(PublicNetworkTestCase):
     def crawl(self, pages, **options):
         session = FixtureSession(pages, options.pop("robots", "User-agent: *\nAllow: /\n"))
         result = crawl_site(ROOT + "/blog", session=session, request_delay=0, **options)
@@ -61,7 +82,16 @@ class CrawlerTests(unittest.TestCase):
 
     def test_breadth_first_page_budget_and_duplicate_links(self):
         pages = {
-            ROOT + "/blog": article(links=["/blog/a#heading", "/blog/b", "/blog/a", "https://other.test/blog/x", "/login", "/blog/file.pdf"]),
+            ROOT + "/blog": article(
+                links=[
+                    "/blog/a#heading",
+                    "/blog/b",
+                    "/blog/a",
+                    "https://other.test/blog/x",
+                    "/login",
+                    "/blog/file.pdf",
+                ]
+            ),
             ROOT + "/blog/a": article(links=["/blog/c", "/blog/b"]),
             ROOT + "/blog/b": article(links=["/blog/d"]),
             ROOT + "/blog/c": article(links=["/blog/e"]),
@@ -69,10 +99,10 @@ class CrawlerTests(unittest.TestCase):
         result, session = self.crawl(pages, max_pages=4, max_depth=2)
         expected = [ROOT + path for path in ["/blog", "/blog/a", "/blog/b", "/blog/c"]]
         self.assertEqual(result.visited_urls, expected)
-        self.assertEqual([page.url for page in result.pages], expected)
+        self.assertEqual([str(page.url) for page in result.pages], expected)
         self.assertEqual(session.calls, [ROOT + "/robots.txt", *expected])
         self.assertFalse(result.failures)
-        self.assertNotIn("Copyright", result.pages[0].text)
+        self.assertNotIn("Copyright", result.pages[0].article_text)
 
     def test_depth_limit_and_custom_link_filter(self):
         pages = {
@@ -111,7 +141,7 @@ class CrawlerTests(unittest.TestCase):
             ROOT + "/blog/story": article(),
         })
         self.assertEqual(result.failures[0].stage, "extract")
-        self.assertEqual([page.url for page in result.pages], [ROOT + "/blog/story"])
+        self.assertEqual([str(page.url) for page in result.pages], [ROOT + "/blog/story"])
 
     def test_robots_disallow_prevents_request_and_other_pages_continue(self):
         result, session = self.crawl({
@@ -143,8 +173,8 @@ class CrawlerTests(unittest.TestCase):
             ROOT + "/blog/": article(links=["story"]),
             ROOT + "/blog/story": article(),
         })
-        self.assertEqual(result.pages[0].url, ROOT + "/blog/")
-        self.assertEqual(result.pages[1].url, ROOT + "/blog/story")
+        self.assertEqual(str(result.pages[0].url), ROOT + "/blog/")
+        self.assertEqual(str(result.pages[1].url), ROOT + "/blog/story")
         self.assertEqual(session.calls.count(ROOT + "/robots.txt"), 1)
 
     def test_redirect_cannot_cross_hostname_or_bypass_robots(self):
@@ -166,32 +196,49 @@ class CrawlerTests(unittest.TestCase):
         self.assertEqual(len(result.pages), 2)
 
     def test_crawl_delay_is_honored(self):
-        session = FixtureSession({ROOT + "/blog": article()}, robots="User-agent: *\nCrawl-delay: 2\n")
+        session = FixtureSession(
+            {ROOT + "/blog": article()},
+            robots="User-agent: *\nCrawl-delay: 2\n",
+        )
         with patch("scripts.scraper.crawler.time.sleep") as sleep:
             crawl_site(ROOT + "/blog", session=session, request_delay=0)
         self.assertTrue(any(call.args[0] > 1 for call in sleep.call_args_list))
 
     def test_non_html_content_is_recorded_as_failure(self):
-        result, _ = self.crawl({ROOT + "/blog": (200, {"Content-Type": "application/pdf"}, "not HTML")})
+        result, _ = self.crawl({
+            ROOT + "/blog": (200, {"Content-Type": "application/pdf"}, "not HTML"),
+        })
         self.assertEqual(result.failures[0].stage, "fetch")
         self.assertFalse(result.pages)
 
     def test_invalid_limits_and_urls(self):
-        for kwargs in [{"max_pages": 0}, {"max_depth": -1}, {"request_delay": float("nan")}, {"timeout": 0}]:
+        for kwargs in [
+            {"max_pages": 0},
+            {"max_depth": -1},
+            {"request_delay": float("nan")},
+            {"timeout": 0},
+            {"max_response_bytes": 0},
+        ]:
             with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
                 crawl_site(ROOT, **kwargs)
         with self.assertRaises(ValueError):
             crawl_site("not-a-url")
 
 
-class LinkAndFetcherTests(unittest.TestCase):
+class LinkAndFetcherTests(PublicNetworkTestCase):
     def test_normalization_and_link_discovery(self):
-        self.assertEqual(normalize_url("HTTPS://Site.Test:443/blog?a=1#section"), ROOT + "/blog?a=1")
+        self.assertEqual(
+            normalize_url("HTTPS://Site.Test:443/blog?a=1#section"),
+            ROOT + "/blog?a=1",
+        )
         html = '<a href="story#part">A</a><a href="story">B</a><a href="mailto:a@b.test">Mail</a>'
         self.assertEqual(discover_links(html, ROOT + "/blog/"), [ROOT + "/blog/story"])
         self.assertTrue(is_article_url(ROOT + "/news/story"))
+        self.assertTrue(is_article_url(ROOT + "/2025/10/story"))
         self.assertFalse(is_article_url(ROOT + "/news/tags/topic"))
         self.assertFalse(is_article_url(ROOT + "/news/file.pdf"))
+        self.assertFalse(is_article_url(ROOT + "/about"))
+        self.assertFalse(is_article_url(ROOT + "/contact"))
 
     def test_encoding_detection(self):
         session = FixtureSession({ROOT + "/story": "<html><body>Unicode: café …</body></html>"})
@@ -210,8 +257,50 @@ class LinkAndFetcherTests(unittest.TestCase):
         with self.assertRaises(FetchError):
             fetch_page_result(ROOT + "/loop", session=session, max_redirects=1)
 
+    def test_private_and_credentialed_urls_are_rejected(self):
+        self.assertFalse(is_valid_url("https://user:secret@site.test/story"))
+        for url in [
+            "http://127.0.0.1/admin",
+            "http://169.254.169.254/latest/meta-data",
+            "http://[::1]/admin",
+            "http://localhost/admin",
+        ]:
+            with self.subTest(url=url), self.assertRaises(UnsafeUrlError):
+                fetch_page_result(url, session=FixtureSession({}))
 
-class ScraperTests(unittest.TestCase):
+    def test_hostname_resolving_to_private_address_is_rejected_before_request(self):
+        session = FixtureSession({ROOT + "/story": article()})
+        private_dns = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.2", 443))]
+        with patch("scripts.scraper.fetcher.socket.getaddrinfo", return_value=private_dns):
+            with self.assertRaises(UnsafeUrlError):
+                fetch_page_result(ROOT + "/story", session=session)
+        self.assertFalse(session.calls)
+
+    def test_redirect_to_private_address_is_rejected_before_request(self):
+        session = FixtureSession({
+            ROOT + "/story": (302, {"Location": "http://127.0.0.1/admin"}, ""),
+        })
+        with self.assertRaises(UnsafeUrlError):
+            fetch_page_result(ROOT + "/story", session=session)
+        self.assertEqual(session.calls, [ROOT + "/story"])
+
+    def test_response_size_limit_uses_header_and_streamed_bytes(self):
+        declared = FixtureSession({
+            ROOT + "/declared": (
+                200,
+                {"Content-Type": "text/html", "Content-Length": "100"},
+                "short",
+            ),
+        })
+        with self.assertRaises(FetchError):
+            fetch_page_result(ROOT + "/declared", session=declared, max_response_bytes=10)
+
+        streamed = FixtureSession({ROOT + "/streamed": "<html>too large</html>"})
+        with self.assertRaises(FetchError):
+            fetch_page_result(ROOT + "/streamed", session=streamed, max_response_bytes=10)
+
+
+class ScraperTests(PublicNetworkTestCase):
     def test_success_returns_html_content_and_final_url(self):
         html = article("Final article")
         session = FixtureSession({
@@ -223,7 +312,7 @@ class ScraperTests(unittest.TestCase):
         self.assertEqual(checked, [ROOT + "/old", ROOT + "/story"])
         self.assertEqual(result.url, ROOT + "/story")
         self.assertEqual(result.html, html)
-        self.assertEqual(result.page.url, result.url)
+        self.assertEqual(str(result.page.url), result.url)
         self.assertEqual(result.page.title, "Final article")
         self.assertIsNone(result.extraction_error)
 
@@ -237,9 +326,37 @@ class ScraperTests(unittest.TestCase):
         self.assertEqual(discover_links(result.html, result.url), [ROOT + "/blog/story"])
 
     def test_request_and_non_html_failures_raise_fetch_error(self):
-        for response in [requests.ConnectionError("fixture failure"), (200, {"Content-Type": "application/pdf"}, "PDF")]:
+        responses = [
+            requests.ConnectionError("fixture failure"),
+            (200, {"Content-Type": "application/pdf"}, "PDF"),
+        ]
+        for response in responses:
             with self.subTest(response=response), self.assertRaises(FetchError):
                 scrape_url(ROOT + "/story", session=FixtureSession({ROOT + "/story": response}))
+
+
+class ArticleContractTests(unittest.TestCase):
+    def test_extractor_returns_shared_article_contract(self):
+        extracted = json.dumps({
+            "text": "Original article text.",
+            "title": "Article title",
+            "author": "Example Author",
+            "date": "2025-10-03T12:30:00Z",
+            "sitename": "Example Publisher",
+        })
+        with patch("scripts.scraper.extractor.trafilatura.extract", return_value=extracted):
+            result = extract_page("<html>fixture</html>", ROOT + "/news/story")
+
+        self.assertIsInstance(result, Article)
+        self.assertEqual(result.article_text, "Original article text.")
+        self.assertEqual(result.source, "Example Publisher")
+        self.assertEqual(result.published_at.isoformat(), "2025-10-03T12:30:00+00:00")
+
+    def test_unparseable_date_does_not_discard_valid_article(self):
+        extracted = json.dumps({"text": "Useful article text.", "date": "not-a-date"})
+        with patch("scripts.scraper.extractor.trafilatura.extract", return_value=extracted):
+            result = extract_page("<html>fixture</html>", ROOT + "/news/story")
+        self.assertIsNone(result.published_at)
 
 
 if __name__ == "__main__":

@@ -23,7 +23,13 @@ def main() -> int:
     except ValueError as exc:
         print(f"Crawl failed: {exc}", file=sys.stderr)
         return 1
-    print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
+    output = {
+        "seed_url": result.seed_url,
+        "pages": [page.model_dump(mode="json") for page in result.pages],
+        "failures": [asdict(failure) for failure in result.failures],
+        "visited_urls": result.visited_urls,
+    }
+    print(json.dumps(output, ensure_ascii=False, indent=2))
     return 0 if result.pages else 1
 
 

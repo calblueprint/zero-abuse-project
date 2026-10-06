@@ -1,12 +1,15 @@
 """Extract page text and metadata from HTML."""
 
 import json
+from datetime import datetime
 from typing import Any
 
 import trafilatura
+from pydantic import TypeAdapter, ValidationError
+
+from scripts.models import Article
 
 from .fetcher import is_valid_url
-from .models import ScrapedPage
 
 
 class ExtractionError(Exception):
@@ -23,7 +26,21 @@ def _optional_text(value: Any) -> str | None:
     return value or None
 
 
-def extract_page(html: str, url: str) -> ScrapedPage:
+_DATETIME_ADAPTER = TypeAdapter(datetime)
+
+
+def _optional_datetime(value: Any) -> datetime | None:
+    """Parse normalized extractor dates without rejecting useful article text."""
+    value = _optional_text(value)
+    if value is None:
+        return None
+    try:
+        return _DATETIME_ADAPTER.validate_python(value)
+    except ValidationError:
+        return None
+
+
+def extract_page(html: str, url: str) -> Article:
     """Extract the main text and available metadata from HTML.
 
     Missing metadata is returned as ``None``.
@@ -65,10 +82,11 @@ def extract_page(html: str, url: str) -> ScrapedPage:
     if text is None:
         raise ExtractionError(f"No meaningful main text found at {url!r}.")
 
-    return ScrapedPage(
+    return Article(
         url=url,
+        article_text=text,
+        source=_optional_text(data.get("sitename")) or _optional_text(data.get("hostname")),
         title=_optional_text(data.get("title")),
-        text=text,
-        published_date=_optional_text(data.get("date")),
         author=_optional_text(data.get("author")),
+        published_at=_optional_datetime(data.get("date")),
     )

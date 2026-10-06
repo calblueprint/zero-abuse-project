@@ -1,0 +1,4 @@
+charset-normalizer==3.5.2
+pydantic==2.13.5
+requests==2.34.2
+trafilatura==2.3.0

@@ -11,7 +11,14 @@ from urllib.robotparser import RobotFileParser
 
 import requests
 
-from .fetcher import DEFAULT_TIMEOUT_SECONDS, USER_AGENT, FetchError
+from .fetcher import (
+    DEFAULT_MAX_RESPONSE_BYTES,
+    DEFAULT_TIMEOUT_SECONDS,
+    USER_AGENT,
+    FetchError,
+    ensure_public_url,
+    read_limited_body,
+)
 from .models import CrawlFailure, CrawlResult
 from .scraper import scrape_url
 
@@ -22,6 +29,9 @@ class _AccessError(FetchError):
 
 class _AlreadyVisited(Exception):
     """A redirect led to a URL already requested by this crawl."""
+
+
+MAX_ROBOTS_BYTES = 1024 * 1024
 
 
 def normalize_url(url: str, base_url: str | None = None) -> str:
@@ -82,8 +92,24 @@ def is_article_url(url: str) -> bool:
     segments = [segment for segment in path.split("/") if segment]
     if not segments:
         return False
-    if path.endswith((".pdf", ".zip", ".jpg", ".jpeg", ".png", ".gif", ".svg",
-                      ".webp", ".mp3", ".mp4", ".xml", ".json", ".css", ".js")):
+    if path.endswith(
+        (
+            ".pdf",
+            ".zip",
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".svg",
+            ".webp",
+            ".mp3",
+            ".mp4",
+            ".xml",
+            ".json",
+            ".css",
+            ".js",
+        )
+    ):
         return False
     excluded = {
         "tag", "tags", "category", "categories", "author", "authors",
@@ -95,7 +121,6 @@ def is_article_url(url: str) -> bool:
         "blog", "blogs", "news", "article", "articles", "post", "posts",
         "report", "reports", "press", "weblog",
     }
-    return True # remove later (this makes it so that it doesn't have to be an article)
     return any(part in sections for part in segments[:-1]) or bool(
         re.search(r"/(?:19|20)\d{2}/\d{1,2}/", path)
     )
@@ -124,11 +149,15 @@ class _CrawlRules:
         for _ in range(6):
             if urlsplit(url).hostname != self.host:
                 raise _AccessError("robots.txt redirected outside the seed hostname")
-            self._wait(self.delay)
             try:
+                ensure_public_url(url)
+                self._wait(self.delay)
                 with self.session.get(
-                    url, timeout=self.timeout, headers={"User-Agent": USER_AGENT},
+                    url,
+                    timeout=self.timeout,
+                    headers={"User-Agent": USER_AGENT},
                     allow_redirects=False,
+                    stream=True,
                 ) as response:
                     status = response.status_code
                     if status in {301, 302, 303, 307, 308}:
@@ -145,9 +174,10 @@ class _CrawlRules:
                         parser.allow_all = True
                     else:
                         response.raise_for_status()
-                        parser.parse(response.text.splitlines())
+                        body = read_limited_body(response, MAX_ROBOTS_BYTES)
+                        parser.parse(body.decode("utf-8", errors="replace").splitlines())
                     return parser
-            except (requests.RequestException, ValueError) as exc:
+            except (FetchError, requests.RequestException, ValueError) as exc:
                 raise _AccessError(f"Could not read robots.txt: {exc}") from exc
         raise _AccessError("Too many redirects while reading robots.txt")
 
@@ -179,6 +209,7 @@ def crawl_site(
     max_depth: int = 1,
     request_delay: float = 1.0,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    max_response_bytes: int = DEFAULT_MAX_RESPONSE_BYTES,
     link_filter: Callable[[str], bool] | None = None,
     session: requests.Session | None = None,
 ) -> CrawlResult:
@@ -197,8 +228,15 @@ def crawl_site(
         raise ValueError("request_delay must be finite and non-negative")
     if not math.isfinite(timeout) or timeout <= 0:
         raise ValueError("timeout must be finite and greater than zero")
+    if (
+        isinstance(max_response_bytes, bool)
+        or not isinstance(max_response_bytes, int)
+        or max_response_bytes < 1
+    ):
+        raise ValueError("max_response_bytes must be a positive integer")
 
     host = urlsplit(seed).hostname
+    assert host is not None
     client = session or requests.Session()
     rules = _CrawlRules(host, client, timeout, request_delay)
     filter_link = is_article_url if link_filter is None else link_filter
@@ -214,7 +252,11 @@ def crawl_site(
             result.visited_urls.append(url)
             try:
                 scraped = scrape_url(
-                    url, timeout=timeout, session=client, before_request=rules.before_request,
+                    url,
+                    timeout=timeout,
+                    session=client,
+                    before_request=rules.before_request,
+                    max_response_bytes=max_response_bytes,
                 )
             except _AlreadyVisited:
                 continue
