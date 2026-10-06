@@ -15,6 +15,13 @@
       "when": 1790485255470,
       "tag": "0001_quick_maximus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791254957703,
+      "tag": "0002_purple_molly_hayes",
+      "breakpoints": true
     }
   ]
 }

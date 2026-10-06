@@ -37,7 +37,6 @@ export const users = pgTable("users", {
     .references(() => authUsers.id, { onDelete: "cascade" }),
   firstName: varchar("first_name").notNull(),
   lastName: varchar("last_name").notNull(),
-  email: varchar("email"),
   phone: varchar("phone"),
   organization: varchar("organization"),
   onboardingComplete: boolean("onboarding_complete").default(false).notNull(),

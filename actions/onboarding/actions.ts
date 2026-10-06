@@ -1,10 +1,8 @@
 "use server";
 
-import type {
-  OnboardingFields,
-  OnboardingState,
-} from "@/actions/onboarding/validation";
+import type { OnboardingState } from "@/actions/onboarding/validation";
 import { redirect } from "next/navigation";
+import { parseOnboardingFormData } from "@/actions/onboarding/validation";
 import { completeOnboarding } from "@/actions/supabase/profile";
 import { requireVerifiedAuthUser } from "@/lib/auth";
 
@@ -12,27 +10,21 @@ export async function submitOnboarding(
   _prevState: OnboardingState,
   formData: FormData,
 ): Promise<OnboardingState> {
-  const fields: OnboardingFields = {
-    firstName: String(formData.get("firstName") ?? ""),
-    lastName: String(formData.get("lastName") ?? ""),
-    phone: String(formData.get("phone") ?? ""),
-    organization: String(formData.get("organization") ?? ""),
-  };
   const user = await requireVerifiedAuthUser();
-  let result;
+  const result = parseOnboardingFormData(formData);
+
+  if (!result.success) {
+    return { fields: result.fields, errors: result.errors };
+  }
 
   try {
-    result = await completeOnboarding(user, fields);
+    await completeOnboarding(user.id, result.data);
   } catch (error) {
     console.error("Onboarding failed:", error);
     return {
-      fields,
+      fields: result.fields,
       errors: { form: "Something went wrong. Please try again." },
     };
-  }
-
-  if (!result.success) {
-    return { fields, errors: result.errors };
   }
 
   redirect("/");
