@@ -22,6 +22,20 @@
       "when": 1791254957703,
       "tag": "0002_purple_molly_hayes",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791264445313,
+      "tag": "0003_conscious_guardsmen",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791269486750,
+      "tag": "0004_rainy_thunderbolt_ross",
+      "breakpoints": true
     }
   ]
 }

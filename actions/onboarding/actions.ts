@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { parseOnboardingFormData } from "@/actions/onboarding/validation";
 import { completeOnboarding } from "@/actions/supabase/profile";
 import { requireVerifiedAuthUser } from "@/lib/auth";
+import { getInitialUserAccess } from "@/lib/auth/access";
 
 export async function submitOnboarding(
   _prevState: OnboardingState,
@@ -18,7 +19,11 @@ export async function submitOnboarding(
   }
 
   try {
-    await completeOnboarding(user.id, result.data);
+    await completeOnboarding(
+      user,
+      result.data,
+      getInitialUserAccess(user.email),
+    );
   } catch (error) {
     console.error("Onboarding failed:", error);
     return {

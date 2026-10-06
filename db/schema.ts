@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   foreignKey,
   json,
   pgTable,
@@ -9,6 +11,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { authUsers } from "drizzle-orm/supabase/rls";
+
+export const approvalStatuses = ["pending", "approved", "rejected"] as const;
 
 export const savedGroups = pgTable(
   "saved_groups",
@@ -31,19 +35,41 @@ export const savedGroups = pgTable(
   ],
 ).enableRLS();
 
-export const users = pgTable("users", {
-  userId: uuid("user_id")
-    .primaryKey()
-    .references(() => authUsers.id, { onDelete: "cascade" }),
-  firstName: varchar("first_name").notNull(),
-  lastName: varchar("last_name").notNull(),
-  phone: varchar("phone"),
-  organization: varchar("organization"),
-  onboardingComplete: boolean("onboarding_complete").default(false).notNull(),
-  isAdmin: boolean("is_admin"),
-  approvalStatus: varchar("approval_status"),
-  recentlyAccessed: json("recently_accessed"),
-}).enableRLS();
+export const users = pgTable(
+  "users",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    firstName: varchar("first_name").notNull(),
+    lastName: varchar("last_name").notNull(),
+    email: varchar("email"),
+    phone: varchar("phone"),
+    organization: varchar("organization"),
+    onboardingComplete: boolean("onboarding_complete").default(false).notNull(),
+    isAdmin: boolean("is_admin").default(false).notNull(),
+    approvalStatus: varchar("approval_status", { enum: approvalStatuses })
+      .default("pending")
+      .notNull(),
+    approvalDecidedBy: uuid("approval_decided_by"),
+    approvalDecidedAt: timestamp("approval_decided_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
+    recentlyAccessed: json("recently_accessed"),
+  },
+  table => [
+    check(
+      "users_approval_status_check",
+      sql`${table.approvalStatus} IN ('pending', 'approved', 'rejected')`,
+    ),
+    foreignKey({
+      columns: [table.approvalDecidedBy],
+      foreignColumns: [table.userId],
+      name: "users_approval_decided_by_fkey",
+    }).onDelete("set null"),
+  ],
+).enableRLS();
 
 export const trends = pgTable(
   "trends",
