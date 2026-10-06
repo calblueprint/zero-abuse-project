@@ -13,14 +13,16 @@ type OnboardingFormProps = {
     prevState: OnboardingState,
     formData: FormData,
   ) => Promise<OnboardingState>;
-  initialFields?: OnboardingFields;
+  initialFields?: OnboardingFields & { email?: string };
   submitLabel?: string;
+  showEmail?: boolean;
 };
 
 export default function OnboardingForm({
   action = submitOnboarding,
   initialFields,
   submitLabel = "Continue",
+  showEmail = false,
 }: OnboardingFormProps) {
   const initialState: OnboardingState = { fields: initialFields };
 
@@ -102,6 +104,26 @@ export default function OnboardingForm({
           </p>
         )}
       </div>
+      {showEmail && (
+        <div>
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            defaultValue={state.fields?.email}
+            aria-describedby="email-error"
+            aria-invalid={Boolean(state.errors?.email)}
+            required
+          />
+          {state.errors?.email && (
+            <p id="email-error" role="alert">
+              {state.errors.email}
+            </p>
+          )}
+        </div>
+      )}
       {state.errors?.form && <p role="alert">{state.errors.form}</p>}
       {state.message && <p role="status">{state.message}</p>}
       <button type="submit" disabled={isPending}>

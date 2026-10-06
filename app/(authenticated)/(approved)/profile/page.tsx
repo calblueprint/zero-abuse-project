@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
 import { getUserProfile } from "@/actions/supabase/profile";
 import ProfileView from "@/app/(authenticated)/(approved)/profile/ProfileView";
-import { requireVerifiedAuthUser } from "@/lib/auth";
+import { getAuthEmails, requireVerifiedAuthUser } from "@/lib/auth";
 
 export default async function ProfilePage() {
   const user = await requireVerifiedAuthUser();
-  const profile = await getUserProfile(user.id);
+  const [profile, { email, pendingEmail }] = await Promise.all([
+    getUserProfile(user.id),
+    getAuthEmails(),
+  ]);
 
   if (!profile) {
     redirect("/onboarding");
@@ -15,9 +18,10 @@ export default async function ProfilePage() {
     <ProfileView
       accessLevel={profile.isAdmin ? "Admin" : "Member"}
       name={`${profile.firstName} ${profile.lastName}`}
-      email={profile.email ?? user.email}
+      email={email ?? user.email}
       organization={profile.organization ?? ""}
       phone={profile.phone ?? ""}
+      pendingEmail={pendingEmail}
     />
   );
 }

@@ -12,8 +12,8 @@ export type OnboardingErrors = Partial<
 };
 
 export type OnboardingState = {
-  fields?: OnboardingFields;
-  errors?: OnboardingErrors;
+  fields?: OnboardingFields & { email?: string };
+  errors?: OnboardingErrors & { email?: string };
   message?: string;
 };
 
@@ -85,4 +85,14 @@ export function parseOnboardingFormData(
   }
 
   return { success: true, data, fields };
+}
+
+export function validateEmail(email: string): string | undefined {
+  if (!email.trim()) {
+    return "Enter your email.";
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    return "Enter a valid email address.";
+  }
+  return undefined;
 }

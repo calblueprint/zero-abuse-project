@@ -13,6 +13,7 @@ interface ProfileViewProps {
   email: string;
   phone: string;
   organization: string;
+  pendingEmail: string | null;
 }
 
 export default function ProfileView({
@@ -21,6 +22,7 @@ export default function ProfileView({
   email,
   phone,
   organization,
+  pendingEmail,
 }: ProfileViewProps) {
   const router = useRouter();
 
@@ -41,7 +43,15 @@ export default function ProfileView({
           </Row>
           <Row>
             <Label>Work email</Label>
-            <Value>{email}</Value>
+            <div>
+              <Value>{email}</Value>
+              {pendingEmail && (
+                <P3 $color={COLORS.gray}>
+                  Change to <strong>{pendingEmail}</strong> is pending
+                  verification. Check your inbox to confirm.
+                </P3>
+              )}
+            </div>
           </Row>
           <Row>
             <Label>Phone</Label>

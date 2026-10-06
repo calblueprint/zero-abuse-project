@@ -31,3 +31,15 @@ export const requireVerifiedAuthUser = cache(
     return user;
   },
 );
+
+export async function getAuthEmails(): Promise<{
+  email: string | null;
+  pendingEmail: string | null;
+}> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.auth.getUser();
+  return {
+    email: data.user?.email ?? null,
+    pendingEmail: data.user?.new_email ?? null,
+  };
+}
