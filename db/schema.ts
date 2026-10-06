@@ -12,6 +12,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { authUsers } from "drizzle-orm/supabase/rls";
 
+export const approvalStatuses = ["pending", "approved", "rejected"] as const;
+
 export const savedGroups = pgTable(
   "saved_groups",
   {
@@ -41,11 +43,19 @@ export const users = pgTable(
       .references(() => authUsers.id, { onDelete: "cascade" }),
     firstName: varchar("first_name").notNull(),
     lastName: varchar("last_name").notNull(),
+    email: varchar("email"),
     phone: varchar("phone"),
     organization: varchar("organization"),
     onboardingComplete: boolean("onboarding_complete").default(false).notNull(),
-    isAdmin: boolean("is_admin"),
-    approvalStatus: varchar("approval_status"),
+    isAdmin: boolean("is_admin").default(false).notNull(),
+    approvalStatus: varchar("approval_status", { enum: approvalStatuses })
+      .default("pending")
+      .notNull(),
+    approvalDecidedBy: uuid("approval_decided_by"),
+    approvalDecidedAt: timestamp("approval_decided_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
     recentlyAccessed: json("recently_accessed"),
   },
   table => [
@@ -53,6 +63,11 @@ export const users = pgTable(
       "users_approval_status_check",
       sql`${table.approvalStatus} IN ('pending', 'approved', 'rejected')`,
     ),
+    foreignKey({
+      columns: [table.approvalDecidedBy],
+      foreignColumns: [table.userId],
+      name: "users_approval_decided_by_fkey",
+    }).onDelete("set null"),
   ],
 ).enableRLS();
 

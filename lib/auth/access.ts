@@ -1,26 +1,25 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { approvalStatuses, users } from "@/db/schema";
 import { requireVerifiedAuthUser } from "@/lib/auth";
-
-const approvalStatuses = ["pending", "approved", "rejected"] as const;
 
 export type ApprovalStatus = (typeof approvalStatuses)[number];
 
 type AccessUser = {
   userId: string;
-  email: string;
   isAdmin: boolean;
   approvalStatus: ApprovalStatus;
 };
+
+export type InitialUserAccess = Pick<AccessUser, "isAdmin" | "approvalStatus">;
 
 function isApprovalStatus(value: string): value is ApprovalStatus {
   return approvalStatuses.includes(value as ApprovalStatus);
 }
 
-function accessValuesForEmail(email: string) {
+export function getInitialUserAccess(email: string): InitialUserAccess {
   const domain = email.trim().toLowerCase().split("@").at(-1);
 
   return domain === "zeroabuseproject.org"
@@ -28,7 +27,7 @@ function accessValuesForEmail(email: string) {
     : { isAdmin: false, approvalStatus: "pending" as const };
 }
 
-export async function ensureAccessUser(): Promise<AccessUser> {
+export async function requireAccessUser(): Promise<AccessUser> {
   const authUser = await requireVerifiedAuthUser();
   const [existingUser] = await db
     .select({
@@ -45,49 +44,14 @@ export async function ensureAccessUser(): Promise<AccessUser> {
     redirect("/onboarding");
   }
 
-  if (existingUser.approvalStatus !== null) {
-    return toAccessUser(existingUser, authUser.email);
-  }
-
-  const [initializedUser] = await db
-    .update(users)
-    .set(accessValuesForEmail(authUser.email))
-    .where(and(eq(users.userId, authUser.id), isNull(users.approvalStatus)))
-    .returning({
-      userId: users.userId,
-      isAdmin: users.isAdmin,
-      approvalStatus: users.approvalStatus,
-    });
-
-  if (initializedUser) {
-    return toAccessUser(initializedUser, authUser.email);
-  }
-
-  const [accessUser] = await db
-    .select({
-      userId: users.userId,
-      isAdmin: users.isAdmin,
-      approvalStatus: users.approvalStatus,
-    })
-    .from(users)
-    .where(eq(users.userId, authUser.id))
-    .limit(1);
-
-  if (!accessUser) {
-    redirect("/onboarding");
-  }
-
-  return toAccessUser(accessUser, authUser.email);
+  return toAccessUser(existingUser);
 }
 
-function toAccessUser(
-  user: {
-    userId: string;
-    isAdmin: boolean | null;
-    approvalStatus: string | null;
-  },
-  email: string,
-): AccessUser {
+function toAccessUser(user: {
+  userId: string;
+  isAdmin: boolean | null;
+  approvalStatus: string | null;
+}): AccessUser {
   if (
     user.isAdmin === null ||
     !user.approvalStatus ||
@@ -98,14 +62,13 @@ function toAccessUser(
 
   return {
     userId: user.userId,
-    email,
     isAdmin: user.isAdmin,
     approvalStatus: user.approvalStatus,
   };
 }
 
 export async function requireApprovedUser(): Promise<AccessUser> {
-  const user = await ensureAccessUser();
+  const user = await requireAccessUser();
 
   if (user.approvalStatus === "pending") {
     redirect("/waiting-for-approval");

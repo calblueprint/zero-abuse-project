@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { requireApprovedUser } from "@/actions/auth/access";
+import { requireApprovedUser } from "@/lib/auth/access";
 
 type ApprovedLayoutProps = {
   children: ReactNode;

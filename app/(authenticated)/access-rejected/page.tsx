@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { ensureAccessUser } from "@/actions/auth/access";
+import { requireAccessUser } from "@/lib/auth/access";
 
 export default async function AccessRejectedPage() {
-  const user = await ensureAccessUser();
+  const user = await requireAccessUser();
 
   if (user.approvalStatus === "approved") {
     redirect("/");

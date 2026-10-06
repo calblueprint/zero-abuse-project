@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
 
@@ -19,12 +20,14 @@ export async function getVerifiedAuthUser(): Promise<VerifiedAuthUser | null> {
   return { id: data.claims.sub, email };
 }
 
-export async function requireVerifiedAuthUser(): Promise<VerifiedAuthUser> {
-  const user = await getVerifiedAuthUser();
+export const requireVerifiedAuthUser = cache(
+  async (): Promise<VerifiedAuthUser> => {
+    const user = await getVerifiedAuthUser();
 
-  if (!user) {
-    redirect("/login");
-  }
+    if (!user) {
+      redirect("/login");
+    }
 
-  return user;
-}
+    return user;
+  },
+);

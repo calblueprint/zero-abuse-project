@@ -1,17 +1,30 @@
 import { eq } from "drizzle-orm";
-import { requireAdmin } from "@/actions/auth/access";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { requireAdmin } from "@/lib/auth/access";
 import { approveUser, rejectUser } from "./actions";
 
-export default async function AdminUsersPage() {
+type AdminUsersPageProps = {
+  searchParams: Promise<{ notice?: string }>;
+};
+
+const notices = {
+  "already-reviewed": "That user has already been reviewed.",
+  "invalid-user": "The selected user is invalid.",
+} as const;
+
+export default async function AdminUsersPage({
+  searchParams,
+}: AdminUsersPageProps) {
   await requireAdmin();
+  const { notice } = await searchParams;
 
   const pendingUsers = await db
     .select({
       userId: users.userId,
       firstName: users.firstName,
       lastName: users.lastName,
+      email: users.email,
       phone: users.phone,
       organization: users.organization,
     })
@@ -21,6 +34,9 @@ export default async function AdminUsersPage() {
   return (
     <main>
       <h1>Pending users</h1>
+      {notice && notice in notices && (
+        <p role="status">{notices[notice as keyof typeof notices]}</p>
+      )}
       {pendingUsers.length === 0 ? (
         <p>No pending users.</p>
       ) : (
@@ -30,6 +46,7 @@ export default async function AdminUsersPage() {
               <p>
                 {user.firstName} {user.lastName}
               </p>
+              <p>{user.email ?? "Email unavailable"}</p>
               <p>{user.organization}</p>
               <p>{user.phone}</p>
               <form action={approveUser.bind(null, user.userId)}>
