@@ -9,7 +9,7 @@ import requests
 
 from scripts.models import Article
 from scripts.scraper.crawler import crawl_site, discover_links, is_article_url, normalize_url
-from scripts.scraper.extractor import extract_page
+from scripts.scraper.extractor import ExtractionError, extract_page
 from scripts.scraper.fetcher import FetchError, UnsafeUrlError, fetch_page_result, is_valid_url
 from scripts.scraper.scraper import scrape_url
 
@@ -344,13 +344,49 @@ class ArticleContractTests(unittest.TestCase):
             "date": "2025-10-03T12:30:00Z",
             "sitename": "Example Publisher",
         })
-        with patch("scripts.scraper.extractor.trafilatura.extract", return_value=extracted):
+        with patch(
+            "scripts.scraper.extractor.trafilatura.extract",
+            return_value=extracted,
+        ) as extract:
             result = extract_page("<html>fixture</html>", ROOT + "/news/story")
 
         self.assertIsInstance(result, Article)
         self.assertEqual(result.article_text, "Original article text.")
         self.assertEqual(result.source, "Example Publisher")
         self.assertEqual(result.published_at.isoformat(), "2025-10-03T12:30:00+00:00")
+        self.assertEqual(extract.call_count, 1)
+        self.assertTrue(extract.call_args.kwargs["fast"])
+
+    def test_substantial_fallback_article_is_accepted(self):
+        fallback = json.dumps({
+            "text": "Substantial article evidence " * 50,
+            "title": "Fallback article",
+        })
+        with patch(
+            "scripts.scraper.extractor.trafilatura.extract",
+            side_effect=[None, fallback],
+        ) as extract:
+            result = extract_page("<html>fixture</html>", ROOT + "/news/story")
+
+        self.assertEqual(result.title, "Fallback article")
+        self.assertEqual([call.kwargs["fast"] for call in extract.call_args_list], [True, False])
+
+    def test_short_fallback_navigation_is_rejected(self):
+        fallback = json.dumps({"text": "Home About Contact News"})
+        with patch(
+            "scripts.scraper.extractor.trafilatura.extract",
+            side_effect=[None, fallback],
+        ):
+            with self.assertRaisesRegex(ExtractionError, "No meaningful main content"):
+                extract_page("<html>fixture</html>", ROOT + "/news/story")
+
+    def test_invalid_fallback_metadata_fails_safely(self):
+        with patch(
+            "scripts.scraper.extractor.trafilatura.extract",
+            side_effect=[None, "not-json"],
+        ):
+            with self.assertRaisesRegex(ExtractionError, "invalid metadata"):
+                extract_page("<html>fixture</html>", ROOT + "/news/story")
 
     def test_unparseable_date_does_not_discard_valid_article(self):
         extracted = json.dumps({"text": "Useful article text.", "date": "not-a-date"})

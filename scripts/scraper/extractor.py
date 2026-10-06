@@ -11,6 +11,8 @@ from scripts.models import Article
 
 from .fetcher import is_valid_url
 
+MIN_FALLBACK_WORDS = 100
+
 
 class ExtractionError(Exception):
     """Raised when the page has no useful text to extract."""
@@ -40,6 +42,35 @@ def _optional_datetime(value: Any) -> datetime | None:
         return None
 
 
+def _extract_metadata(html: str, url: str, *, fast: bool) -> dict[str, Any] | None:
+    """Run Trafilatura and validate the shape of its JSON response."""
+    extracted = trafilatura.extract(
+        html,
+        url=url,
+        output_format="json",
+        with_metadata=True,
+        include_comments=False,
+        include_tables=True,
+        favor_precision=True,
+        fast=fast,
+    )
+    if not extracted:
+        return None
+
+    try:
+        data = json.loads(extracted)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise ExtractionError("The content extractor returned invalid metadata.") from exc
+    if not isinstance(data, dict):
+        raise ExtractionError("The content extractor returned an unexpected result.")
+    return data
+
+
+def _fallback_is_substantial(text: str) -> bool:
+    """Reject fallback results that look like isolated navigation or labels."""
+    return len(text.split()) >= MIN_FALLBACK_WORDS
+
+
 def extract_page(html: str, url: str) -> Article:
     """Extract the main text and available metadata from HTML.
 
@@ -55,33 +86,15 @@ def extract_page(html: str, url: str) -> Article:
     if not isinstance(html, str) or not html.strip():
         raise ExtractionError("The fetched page is empty.")
 
-    extracted = trafilatura.extract(
-        html,
-        url=url,
-        output_format="json",
-        with_metadata=True,
-        include_comments=False,
-        include_tables=True,
-        favor_precision=True,
-        # Disable Trafilatura's fallback parser: on sparse pages it can treat
-        # a lone navigation label as the page's main content.
-        fast=True,
-    )
-    if not extracted:
-        raise ExtractionError(f"No extractable main content found at {url!r}.")
-
-    try:
-        data = json.loads(extracted)
-    except (TypeError, json.JSONDecodeError) as exc:
-        raise ExtractionError("The content extractor returned invalid metadata.") from exc
-
-    if not isinstance(data, dict):
-        raise ExtractionError("The content extractor returned an unexpected result.")
-
-    text = _optional_text(data.get("text"))
+    data = _extract_metadata(html, url, fast=True)
+    text = _optional_text(data.get("text")) if data is not None else None
     if text is None:
-        raise ExtractionError(f"No meaningful main text found at {url!r}.")
+        data = _extract_metadata(html, url, fast=False)
+        text = _optional_text(data.get("text")) if data is not None else None
+        if text is None or not _fallback_is_substantial(text):
+            raise ExtractionError(f"No meaningful main content found at {url!r}.")
 
+    assert data is not None
     return Article(
         url=url,
         article_text=text,
