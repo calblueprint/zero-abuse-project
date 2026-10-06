@@ -8,6 +8,20 @@
       "when": 1790395833116,
       "tag": "0000_needy_silverclaw",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790485255470,
+      "tag": "0001_quick_maximus",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791254957703,
+      "tag": "0002_purple_molly_hayes",
+      "breakpoints": true
     }
   ]
 }

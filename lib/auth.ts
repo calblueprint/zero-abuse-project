@@ -28,7 +28,3 @@ export async function requireVerifiedAuthUser(): Promise<VerifiedAuthUser> {
 
   return user;
 }
-
-export async function getCurrentUserId(): Promise<string> {
-  return (await requireVerifiedAuthUser()).id;
-}
