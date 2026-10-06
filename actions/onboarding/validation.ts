@@ -14,6 +14,7 @@ export type OnboardingErrors = Partial<
 export type OnboardingState = {
   fields?: OnboardingFields;
   errors?: OnboardingErrors;
+  message?: string;
 };
 
 export const onboardingFieldLimits = {

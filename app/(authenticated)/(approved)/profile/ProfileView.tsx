@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import styled from "styled-components";
 import { Button } from "@/components/Button";
 import COLORS from "@/styles/colors";
@@ -21,6 +22,8 @@ export default function ProfileView({
   phone,
   organization,
 }: ProfileViewProps) {
+  const router = useRouter();
+
   return (
     <Page>
       <Box $maxW="1000px" $mx="auto" $h="auto">
@@ -51,8 +54,11 @@ export default function ProfileView({
           <P3 $color={COLORS.gray}>
             Organization access is managed by an admin.
           </P3>
-          {/* TODO: link to the edit page */}
-          <EditButton type="button" $primaryColor={COLORS.navy}>
+          <EditButton
+            type="button"
+            $primaryColor={COLORS.navy}
+            onClick={() => router.push("/profile/edit")}
+          >
             Edit profile
           </EditButton>
         </Card>

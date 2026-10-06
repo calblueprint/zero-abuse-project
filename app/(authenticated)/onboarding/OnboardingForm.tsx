@@ -1,17 +1,30 @@
 "use client";
 
-import type { OnboardingState } from "@/actions/onboarding/validation";
+import type {
+  OnboardingFields,
+  OnboardingState,
+} from "@/actions/onboarding/validation";
 import { useActionState } from "react";
 import { submitOnboarding } from "@/actions/onboarding/actions";
 import { onboardingFieldLimits } from "@/actions/onboarding/validation";
 
-export default function OnboardingForm() {
-  const initialState: OnboardingState = {};
+type OnboardingFormProps = {
+  action?: (
+    prevState: OnboardingState,
+    formData: FormData,
+  ) => Promise<OnboardingState>;
+  initialFields?: OnboardingFields;
+  submitLabel?: string;
+};
 
-  const [state, formAction, isPending] = useActionState(
-    submitOnboarding,
-    initialState,
-  );
+export default function OnboardingForm({
+  action = submitOnboarding,
+  initialFields,
+  submitLabel = "Continue",
+}: OnboardingFormProps) {
+  const initialState: OnboardingState = { fields: initialFields };
+
+  const [state, formAction, isPending] = useActionState(action, initialState);
 
   return (
     <form action={formAction} noValidate>
@@ -90,8 +103,9 @@ export default function OnboardingForm() {
         )}
       </div>
       {state.errors?.form && <p role="alert">{state.errors.form}</p>}
+      {state.message && <p role="status">{state.message}</p>}
       <button type="submit" disabled={isPending}>
-        {isPending ? "Saving..." : "Continue"}
+        {isPending ? "Saving..." : submitLabel}
       </button>
     </form>
   );

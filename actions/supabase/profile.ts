@@ -40,3 +40,18 @@ export async function completeOnboarding(
     })
     .onConflictDoUpdate({ target: users.userId, set: profileValues });
 }
+
+export async function updateUserProfile(
+  userId: string,
+  profile: OnboardingFields,
+) {
+  await db
+    .update(users)
+    .set({
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      phone: profile.phone,
+      organization: profile.organization,
+    })
+    .where(eq(users.userId, userId));
+}
