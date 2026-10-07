@@ -3,7 +3,6 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
-import { PASSWORD_RECOVERY_COOKIE } from "@/lib/auth/recovery";
 
 function formValue(formData: FormData, name: string) {
   return String(formData.get(name) ?? "");
@@ -150,7 +149,7 @@ export async function requestPasswordReset(formData: FormData) {
     redirectWithCode("/reset-password", "error", "reset-failed");
   }
 
-  (await cookies()).set(PASSWORD_RECOVERY_COOKIE, "true", {
+  (await cookies()).set("password-recovery-requested", "true", {
     httpOnly: true,
     maxAge: 60 * 60,
     path: "/",

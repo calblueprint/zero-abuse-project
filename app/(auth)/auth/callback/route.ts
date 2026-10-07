@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
-import { PASSWORD_RECOVERY_COOKIE } from "@/lib/auth/recovery";
 
 function safeNextPath(next: string | null) {
   return next?.startsWith("/") && !next.startsWith("//") ? next : "/";
@@ -9,7 +8,7 @@ function safeNextPath(next: string | null) {
 
 function redirectAfterRecovery(url: URL) {
   const response = NextResponse.redirect(url);
-  response.cookies.delete(PASSWORD_RECOVERY_COOKIE);
+  response.cookies.delete("password-recovery-requested");
   return response;
 }
 
@@ -39,7 +38,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     const isPasswordRecovery =
-      request.cookies.get(PASSWORD_RECOVERY_COOKIE)?.value === "true";
+      request.cookies.get("password-recovery-requested")?.value === "true";
 
     if (!error) {
       const nextPath = isPasswordRecovery
