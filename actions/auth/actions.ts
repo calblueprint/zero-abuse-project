@@ -1,8 +1,9 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
+import { PASSWORD_RECOVERY_COOKIE } from "@/lib/auth/recovery";
 
 function formValue(formData: FormData, name: string) {
   return String(formData.get(name) ?? "");
@@ -142,12 +143,20 @@ export async function requestPasswordReset(formData: FormData) {
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${await siteUrl()}/auth/callback?next=/update-password`,
+    redirectTo: `${await siteUrl()}/auth/callback`,
   });
 
   if (error) {
     redirectWithCode("/reset-password", "error", "reset-failed");
   }
+
+  (await cookies()).set(PASSWORD_RECOVERY_COOKIE, "true", {
+    httpOnly: true,
+    maxAge: 60 * 60,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
 
   redirectWithCode("/reset-password", "message", "email-sent");
 }

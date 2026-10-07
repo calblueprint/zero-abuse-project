@@ -14,6 +14,8 @@ const errorMessages: Record<string, string> = {
   "invalid-auth-link": "The authentication link is invalid or has expired.",
   "invalid-credentials": "The email or password is incorrect.",
   "invalid-email": "Enter a valid email address.",
+  "invalid-reset-link":
+    "The password reset link is invalid or has expired. Request a new one.",
   "missing-password": "Enter your password.",
   "signin-failed": "Unable to start your session. Please try again.",
 };
