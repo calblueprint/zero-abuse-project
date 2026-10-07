@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { submitProfileUpdate } from "@/actions/profile/actions";
 import { getUserProfile } from "@/actions/supabase/profile";
-import ProfileForm from "@/components/profile/ProfileForm";
+import OnboardingForm from "@/app/(authenticated)/onboarding/OnboardingForm";
 import { getPendingAuthEmail, requireVerifiedAuthUser } from "@/lib/auth";
 
 export default async function EditProfilePage() {
@@ -24,7 +24,7 @@ export default async function EditProfilePage() {
           verification. Your current email stays active until you confirm it.
         </p>
       )}
-      <ProfileForm
+      <OnboardingForm
         action={submitProfileUpdate}
         initialFields={{
           firstName: profile.firstName,
@@ -33,6 +33,8 @@ export default async function EditProfilePage() {
           organization: profile.organization ?? "",
           email: user.email,
         }}
+        submitLabel="Save changes"
+        showEmail
       />
     </main>
   );

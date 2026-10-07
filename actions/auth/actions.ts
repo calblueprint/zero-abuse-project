@@ -1,9 +1,8 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
-import { getSiteUrl } from "@/lib/site-url";
 
 function formValue(formData: FormData, name: string) {
   return String(formData.get(name) ?? "");
@@ -20,6 +19,16 @@ function redirectWithCode(
 ) {
   const searchParams = new URLSearchParams({ [key]: code });
   redirect(`${path}?${searchParams}`);
+}
+
+async function siteUrl() {
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  return (await headers()).get("origin") ?? "http://localhost:3000";
 }
 
 export async function signIn(formData: FormData) {
@@ -77,7 +86,7 @@ export async function signUp(formData: FormData) {
     email,
     password,
     options: {
-      emailRedirectTo: `${await getSiteUrl()}/auth/callback`,
+      emailRedirectTo: `${await siteUrl()}/auth/callback`,
     },
   });
 
@@ -113,7 +122,7 @@ export async function resendVerification(formData: FormData) {
     type: "signup",
     email,
     options: {
-      emailRedirectTo: `${await getSiteUrl()}/auth/callback`,
+      emailRedirectTo: `${await siteUrl()}/auth/callback`,
     },
   });
   const searchParams = new URLSearchParams({
@@ -133,7 +142,7 @@ export async function requestPasswordReset(formData: FormData) {
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${await getSiteUrl()}/auth/callback`,
+    redirectTo: `${await siteUrl()}/auth/callback`,
   });
 
   if (error) {

@@ -1,22 +1,45 @@
 "use server";
 
-import type { ProfileState } from "@/actions/profile/validation";
+import type { OnboardingState } from "@/actions/onboarding/validation";
 import { revalidatePath } from "next/cache";
-import { parseProfileFormData } from "@/actions/profile/validation";
+import { headers } from "next/headers";
+import {
+  parseOnboardingFormData,
+  validateEmail,
+} from "@/actions/onboarding/validation";
 import { updateUserProfile } from "@/actions/supabase/profile";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
 import { requireApprovedUser } from "@/lib/auth/access";
-import { getSiteUrl } from "@/lib/site-url";
+
+async function siteUrl() {
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  return (await headers()).get("origin") ?? "http://localhost:3000";
+}
 
 export async function submitProfileUpdate(
-  _prevState: ProfileState,
+  _prevState: OnboardingState,
   formData: FormData,
-): Promise<ProfileState> {
+): Promise<OnboardingState> {
   const user = await requireApprovedUser();
-  const result = parseProfileFormData(formData);
+  const result = parseOnboardingFormData(formData);
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  const emailError = validateEmail(email);
 
-  if (!result.success) {
-    return { fields: result.fields, errors: result.errors };
+  if (!result.success || emailError) {
+    return {
+      fields: { ...result.fields, email },
+      errors: {
+        ...(!result.success && result.errors),
+        ...(emailError && { email: emailError }),
+      },
+    };
   }
 
   try {
@@ -24,7 +47,7 @@ export async function submitProfileUpdate(
   } catch (error) {
     console.error("Profile update failed:", error);
     return {
-      fields: result.fields,
+      fields: { ...result.fields, email },
       errors: { form: "Something went wrong. Please try again." },
     };
   }
@@ -32,22 +55,25 @@ export async function submitProfileUpdate(
   revalidatePath("/profile");
 
   const currentEmail = user.email.trim().toLowerCase();
-  if (result.data.email === currentEmail) {
-    return { fields: result.fields, message: "Profile saved." };
+  if (email === currentEmail) {
+    return {
+      fields: { ...result.fields, email },
+      message: "Profile saved.",
+    };
   }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.updateUser(
-    { email: result.data.email },
+    { email },
     {
-      emailRedirectTo: `${await getSiteUrl()}/auth/callback?next=/profile`,
+      emailRedirectTo: `${await siteUrl()}/auth/callback?next=/profile`,
     },
   );
 
   if (error) {
     console.error("Email change request failed:", error);
     return {
-      fields: result.fields,
+      fields: { ...result.fields, email },
       errors: { email: "We couldn't start your email change. Try again." },
       message: "Your other changes were saved.",
     };
