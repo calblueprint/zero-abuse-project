@@ -7,6 +7,7 @@ import { parseOnboardingFormData } from "@/actions/onboarding/validation";
 import { updateUserProfile } from "@/actions/supabase/profile";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
 import { requireApprovedUser } from "@/lib/auth/access";
+import { getAuthEmailState } from "@/lib/auth/user";
 import { validateEmail } from "@/lib/validation/email";
 
 async function siteUrl() {
@@ -52,7 +53,7 @@ export async function submitProfileUpdate(
 
   revalidatePath("/profile");
 
-  const currentEmail = user.email.trim().toLowerCase();
+  const { email: currentEmail } = await getAuthEmailState();
   if (email === currentEmail) {
     return {
       fields: { ...result.fields, email },
@@ -77,7 +78,7 @@ export async function submitProfileUpdate(
     };
   }
 
-  (await cookies()).set("email-change-requested", "true", {
+  (await cookies()).set("email-change-requested", email, {
     httpOnly: true,
     maxAge: 60 * 60,
     path: "/",

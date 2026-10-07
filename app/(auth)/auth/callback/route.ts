@@ -22,7 +22,7 @@ function redirectAfterEmailChange(url: URL, completed: boolean) {
   return response;
 }
 
-async function continueEmailChange(requestUrl: URL) {
+async function continueEmailChange(requestUrl: URL, requestedEmail: string) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -33,13 +33,16 @@ async function continueEmailChange(requestUrl: URL) {
     return null;
   }
 
-  const completed = !user.new_email;
+  const completed = user.email?.trim().toLowerCase() === requestedEmail;
 
   if (completed) {
     const { error: refreshError } = await supabase.auth.refreshSession();
 
     if (refreshError) {
-      return null;
+      console.error(
+        "Unable to refresh session after email change:",
+        refreshError,
+      );
     }
   }
 
@@ -51,8 +54,10 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get("code");
   const tokenHash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type");
-  const isEmailChange =
-    request.cookies.get("email-change-requested")?.value === "true";
+  const requestedEmail =
+    request.cookies.get("email-change-requested")?.value.trim().toLowerCase() ??
+    null;
+  const isEmailChange = Boolean(requestedEmail);
 
   if (tokenHash && type === "recovery") {
     const supabase = await createSupabaseServerClient();
@@ -89,7 +94,10 @@ export async function GET(request: NextRequest) {
       }
 
       if (isEmailChange) {
-        return redirectAfterEmailChange(redirectUrl, !data.user.new_email);
+        return redirectAfterEmailChange(
+          redirectUrl,
+          data.user.email?.trim().toLowerCase() === requestedEmail,
+        );
       }
 
       return NextResponse.redirect(redirectUrl);
@@ -102,8 +110,8 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  if (isEmailChange) {
-    const response = await continueEmailChange(requestUrl);
+  if (requestedEmail) {
+    const response = await continueEmailChange(requestUrl, requestedEmail);
 
     if (response) {
       return response;
