@@ -2,7 +2,7 @@
 
 import type { OnboardingState } from "@/actions/onboarding/validation";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { parseOnboardingFormData } from "@/actions/onboarding/validation";
 import { updateUserProfile } from "@/actions/supabase/profile";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
@@ -64,7 +64,7 @@ export async function submitProfileUpdate(
   const { error } = await supabase.auth.updateUser(
     { email },
     {
-      emailRedirectTo: `${await siteUrl()}/auth/callback?next=/profile`,
+      emailRedirectTo: `${await siteUrl()}/auth/callback`,
     },
   );
 
@@ -76,6 +76,14 @@ export async function submitProfileUpdate(
       message: "Your other changes were saved.",
     };
   }
+
+  (await cookies()).set("email-change-requested", "true", {
+    httpOnly: true,
+    maxAge: 60 * 60,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
 
   return {
     fields: { ...result.fields, email: currentEmail },
