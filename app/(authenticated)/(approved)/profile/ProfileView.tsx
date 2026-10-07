@@ -1,14 +1,11 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import styled from "styled-components";
-import { Button } from "@/components/Button";
 import COLORS from "@/styles/colors";
 import { Box } from "@/styles/containers";
 import { H1, P1, P3 } from "@/styles/text";
 
 interface ProfileViewProps {
-  accessLevel: string;
+  accessLevel: "Admin" | "Member";
   name: string;
   email: string;
   phone: string;
@@ -24,8 +21,6 @@ export default function ProfileView({
   organization,
   pendingEmail,
 }: ProfileViewProps) {
-  const router = useRouter();
-
   return (
     <Page>
       <Box $maxW="1000px" $mx="auto" $h="auto">
@@ -61,16 +56,7 @@ export default function ProfileView({
             <Label>Organization</Label>
             <Value>{organization}</Value>
           </Row>
-          <P3 $color={COLORS.gray}>
-            Organization access is managed by an admin.
-          </P3>
-          <EditButton
-            type="button"
-            $primaryColor={COLORS.navy}
-            onClick={() => router.push("/profile/edit")}
-          >
-            Edit profile
-          </EditButton>
+          <EditLink href="/profile/edit">Edit profile</EditLink>
         </Card>
       </Box>
     </Page>
@@ -121,14 +107,23 @@ const Value = styled(P1)`
   overflow-wrap: anywhere;
 `;
 
-const EditButton = styled(Button)`
-  display: block;
+const EditLink = styled(Link)`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   max-width: 436px;
   height: 56px;
   margin-top: 8px;
   border-radius: 8px;
+  background: ${COLORS.navy};
+  color: ${COLORS.surface};
   font-size: 1rem;
   font-weight: 400;
-  color: ${COLORS.surface};
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid ${COLORS.navy};
+    outline-offset: 2px;
+  }
 `;

@@ -1,17 +1,25 @@
 "use client";
 
-import type { OnboardingState } from "@/actions/onboarding/validation";
+import type { ProfileFields, ProfileState } from "@/actions/profile/validation";
 import { useActionState } from "react";
-import { submitOnboarding } from "@/actions/onboarding/actions";
 import { onboardingFieldLimits } from "@/actions/onboarding/validation";
+import { profileFieldLimits } from "@/actions/profile/validation";
 
-export default function OnboardingForm() {
-  const initialState: OnboardingState = {};
+type ProfileFormProps = {
+  action: (
+    prevState: ProfileState,
+    formData: FormData,
+  ) => Promise<ProfileState>;
+  initialFields: ProfileFields;
+};
 
-  const [state, formAction, isPending] = useActionState(
-    submitOnboarding,
-    initialState,
-  );
+export default function ProfileForm({
+  action,
+  initialFields,
+}: ProfileFormProps) {
+  const [state, formAction, isPending] = useActionState(action, {
+    fields: initialFields,
+  });
 
   return (
     <form action={formAction} noValidate>
@@ -22,7 +30,9 @@ export default function OnboardingForm() {
           name="firstName"
           autoComplete="given-name"
           defaultValue={state.fields?.firstName}
-          aria-describedby="firstName-error"
+          aria-describedby={
+            state.errors?.firstName ? "firstName-error" : undefined
+          }
           aria-invalid={Boolean(state.errors?.firstName)}
           maxLength={onboardingFieldLimits.firstName}
           required
@@ -40,7 +50,9 @@ export default function OnboardingForm() {
           name="lastName"
           autoComplete="family-name"
           defaultValue={state.fields?.lastName}
-          aria-describedby="lastName-error"
+          aria-describedby={
+            state.errors?.lastName ? "lastName-error" : undefined
+          }
           aria-invalid={Boolean(state.errors?.lastName)}
           maxLength={onboardingFieldLimits.lastName}
           required
@@ -59,7 +71,7 @@ export default function OnboardingForm() {
           type="tel"
           autoComplete="tel"
           defaultValue={state.fields?.phone}
-          aria-describedby="phone-error"
+          aria-describedby={state.errors?.phone ? "phone-error" : undefined}
           aria-invalid={Boolean(state.errors?.phone)}
           inputMode="tel"
           maxLength={onboardingFieldLimits.phone}
@@ -78,7 +90,9 @@ export default function OnboardingForm() {
           name="organization"
           autoComplete="organization"
           defaultValue={state.fields?.organization}
-          aria-describedby="organization-error"
+          aria-describedby={
+            state.errors?.organization ? "organization-error" : undefined
+          }
           aria-invalid={Boolean(state.errors?.organization)}
           maxLength={onboardingFieldLimits.organization}
           required
@@ -89,9 +103,29 @@ export default function OnboardingForm() {
           </p>
         )}
       </div>
+      <div>
+        <label htmlFor="email">Email</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          defaultValue={state.fields?.email}
+          aria-describedby={state.errors?.email ? "email-error" : undefined}
+          aria-invalid={Boolean(state.errors?.email)}
+          maxLength={profileFieldLimits.email}
+          required
+        />
+        {state.errors?.email && (
+          <p id="email-error" role="alert">
+            {state.errors.email}
+          </p>
+        )}
+      </div>
       {state.errors?.form && <p role="alert">{state.errors.form}</p>}
+      {state.message && <p role="status">{state.message}</p>}
       <button type="submit" disabled={isPending}>
-        {isPending ? "Saving..." : "Continue"}
+        {isPending ? "Saving..." : "Save changes"}
       </button>
     </form>
   );

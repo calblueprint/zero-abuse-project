@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
+import { submitProfileUpdate } from "@/actions/profile/actions";
 import { getUserProfile } from "@/actions/supabase/profile";
-import { submitProfileUpdate } from "@/app/(authenticated)/(approved)/profile/edit/actions";
-import OnboardingForm from "@/app/(authenticated)/onboarding/OnboardingForm";
-import { getAuthEmails, requireVerifiedAuthUser } from "@/lib/auth";
+import ProfileForm from "@/components/profile/ProfileForm";
+import { getPendingAuthEmail, requireVerifiedAuthUser } from "@/lib/auth";
 
 export default async function EditProfilePage() {
   const user = await requireVerifiedAuthUser();
-  const [profile, { email, pendingEmail }] = await Promise.all([
+  const [profile, pendingEmail] = await Promise.all([
     getUserProfile(user.id),
-    getAuthEmails(),
+    getPendingAuthEmail(),
   ]);
 
   if (!profile) {
@@ -24,17 +24,15 @@ export default async function EditProfilePage() {
           verification. Your current email stays active until you confirm it.
         </p>
       )}
-      <OnboardingForm
+      <ProfileForm
         action={submitProfileUpdate}
         initialFields={{
           firstName: profile.firstName,
           lastName: profile.lastName,
           phone: profile.phone ?? "",
           organization: profile.organization ?? "",
-          email: email ?? user.email,
+          email: user.email,
         }}
-        submitLabel="Save changes"
-        showEmail
       />
     </main>
   );

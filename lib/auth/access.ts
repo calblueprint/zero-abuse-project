@@ -9,6 +9,7 @@ export type ApprovalStatus = (typeof approvalStatuses)[number];
 
 type AccessUser = {
   userId: string;
+  email: string;
   isAdmin: boolean;
   approvalStatus: ApprovalStatus;
 };
@@ -44,14 +45,17 @@ export async function requireAccessUser(): Promise<AccessUser> {
     redirect("/onboarding");
   }
 
-  return toAccessUser(existingUser);
+  return toAccessUser(existingUser, authUser.email);
 }
 
-function toAccessUser(user: {
-  userId: string;
-  isAdmin: boolean | null;
-  approvalStatus: string | null;
-}): AccessUser {
+function toAccessUser(
+  user: {
+    userId: string;
+    isAdmin: boolean | null;
+    approvalStatus: string | null;
+  },
+  email: string,
+): AccessUser {
   if (
     user.isAdmin === null ||
     !user.approvalStatus ||
@@ -62,6 +66,7 @@ function toAccessUser(user: {
 
   return {
     userId: user.userId,
+    email,
     isAdmin: user.isAdmin,
     approvalStatus: user.approvalStatus,
   };

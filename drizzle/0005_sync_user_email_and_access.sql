@@ -34,7 +34,6 @@ BEGIN
       ELSE approval_decided_by
     END,
     approval_decided_at = CASE
-      WHEN is_zap AND approval_status = 'approved' THEN approval_decided_at
       WHEN is_zap THEN now()
       WHEN was_zap THEN NULL
       ELSE approval_decided_at
