@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { approvalStatuses, users } from "@/db/schema";
-import { requireVerifiedAuthUser } from "@/lib/auth";
+import { requireVerifiedAuthUser } from "@/lib/auth/user";
 
 export type ApprovalStatus = (typeof approvalStatuses)[number];
 

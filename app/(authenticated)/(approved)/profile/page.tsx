@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUserProfile } from "@/actions/supabase/profile";
 import ProfileView from "@/app/(authenticated)/(approved)/profile/ProfileView";
-import { getPendingAuthEmail, requireVerifiedAuthUser } from "@/lib/auth";
+import { getPendingAuthEmail, requireVerifiedAuthUser } from "@/lib/auth/user";
 
 export default async function ProfilePage() {
   const user = await requireVerifiedAuthUser();

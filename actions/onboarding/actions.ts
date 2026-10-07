@@ -4,8 +4,8 @@ import type { OnboardingState } from "@/actions/onboarding/validation";
 import { redirect } from "next/navigation";
 import { parseOnboardingFormData } from "@/actions/onboarding/validation";
 import { completeOnboarding } from "@/actions/supabase/profile";
-import { requireVerifiedAuthUser } from "@/lib/auth";
 import { getInitialUserAccess } from "@/lib/auth/access";
+import { requireVerifiedAuthUser } from "@/lib/auth/user";
 
 export async function submitOnboarding(
   _prevState: OnboardingState,

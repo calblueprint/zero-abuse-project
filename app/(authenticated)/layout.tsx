@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { requireVerifiedAuthUser } from "@/lib/auth";
+import { requireVerifiedAuthUser } from "@/lib/auth/user";
 
 type AuthenticatedLayoutProps = {
   children: ReactNode;

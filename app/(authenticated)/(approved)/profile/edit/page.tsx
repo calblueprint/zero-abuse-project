@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { submitProfileUpdate } from "@/actions/profile/actions";
 import { getUserProfile } from "@/actions/supabase/profile";
 import OnboardingForm from "@/app/(authenticated)/onboarding/OnboardingForm";
-import { getPendingAuthEmail, requireVerifiedAuthUser } from "@/lib/auth";
+import { getPendingAuthEmail, requireVerifiedAuthUser } from "@/lib/auth/user";
 
 export default async function EditProfilePage() {
   const user = await requireVerifiedAuthUser();
