@@ -9,7 +9,7 @@
 ### Screenshots
 [//]: # "Required for frontend changes, otherwise optional but strongly recommended. Add screenshots of expected behavior - GIFs if you're feeling fancy! Use the provided image template. Drag the desired image into the PR, then copy the link into the placeholder."
 
-[image placeholder]: <img src="place image link here!!!" height="240" width="540">
+[image placeholder]: <img src="place image link here!!!" width="540">
 
 
 
