@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUserProfile } from "@/actions/supabase/profile";
 import OnboardingForm from "@/app/(authenticated)/onboarding/OnboardingForm";
-import { requireVerifiedAuthUser } from "@/lib/auth";
+import { requireVerifiedAuthUser } from "@/lib/auth/user";
 
 export default async function OnboardingPage() {
   const user = await requireVerifiedAuthUser();

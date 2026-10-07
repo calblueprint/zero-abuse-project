@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signIn } from "@/actions/auth/actions";
-import { getVerifiedAuthUser } from "@/lib/auth";
+import { getVerifiedAuthUser } from "@/lib/auth/user";
 
 type LoginPageProps = {
   searchParams: Promise<{ error?: string; message?: string }>;

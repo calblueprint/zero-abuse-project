@@ -1,5 +1,5 @@
 import { updatePassword } from "@/actions/auth/actions";
-import { requireVerifiedAuthUser } from "@/lib/auth";
+import { requireVerifiedAuthUser } from "@/lib/auth/user";
 
 type UpdatePasswordPageProps = {
   searchParams: Promise<{ error?: string }>;

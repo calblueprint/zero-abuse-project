@@ -12,8 +12,9 @@ export type OnboardingErrors = Partial<
 };
 
 export type OnboardingState = {
-  fields?: OnboardingFields;
-  errors?: OnboardingErrors;
+  fields?: OnboardingFields & { email?: string };
+  errors?: OnboardingErrors & { email?: string };
+  message?: string;
 };
 
 export const onboardingFieldLimits = {

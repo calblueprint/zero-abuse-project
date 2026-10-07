@@ -3,13 +3,10 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
+import { validateEmail } from "@/lib/validation/email";
 
 function formValue(formData: FormData, name: string) {
   return String(formData.get(name) ?? "");
-}
-
-function validEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function redirectWithCode(
@@ -35,7 +32,7 @@ export async function signIn(formData: FormData) {
   const email = formValue(formData, "email").trim().toLowerCase();
   const password = formValue(formData, "password");
 
-  if (!validEmail(email)) {
+  if (validateEmail(email)) {
     redirectWithCode("/login", "error", "invalid-email");
   }
 
@@ -69,7 +66,7 @@ export async function signUp(formData: FormData) {
   const password = formValue(formData, "password");
   const confirmPassword = formValue(formData, "confirmPassword");
 
-  if (!validEmail(email)) {
+  if (validateEmail(email)) {
     redirectWithCode("/sign-up", "error", "invalid-email");
   }
 
@@ -113,7 +110,7 @@ export async function signUp(formData: FormData) {
 export async function resendVerification(formData: FormData) {
   const email = formValue(formData, "email").trim().toLowerCase();
 
-  if (!validEmail(email)) {
+  if (validateEmail(email)) {
     redirect("/sign-up");
   }
 
@@ -136,7 +133,7 @@ export async function resendVerification(formData: FormData) {
 export async function requestPasswordReset(formData: FormData) {
   const email = formValue(formData, "email").trim().toLowerCase();
 
-  if (!validEmail(email)) {
+  if (validateEmail(email)) {
     redirectWithCode("/reset-password", "error", "invalid-email");
   }
 

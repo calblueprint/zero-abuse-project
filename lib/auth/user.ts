@@ -31,3 +31,24 @@ export const requireVerifiedAuthUser = cache(
     return user;
   },
 );
+
+export type AuthEmailState = {
+  email: string;
+  pendingEmail: string | null;
+};
+
+export async function getAuthEmailState(): Promise<AuthEmailState> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.getUser();
+
+  if (error || !data.user?.email) {
+    throw new Error("Unable to load the authenticated user's email state", {
+      cause: error,
+    });
+  }
+
+  return {
+    email: data.user.email.trim().toLowerCase(),
+    pendingEmail: data.user.new_email?.trim().toLowerCase() ?? null,
+  };
+}
