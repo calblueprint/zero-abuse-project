@@ -1,6 +1,7 @@
 // Keep these values aligned with the extraction contract in
-// scripts/intelligence/enums.py. Geography is intentionally excluded because
-// the extractor returns structured country and jurisdiction values, not an enum.
+// scripts/intelligence/enums.py. Geography is excluded because the extractor
+// returns structured country and jurisdiction values. ZAP relevance is a
+// project-specific database field rather than an extraction enum.
 const INTELLIGENCE_TAXONOMY = {
   exploitationTypes: [
     "financial sextortion",

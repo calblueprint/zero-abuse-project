@@ -72,6 +72,12 @@ export default function IntelligenceLibrary({
       selected: filters.intelTypes,
       options: options.intelTypes,
     },
+    {
+      label: "ZAP relevance",
+      name: "zapRelevance",
+      selected: filters.zapRelevances,
+      options: options.zapRelevances,
+    },
   ];
 
   return (

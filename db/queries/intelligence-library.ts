@@ -31,6 +31,7 @@ export type IntelligenceLibraryItem = {
   offenderTactic: string | null;
   geography: string | null;
   intelType: string | null;
+  zapRelevance: string | null;
 };
 
 export type IntelligenceLibraryFilterOptions = {
@@ -41,6 +42,7 @@ export type IntelligenceLibraryFilterOptions = {
   offenderTactics: string[];
   geographies: string[];
   intelTypes: string[];
+  zapRelevances: string[];
   sources: Array<{ sourceId: string; name: string }>;
 };
 
@@ -50,8 +52,9 @@ const beginningOfFollowingUtcDay = (date: Date) => {
   return followingDay;
 };
 
-const getGeographyValues = async () => {
-  const column = itelItems.geography;
+const getDynamicFilterValues = async (
+  column: typeof itelItems.geography | typeof itelItems.zapRelevance,
+) => {
   const rows = await db
     .selectDistinct({ value: column })
     .from(itelItems)
@@ -89,6 +92,9 @@ export const getIntelligenceLibraryItems = async (
     filters.intelTypes.length
       ? inArray(itelItems.intelType, filters.intelTypes)
       : undefined,
+    filters.zapRelevances.length
+      ? inArray(itelItems.zapRelevance, filters.zapRelevances)
+      : undefined,
     filters.sourceIds.length
       ? inArray(itelItems.sourceId, filters.sourceIds)
       : undefined,
@@ -119,6 +125,7 @@ export const getIntelligenceLibraryItems = async (
       offenderTactic: itelItems.offenderTactic,
       geography: itelItems.geography,
       intelType: itelItems.intelType,
+      zapRelevance: itelItems.zapRelevance,
     })
     .from(itelItems)
     .innerJoin(sources, eq(itelItems.sourceId, sources.sourceId))
@@ -128,7 +135,8 @@ export const getIntelligenceLibraryItems = async (
 
 export const getIntelligenceLibraryFilterOptions =
   async (): Promise<IntelligenceLibraryFilterOptions> => {
-    const geographies = await getGeographyValues();
+    const geographies = await getDynamicFilterValues(itelItems.geography);
+    const zapRelevances = await getDynamicFilterValues(itelItems.zapRelevance);
     const sourceRows = await db
       .selectDistinct({ sourceId: sources.sourceId, name: sources.name })
       .from(sources)
@@ -143,6 +151,7 @@ export const getIntelligenceLibraryFilterOptions =
       offenderTactics: [...INTELLIGENCE_TAXONOMY.offenderTactics],
       geographies,
       intelTypes: [...INTELLIGENCE_TAXONOMY.intelTypes],
+      zapRelevances,
       sources: sourceRows,
     };
   };

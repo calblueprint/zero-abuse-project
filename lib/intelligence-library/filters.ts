@@ -8,6 +8,7 @@ export type IntelligenceFilters = {
   offenderTactics: string[];
   geographies: string[];
   intelTypes: string[];
+  zapRelevances: string[];
   sourceIds: string[];
   hasInvalidSourceIds: boolean;
   publishedFrom?: Date;
@@ -98,6 +99,7 @@ export const parseIntelligenceFilters = (
       "intelType",
       INTELLIGENCE_TAXONOMY.intelTypes,
     ),
+    zapRelevances: getValues(params, "zapRelevance"),
     sourceIds,
     hasInvalidSourceIds: sourceIds.length !== requestedSourceIds.length,
     publishedFrom,
