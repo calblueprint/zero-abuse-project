@@ -1,29 +1,21 @@
-import { CSSProperties } from "react";
-import Image from "next/image";
-import BPLogo from "@/assets/images/bp-logo.png";
+import type { IntelligenceFilterParams } from "@/lib/intelligence-library/filters";
+import IntelligenceLibrary from "@/components/intelligence-library/IntelligenceLibrary";
+import {
+  getIntelligenceLibraryFilterOptions,
+  getIntelligenceLibraryItems,
+} from "@/db/queries/intelligence-library";
+import { parseIntelligenceFilters } from "@/lib/intelligence-library/filters";
 
-export default function Home() {
+type HomeProps = {
+  searchParams: Promise<IntelligenceFilterParams>;
+};
+
+export default async function Home({ searchParams }: HomeProps) {
+  const filters = parseIntelligenceFilters(await searchParams);
+  const items = await getIntelligenceLibraryItems(filters);
+  const options = await getIntelligenceLibraryFilterOptions();
+
   return (
-    <main style={mainStyles}>
-      <Image style={imageStyles} src={BPLogo} alt="Blueprint Logo" />
-      <p>Open up app/page.tsx to get started!</p>
-    </main>
+    <IntelligenceLibrary filters={filters} items={items} options={options} />
   );
 }
-
-// CSS styles
-
-const mainStyles: CSSProperties = {
-  width: "100%",
-  height: "100vh",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
-const imageStyles: CSSProperties = {
-  width: "80px",
-  height: "80px",
-  marginBottom: "0.5rem",
-};
