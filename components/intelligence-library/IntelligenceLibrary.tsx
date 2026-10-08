@@ -3,7 +3,7 @@ import type {
   IntelligenceLibraryItem,
 } from "@/db/queries/intelligence-library";
 import type { IntelligenceFilters } from "@/lib/intelligence-library/filters";
-import ResetFiltersButton from "@/components/ResetFiltersButton";
+import ResetFiltersButton from "@/components/intelligence-library/ResetFiltersButton";
 
 type FilterDefinition = {
   label: string;
@@ -71,12 +71,6 @@ export default function IntelligenceLibrary({
       name: "intelType",
       selected: filters.intelTypes,
       options: options.intelTypes,
-    },
-    {
-      label: "ZAP relevance",
-      name: "zapRelevance",
-      selected: filters.zapRelevances,
-      options: options.zapRelevances,
     },
   ];
 

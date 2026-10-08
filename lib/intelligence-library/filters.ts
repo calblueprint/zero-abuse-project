@@ -1,3 +1,5 @@
+import INTELLIGENCE_TAXONOMY from "@/lib/intelligence-library/taxonomy";
+
 export type IntelligenceFilters = {
   exploitationTypes: string[];
   platforms: string[];
@@ -6,8 +8,8 @@ export type IntelligenceFilters = {
   offenderTactics: string[];
   geographies: string[];
   intelTypes: string[];
-  zapRelevances: string[];
   sourceIds: string[];
+  hasInvalidSourceIds: boolean;
   publishedFrom?: Date;
   publishedTo?: Date;
 };
@@ -20,7 +22,19 @@ const getValues = (params: IntelligenceFilterParams, key: string) => {
   const value = params[key];
   const values = Array.isArray(value) ? value : value ? [value] : [];
 
-  return values.map(item => item.trim()).filter(Boolean);
+  return [...new Set(values.map(item => item.trim()).filter(Boolean))];
+};
+
+const isUuid = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+const getAllowedValues = (
+  params: IntelligenceFilterParams,
+  key: string,
+  allowedValues: readonly string[],
+) => {
+  const allowed = new Set(allowedValues);
+  return getValues(params, key).filter(value => allowed.has(value));
 };
 
 const parseDate = (value: string | undefined) => {
@@ -49,17 +63,43 @@ export const parseIntelligenceFilters = (
 ): IntelligenceFilters => {
   const publishedFrom = parseDate(getValues(params, "publishedFrom")[0]);
   const publishedTo = parseDate(getValues(params, "publishedTo")[0]);
+  const requestedSourceIds = getValues(params, "sourceId");
+  const sourceIds = requestedSourceIds.filter(isUuid);
 
   return {
-    exploitationTypes: getValues(params, "exploitationType"),
-    platforms: getValues(params, "platform"),
-    technologies: getValues(params, "technology"),
-    affectedPopulations: getValues(params, "affectedPopulation"),
-    offenderTactics: getValues(params, "offenderTactic"),
+    exploitationTypes: getAllowedValues(
+      params,
+      "exploitationType",
+      INTELLIGENCE_TAXONOMY.exploitationTypes,
+    ),
+    platforms: getAllowedValues(
+      params,
+      "platform",
+      INTELLIGENCE_TAXONOMY.platforms,
+    ),
+    technologies: getAllowedValues(
+      params,
+      "technology",
+      INTELLIGENCE_TAXONOMY.technologies,
+    ),
+    affectedPopulations: getAllowedValues(
+      params,
+      "affectedPopulation",
+      INTELLIGENCE_TAXONOMY.affectedPopulations,
+    ),
+    offenderTactics: getAllowedValues(
+      params,
+      "offenderTactic",
+      INTELLIGENCE_TAXONOMY.offenderTactics,
+    ),
     geographies: getValues(params, "geography"),
-    intelTypes: getValues(params, "intelType"),
-    zapRelevances: getValues(params, "zapRelevance"),
-    sourceIds: getValues(params, "sourceId"),
+    intelTypes: getAllowedValues(
+      params,
+      "intelType",
+      INTELLIGENCE_TAXONOMY.intelTypes,
+    ),
+    sourceIds,
+    hasInvalidSourceIds: sourceIds.length !== requestedSourceIds.length,
     publishedFrom,
     publishedTo,
   };

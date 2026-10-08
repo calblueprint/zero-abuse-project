@@ -1,5 +1,5 @@
 import type { IntelligenceFilterParams } from "@/lib/intelligence-library/filters";
-import IntelligenceLibrary from "@/components/IntelligenceLibrary";
+import IntelligenceLibrary from "@/components/intelligence-library/IntelligenceLibrary";
 import {
   getIntelligenceLibraryFilterOptions,
   getIntelligenceLibraryItems,

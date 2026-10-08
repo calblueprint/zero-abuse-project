@@ -10,9 +10,11 @@ import {
   isNotNull,
   lt,
   ne,
+  sql,
 } from "drizzle-orm";
 import { db } from "@/db";
 import { itelItems, sources } from "@/db/schema";
+import INTELLIGENCE_TAXONOMY from "@/lib/intelligence-library/taxonomy";
 
 export type IntelligenceLibraryItem = {
   itemId: string;
@@ -29,7 +31,6 @@ export type IntelligenceLibraryItem = {
   offenderTactic: string | null;
   geography: string | null;
   intelType: string | null;
-  zapRelevance: string | null;
 };
 
 export type IntelligenceLibraryFilterOptions = {
@@ -40,7 +41,6 @@ export type IntelligenceLibraryFilterOptions = {
   offenderTactics: string[];
   geographies: string[];
   intelTypes: string[];
-  zapRelevances: string[];
   sources: Array<{ sourceId: string; name: string }>;
 };
 
@@ -50,17 +50,8 @@ const beginningOfFollowingUtcDay = (date: Date) => {
   return followingDay;
 };
 
-const getTaxonomyValues = async (
-  column:
-    | typeof itelItems.exploitationType
-    | typeof itelItems.platform
-    | typeof itelItems.technology
-    | typeof itelItems.affectedPopulation
-    | typeof itelItems.offenderTactic
-    | typeof itelItems.geography
-    | typeof itelItems.intelType
-    | typeof itelItems.zapRelevance,
-) => {
+const getGeographyValues = async () => {
+  const column = itelItems.geography;
   const rows = await db
     .selectDistinct({ value: column })
     .from(itelItems)
@@ -76,6 +67,7 @@ export const getIntelligenceLibraryItems = async (
   filters: IntelligenceFilters,
 ): Promise<IntelligenceLibraryItem[]> => {
   const conditions = [
+    filters.hasInvalidSourceIds ? sql`false` : undefined,
     filters.exploitationTypes.length
       ? inArray(itelItems.exploitationType, filters.exploitationTypes)
       : undefined,
@@ -96,9 +88,6 @@ export const getIntelligenceLibraryItems = async (
       : undefined,
     filters.intelTypes.length
       ? inArray(itelItems.intelType, filters.intelTypes)
-      : undefined,
-    filters.zapRelevances.length
-      ? inArray(itelItems.zapRelevance, filters.zapRelevances)
       : undefined,
     filters.sourceIds.length
       ? inArray(itelItems.sourceId, filters.sourceIds)
@@ -130,7 +119,6 @@ export const getIntelligenceLibraryItems = async (
       offenderTactic: itelItems.offenderTactic,
       geography: itelItems.geography,
       intelType: itelItems.intelType,
-      zapRelevance: itelItems.zapRelevance,
     })
     .from(itelItems)
     .innerJoin(sources, eq(itelItems.sourceId, sources.sourceId))
@@ -140,18 +128,7 @@ export const getIntelligenceLibraryItems = async (
 
 export const getIntelligenceLibraryFilterOptions =
   async (): Promise<IntelligenceLibraryFilterOptions> => {
-    const exploitationTypes = await getTaxonomyValues(
-      itelItems.exploitationType,
-    );
-    const platforms = await getTaxonomyValues(itelItems.platform);
-    const technologies = await getTaxonomyValues(itelItems.technology);
-    const affectedPopulations = await getTaxonomyValues(
-      itelItems.affectedPopulation,
-    );
-    const offenderTactics = await getTaxonomyValues(itelItems.offenderTactic);
-    const geographies = await getTaxonomyValues(itelItems.geography);
-    const intelTypes = await getTaxonomyValues(itelItems.intelType);
-    const zapRelevances = await getTaxonomyValues(itelItems.zapRelevance);
+    const geographies = await getGeographyValues();
     const sourceRows = await db
       .selectDistinct({ sourceId: sources.sourceId, name: sources.name })
       .from(sources)
@@ -159,14 +136,13 @@ export const getIntelligenceLibraryFilterOptions =
       .orderBy(asc(sources.name));
 
     return {
-      exploitationTypes,
-      platforms,
-      technologies,
-      affectedPopulations,
-      offenderTactics,
+      exploitationTypes: [...INTELLIGENCE_TAXONOMY.exploitationTypes],
+      platforms: [...INTELLIGENCE_TAXONOMY.platforms],
+      technologies: [...INTELLIGENCE_TAXONOMY.technologies],
+      affectedPopulations: [...INTELLIGENCE_TAXONOMY.affectedPopulations],
+      offenderTactics: [...INTELLIGENCE_TAXONOMY.offenderTactics],
       geographies,
-      intelTypes,
-      zapRelevances,
+      intelTypes: [...INTELLIGENCE_TAXONOMY.intelTypes],
       sources: sourceRows,
     };
   };
