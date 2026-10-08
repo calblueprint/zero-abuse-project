@@ -3,7 +3,7 @@ import type {
   IntelligenceLibraryItem,
 } from "@/db/queries/intelligence-library";
 import type { IntelligenceFilters } from "@/lib/intelligence-library/filters";
-import ResetFiltersButton from "@/components/intelligence-library/ResetFiltersButton";
+import Link from "next/link";
 
 type FilterDefinition = {
   label: string;
@@ -150,7 +150,7 @@ export default function IntelligenceLibrary({
 
         <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
           <button type="submit">Apply filters</button>
-          <ResetFiltersButton />
+          <Link href="/">Reset filters</Link>
         </div>
       </form>
 
