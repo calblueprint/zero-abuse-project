@@ -11,6 +11,7 @@ from scripts.intelligence.enums import (
     OffenderTactic,
     Platform,
     Technology,
+    ZapProgramRelevance,
 )
 from scripts.models import Article
 
@@ -64,6 +65,9 @@ class IntelligenceItem(BaseModel):
     intel_type: list[IntelligenceType] = Field(
         description="All supported types of development.",
     )
+    zap_program_relevance: list[ZapProgramRelevance] = Field(
+        description="All supported ZAP program relevance categories.",
+    )
 
     @field_validator(
         "exploitation_type",
@@ -73,6 +77,7 @@ class IntelligenceItem(BaseModel):
         "offender_tactic",
         "geography",
         "intel_type",
+        "zap_program_relevance",
     )
     @classmethod
     def remove_duplicates(cls, values: list[T]) -> list[T]:

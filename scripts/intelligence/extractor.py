@@ -2,7 +2,7 @@ import logging
 
 import instructor
 from instructor.core.exceptions import InstructorRetryException, ResponseParsingError
-from openai import APIError, BadRequestError, OpenAI, RateLimitError
+from openai import APIError, OpenAI, RateLimitError
 from pydantic import ValidationError
 
 from scripts.intelligence.models import ExtractionResult, IntelligenceItem
@@ -22,6 +22,24 @@ ages can establish children, gender can establish boys or girls, and arrests or
 charges establish case/prosecution. Include all supported overlapping labels.
 Attributed allegations can support classifications; preserve attribution in the
 description. Offline grooming does not establish online grooming.
+
+For zap_program_relevance, assign zero, one, or multiple broad programmatic categories 
+based on implications:
+    - "Prevention & Education": Intelligence with implications for child abuse 
+    prevention, online/digital safety, caregiver/parent education, educator/school 
+    guidance, youth education, public awareness, professional prevention training, 
+    emerging risks for families or professionals, or prevention resources/messaging.
+    - "Investigation & Justice": Intelligence with implications for Internet Crimes 
+    Against Children (ICAC), law enforcement, investigation, digital evidence, 
+    forensic interviewing, prosecution, court decisions, statutes/legislation, 
+    offender tactics, investigative technology, or criminal justice practice.
+    - "Survivor Support": Intelligence with implications for survivors of child 
+    sexual abuse/exploitation, adult survivors of childhood abuse, victim impact, 
+    trauma, healing and recovery, survivor resources, mental health/wellness, 
+    disclosure/support response, male survivors, or survivor-informed practice.
+An item may have implications across multiple categories (e.g., an article covering 
+a prosecution alongside survivor psychological trauma and prevention implications 
+can receive all three).
 
 Enum labels are choices, not evidence. Base classifications only on this article.
 Include a named platform only when its name appears in the article and refers to a
@@ -82,6 +100,7 @@ def extract_intelligence(
         raise ConfigurationError("Set the model to a structured-output model ID.")
 
     # Try schema mode first, with one format fallback for JSON-only providers.
+    intel: IntelligenceItem | None = None
     for format_attempt in range(2):
         try:
             intel = client.chat.completions.create(
@@ -113,11 +132,10 @@ def extract_intelligence(
                 else:
                     cause = exc.__cause__ or (exc.args[0] if exc.args else exc)
 
-            message = str(cause).lower()
+            message = f"{exc} {cause}".lower()
             if (
                 format_attempt == 0
                 and client.mode == instructor.Mode.JSON_SCHEMA
-                and isinstance(cause, BadRequestError)
                 and "does not support" in message
                 and "json_schema" in message
                 and "supported formats: json_object" in message
@@ -132,6 +150,9 @@ def extract_intelligence(
                 continue
 
             raise ExtractionError(_failure_message(cause)) from exc
+
+    if intel is None:
+        raise ExtractionError("The provider returned no extraction result.")
 
     logger.info("Extracted article successfully.")
     return ExtractionResult(article=article, intelligence=intel)
