@@ -63,3 +63,9 @@ class IntelligenceType(str, Enum):
     SAFETY_UPDATE = "safety update"
     PROFESSIONAL_GUIDANCE = "professional guidance"
     OTHER = "other"
+
+
+class ZapProgramRelevance(str, Enum):
+    PREVENTION_AND_EDUCATION = "Prevention & Education"
+    INVESTIGATION_AND_JUSTICE = "Investigation & Justice"
+    SURVIVOR_SUPPORT = "Survivor Support"

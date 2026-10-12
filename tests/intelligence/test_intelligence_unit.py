@@ -40,6 +40,7 @@ def valid_intelligence(**overrides):
         "offender_tactic": [],
         "geography": [],
         "intel_type": [],
+        "zap_program_relevance": [],
         **overrides,
     }
 
@@ -58,16 +59,30 @@ class ModelTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             IntelligenceItem(**valid_intelligence(platform=["invented platform"]))
 
+        with self.assertRaises(ValidationError):
+            IntelligenceItem(
+                **valid_intelligence(zap_program_relevance=["invented program"])
+            )
+
     def test_duplicates_removed_without_losing_order_or_distinct_geography(self):
         ontario = {"country": "Canada", "state_or_jurisdiction": "Ontario"}
         quebec = {"country": "Canada", "state_or_jurisdiction": "Quebec"}
         item = IntelligenceItem(
             **valid_intelligence(
                 platform=["Telegram", "Discord", "Telegram"],
+                zap_program_relevance=[
+                    "Prevention & Education",
+                    "Investigation & Justice",
+                    "Prevention & Education",
+                ],
                 geography=[ontario, ontario, quebec],
             )
         )
         self.assertEqual(item.platform, ["Telegram", "Discord"])
+        self.assertEqual(
+            item.zap_program_relevance,
+            ["Prevention & Education", "Investigation & Justice"],
+        )
         self.assertEqual(
             [g.state_or_jurisdiction for g in item.geography], ["Ontario", "Quebec"]
         )
@@ -132,6 +147,17 @@ class ExtractionTests(unittest.TestCase):
         return extract_intelligence(
             self.article, client=client, model="requested-test-model"
         )
+
+    def extract_relevance(self, article_text, relevance):
+        article = Article(url=HttpUrl("https://example.com"), article_text=article_text)
+        result = extract_intelligence(
+            article,
+            client=self.make_client(
+                [json.dumps(valid_intelligence(zap_program_relevance=relevance))]
+            ),
+            model="requested-test-model",
+        )
+        self.assertEqual(result.intelligence.zap_program_relevance, relevance)
 
     def test_success_preserves_source_without_extraction_metadata(self):
         result = self.extract(self.make_client([json.dumps(valid_intelligence())]))
@@ -234,7 +260,7 @@ class ConfigurationAndCliTests(unittest.TestCase):
         directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
         path = directory / "article.json"
         article = Article(
-            url="https://example.com/article", article_text="Example article."
+            url=HttpUrl("https://example.com/article"), article_text="Example article."
         )
         path.write_text(article.model_dump_json(), encoding="utf-8")
         return path
