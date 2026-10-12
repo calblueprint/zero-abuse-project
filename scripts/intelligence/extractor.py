@@ -23,23 +23,32 @@ charges establish case/prosecution. Include all supported overlapping labels.
 Attributed allegations can support classifications; preserve attribution in the
 description. Offline grooming does not establish online grooming.
 
-For zap_program_relevance, assign zero, one, or multiple broad programmatic categories 
-based on implications:
-    - "Prevention & Education": Intelligence with implications for child abuse 
-    prevention, online/digital safety, caregiver/parent education, educator/school 
-    guidance, youth education, public awareness, professional prevention training, 
-    emerging risks for families or professionals, or prevention resources/messaging.
-    - "Investigation & Justice": Intelligence with implications for Internet Crimes 
-    Against Children (ICAC), law enforcement, investigation, digital evidence, 
-    forensic interviewing, prosecution, court decisions, statutes/legislation, 
+For zap_program_relevance, classify the reasonable programmatic implications of facts
+contained in the article. The article does not need to mention Zero Abuse Project or
+a category by name. Every selected category must still be supported by information
+in the article; do not invent facts or select categories based on remote or purely
+hypothetical connections. Select categories independently and return every supported
+category:
+    - "Prevention & Education": Intelligence with implications for child abuse
+    prevention, online/digital safety, caregiver or parent education, educator or
+    school guidance, youth education, public awareness, professional prevention
+    training, emerging risks professionals or families should understand, or
+    prevention resources or messaging.
+    - "Investigation & Justice": Intelligence with implications for Internet Crimes
+    Against Children (ICAC), law enforcement, investigation, digital evidence,
+    forensic interviewing, prosecution, court decisions, statutes or legislation,
     offender tactics, investigative technology, or criminal justice practice.
-    - "Survivor Support": Intelligence with implications for survivors of child 
-    sexual abuse/exploitation, adult survivors of childhood abuse, victim impact, 
-    trauma, healing and recovery, survivor resources, mental health/wellness, 
-    disclosure/support response, male survivors, or survivor-informed practice.
-An item may have implications across multiple categories (e.g., an article covering 
-a prosecution alongside survivor psychological trauma and prevention implications 
-can receive all three).
+    - "Survivor Support": Intelligence with implications for survivors of child
+    sexual abuse or exploitation, adult survivors of childhood abuse, victim impact,
+    trauma, healing and recovery, survivor resources, mental health and wellness,
+    disclosure or support response, male survivors, or survivor-informed practice.
+
+An item may receive multiple categories when separate aspects of the article support
+them. Do not select "Survivor Support" solely because an article mentions a victim;
+the article should address survivor experience, impact, response, recovery, or
+support. Select all three categories only when the article contains independently
+supported implications for all three. Return [] when no category is reasonably
+supported.
 
 Enum labels are choices, not evidence. Base classifications only on this article.
 Include a named platform only when its name appears in the article and refers to a
