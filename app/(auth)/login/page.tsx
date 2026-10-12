@@ -7,13 +7,6 @@ type LoginPageProps = {
   searchParams: Promise<{ error?: string; message?: string }>;
 };
 
-const credentialErrors = new Set([
-  "invalid-credentials",
-  "invalid-email",
-  "missing-password",
-  "signin-failed",
-]);
-
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   if (await getVerifiedAuthUser()) {
     redirect("/");
@@ -25,16 +18,17 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     return (
       <StatusBlock
         title="Password reset"
+        description="Your password was updated. Sign in with your new password."
         primaryHref="/login"
         primaryLabel="Log in"
       />
     );
   }
 
-  if (error === "invalid-auth-link") {
+  if (error === "invalid-reset-link") {
     return (
       <StatusBlock
-        title="Link expired"
+        title="Reset link expired"
         description="Request a new reset link."
         primaryHref="/reset-password"
         primaryLabel="Send a new link"
@@ -44,23 +38,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     );
   }
 
-  const notice =
-    error === "email-not-confirmed"
-      ? {
-          text: "Verify your email address before signing in.",
-          tone: "error" as const,
-        }
-      : error === "expired-session"
-        ? {
-            text: "Your session has expired. Please sign in again.",
-            tone: "muted" as const,
-          }
-        : null;
+  if (error === "invalid-auth-link") {
+    return (
+      <StatusBlock
+        title="Link expired"
+        description="This authentication link is invalid or has expired."
+        primaryHref="/login"
+        primaryLabel="Back to log in"
+        secondaryHref="/sign-up"
+        secondaryLabel="Create an account"
+      />
+    );
+  }
 
-  return (
-    <LoginForm
-      credentialsError={credentialErrors.has(error ?? "")}
-      notice={notice}
-    />
-  );
+  return <LoginForm error={error} />;
 }

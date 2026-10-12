@@ -9,8 +9,8 @@ export default async function ResetPasswordPage({
 }: ResetPasswordPageProps) {
   const { error, message } = await searchParams;
 
-  if (message === "email-sent") {
-    return <CheckEmail />;
+  if (message === "email-sent" || message === "resent") {
+    return <CheckEmail key={message} resent={message === "resent"} />;
   }
 
   return <ResetPasswordForm error={error} />;

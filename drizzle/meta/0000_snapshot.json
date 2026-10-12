@@ -54,8 +54,12 @@
           "tableFrom": "saved_groups",
           "tableTo": "users",
           "schemaTo": "public",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["user_id"],
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "user_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -208,8 +212,12 @@
           "tableFrom": "trends",
           "tableTo": "users",
           "schemaTo": "public",
-          "columnsFrom": ["reviewed_by"],
-          "columnsTo": ["user_id"],
+          "columnsFrom": [
+            "reviewed_by"
+          ],
+          "columnsTo": [
+            "user_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -218,8 +226,12 @@
           "tableFrom": "trends",
           "tableTo": "users",
           "schemaTo": "public",
-          "columnsFrom": ["triggered_by"],
-          "columnsTo": ["user_id"],
+          "columnsFrom": [
+            "triggered_by"
+          ],
+          "columnsTo": [
+            "user_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -267,8 +279,12 @@
           "tableFrom": "trend_metrics",
           "tableTo": "trends",
           "schemaTo": "public",
-          "columnsFrom": ["trend_id"],
-          "columnsTo": ["trend_id"],
+          "columnsFrom": [
+            "trend_id"
+          ],
+          "columnsTo": [
+            "trend_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -395,8 +411,12 @@
           "tableFrom": "itel_items",
           "tableTo": "sources",
           "schemaTo": "public",
-          "columnsFrom": ["source_id"],
-          "columnsTo": ["source_id"],
+          "columnsFrom": [
+            "source_id"
+          ],
+          "columnsTo": [
+            "source_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }

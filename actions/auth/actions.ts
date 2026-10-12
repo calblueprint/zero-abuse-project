@@ -51,7 +51,13 @@ export async function signIn(formData: FormData) {
       redirectWithCode("/login", "error", "email-not-confirmed");
     }
 
-    redirectWithCode("/login", "error", "invalid-credentials");
+    redirectWithCode(
+      "/login",
+      "error",
+      error.code === "invalid_credentials"
+        ? "invalid-credentials"
+        : "signin-failed",
+    );
   }
 
   if (!data.session) {
@@ -83,7 +89,7 @@ export async function signUp(formData: FormData) {
     email,
     password,
     options: {
-      emailRedirectTo: `${await siteUrl()}/auth/callback`,
+      emailRedirectTo: `${await siteUrl()}/auth/callback?next=/onboarding`,
     },
   });
 
@@ -119,7 +125,7 @@ export async function resendVerification(formData: FormData) {
     type: "signup",
     email,
     options: {
-      emailRedirectTo: `${await siteUrl()}/auth/callback`,
+      emailRedirectTo: `${await siteUrl()}/auth/callback?next=/onboarding`,
     },
   });
   const searchParams = new URLSearchParams({
@@ -132,6 +138,7 @@ export async function resendVerification(formData: FormData) {
 
 export async function requestPasswordReset(formData: FormData) {
   const email = formValue(formData, "email").trim().toLowerCase();
+  const isResend = formValue(formData, "intent") === "resend";
 
   if (validateEmail(email)) {
     redirectWithCode("/reset-password", "error", "invalid-email");
@@ -154,7 +161,11 @@ export async function requestPasswordReset(formData: FormData) {
     secure: process.env.NODE_ENV === "production",
   });
 
-  redirectWithCode("/reset-password", "message", "email-sent");
+  redirectWithCode(
+    "/reset-password",
+    "message",
+    isResend ? "resent" : "email-sent",
+  );
 }
 
 export async function updatePassword(formData: FormData) {

@@ -16,7 +16,7 @@ import {
   Label,
   PasswordInput,
   PasswordRules,
-  PrimaryButton,
+  SubmitButton,
 } from "../ui";
 
 const EMAIL_KEY = "zap-signup-email";
@@ -29,6 +29,7 @@ export function SignUpForm({ error }: { error?: string }) {
   const emailInvalid =
     error === "email-already-registered" || error === "invalid-email";
   const showRules = submitted;
+  const passwordInvalid = submitted && !passwordIsValid(password);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     if (!passwordIsValid(password)) {
@@ -77,6 +78,8 @@ export function SignUpForm({ error }: { error?: string }) {
             autoComplete="new-password"
             placeholder="Create a password"
             value={password}
+            $invalid={passwordInvalid}
+            aria-invalid={passwordInvalid}
             onChange={event => setPassword(event.target.value)}
             required
           />
@@ -91,9 +94,16 @@ export function SignUpForm({ error }: { error?: string }) {
               Unable to create your account. Please try again.
             </ErrorText>
           ) : null}
+          {error === "password-mismatch" ? (
+            <ErrorText role="alert">
+              Password confirmation failed. Please try again.
+            </ErrorText>
+          ) : null}
         </Field>
       </Fields>
-      <PrimaryButton type="submit">Create account</PrimaryButton>
+      <SubmitButton pendingLabel="Creating account…">
+        Create account
+      </SubmitButton>
       <CenterLink href="/login">Back to Log in</CenterLink>
     </form>
   );

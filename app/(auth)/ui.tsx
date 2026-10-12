@@ -2,6 +2,7 @@
 
 import type { ComponentProps, ReactNode } from "react";
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import styled, { css } from "styled-components";
@@ -42,6 +43,11 @@ const primaryStyles = css`
   &:focus-visible {
     outline: 2px solid #002f6d;
     outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.7;
   }
 `;
 
@@ -291,6 +297,22 @@ export const PrimaryButton = styled.button`
   ${primaryStyles}
 `;
 
+export function SubmitButton({
+  children,
+  pendingLabel,
+}: {
+  children: ReactNode;
+  pendingLabel: string;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <PrimaryButton type="submit" disabled={pending}>
+      {pending ? pendingLabel : children}
+    </PrimaryButton>
+  );
+}
+
 export const PrimaryLink = styled(Link)`
   ${primaryStyles}
 `;
@@ -318,6 +340,26 @@ export const CenterLink = styled(Link)`
   line-height: 20px;
   text-align: center;
   text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+export const CenterButton = styled.button`
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #002f6d;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  text-align: center;
+  cursor: pointer;
 
   &:hover {
     text-decoration: underline;

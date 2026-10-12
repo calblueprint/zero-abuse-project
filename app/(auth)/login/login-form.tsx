@@ -14,24 +14,27 @@ import {
   Label,
   MetaRow,
   PasswordInput,
-  PrimaryButton,
+  SubmitButton,
 } from "../ui";
 
 const EMAIL_KEY = "zap-login-email";
 
-type LoginNotice = {
-  text: string;
-  tone: "error" | "muted";
+const fieldErrors: Record<string, string> = {
+  "invalid-credentials": "Email or password is incorrect.",
+  "invalid-email": "Enter a valid email address.",
+  "missing-password": "Enter your password.",
+  "signin-failed": "Unable to sign in. Please try again.",
+  "email-not-confirmed": "Verify your email address before signing in.",
 };
 
-export function LoginForm({
-  credentialsError,
-  notice,
-}: {
-  credentialsError: boolean;
-  notice: LoginNotice | null;
-}) {
+export function LoginForm({ error }: { error?: string }) {
   const email = useSessionValue(EMAIL_KEY);
+  const credentialsError = error === "invalid-credentials";
+  const emailInvalid = credentialsError || error === "invalid-email";
+  const passwordInvalid = credentialsError || error === "missing-password";
+  const emailError = error === "invalid-email" ? fieldErrors[error] : null;
+  const formError =
+    error && error !== "invalid-email" ? fieldErrors[error] : null;
 
   return (
     <form
@@ -41,7 +44,11 @@ export function LoginForm({
       }}
     >
       <Heading>Log in</Heading>
-      {notice?.tone === "muted" ? <Body>{notice.text}</Body> : null}
+      {error === "expired-session" ? (
+        <Body role="status">
+          Your session has expired. Please sign in again.
+        </Body>
+      ) : null}
       <Fields>
         <Field>
           <Label htmlFor="email">Organization email</Label>
@@ -53,9 +60,17 @@ export function LoginForm({
             autoCapitalize="none"
             placeholder="you@organization.org"
             value={email}
+            $invalid={emailInvalid}
+            aria-invalid={emailInvalid}
+            aria-describedby={emailError ? "login-email-error" : undefined}
             onChange={event => setSessionValue(EMAIL_KEY, event.target.value)}
             required
           />
+          {emailError ? (
+            <ErrorText id="login-email-error" role="alert">
+              {emailError}
+            </ErrorText>
+          ) : null}
         </Field>
         <Field>
           <Label htmlFor="password">Password</Label>
@@ -64,23 +79,22 @@ export function LoginForm({
             name="password"
             autoComplete="current-password"
             placeholder="Password"
-            $invalid={credentialsError}
-            aria-invalid={credentialsError}
+            $invalid={passwordInvalid}
+            aria-invalid={passwordInvalid}
+            aria-describedby={formError ? "login-form-error" : undefined}
             required
           />
           <MetaRow>
-            {credentialsError ? (
-              <ErrorText role="alert">
-                Email or password is incorrect.
+            {formError ? (
+              <ErrorText id="login-form-error" role="alert">
+                {formError}
               </ErrorText>
-            ) : notice?.tone === "error" ? (
-              <ErrorText role="alert">{notice.text}</ErrorText>
             ) : null}
             <InlineLink href="/reset-password">Forgot password?</InlineLink>
           </MetaRow>
         </Field>
       </Fields>
-      <PrimaryButton type="submit">Log in</PrimaryButton>
+      <SubmitButton pendingLabel="Logging in…">Log in</SubmitButton>
       <CenterLink href="/sign-up">Create account</CenterLink>
     </form>
   );

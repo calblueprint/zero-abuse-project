@@ -1,12 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { requestPasswordReset } from "@/actions/auth/actions";
-import {
-  removeSessionValue,
-  setSessionValue,
-  useSessionValue,
-} from "../session-value";
+import { setSessionValue, useSessionValue } from "../session-value";
 import {
   Body,
   CenterLink,
@@ -20,10 +16,10 @@ import {
   Label,
   Overlay,
   PrimaryButton,
+  SubmitButton,
 } from "../ui";
 
 const EMAIL_KEY = "zap-reset-email";
-const RESENT_KEY = "zap-reset-resent";
 
 export function ResetPasswordForm({ error }: { error?: string }) {
   const email = useSessionValue(EMAIL_KEY);
@@ -31,7 +27,6 @@ export function ResetPasswordForm({ error }: { error?: string }) {
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     setSessionValue(EMAIL_KEY, email.trim());
-    removeSessionValue(RESENT_KEY);
     if (!email.trim()) {
       event.preventDefault();
     }
@@ -67,15 +62,15 @@ export function ResetPasswordForm({ error }: { error?: string }) {
           ) : null}
         </Field>
       </Fields>
-      <PrimaryButton type="submit">Send reset link</PrimaryButton>
+      <SubmitButton pendingLabel="Sending…">Send reset link</SubmitButton>
       <CenterLink href="/login">Back to log in</CenterLink>
     </form>
   );
 }
 
-export function CheckEmail() {
+export function CheckEmail({ resent }: { resent: boolean }) {
   const email = useSessionValue(EMAIL_KEY);
-  const open = useSessionValue(RESENT_KEY) === "1";
+  const [open, setOpen] = useState(resent);
 
   useEffect(() => {
     if (!open) {
@@ -84,7 +79,7 @@ export function CheckEmail() {
 
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        removeSessionValue(RESENT_KEY);
+        setOpen(false);
       }
     }
 
@@ -93,26 +88,22 @@ export function CheckEmail() {
   }, [open]);
 
   function closeResent() {
-    removeSessionValue(RESENT_KEY);
-  }
-
-  function onResend(event: FormEvent<HTMLFormElement>) {
-    if (!email) {
-      event.preventDefault();
-      return;
-    }
-
-    setSessionValue(RESENT_KEY, "1");
+    setOpen(false);
   }
 
   return (
     <>
       <Heading>Check your email</Heading>
       <Body>If your email is registered, a reset link is on its way.</Body>
-      <form action={requestPasswordReset} onSubmit={onResend}>
-        <input type="hidden" name="email" value={email} />
-        <PrimaryButton type="submit">Resend reset link</PrimaryButton>
-      </form>
+      {email ? (
+        <form action={requestPasswordReset}>
+          <input type="hidden" name="email" value={email} />
+          <input type="hidden" name="intent" value="resend" />
+          <SubmitButton pendingLabel="Resending…">
+            Resend reset link
+          </SubmitButton>
+        </form>
+      ) : null}
       <CenterLink href="/reset-password">Use a different email</CenterLink>
       {open ? (
         <Overlay onMouseDown={closeResent}>

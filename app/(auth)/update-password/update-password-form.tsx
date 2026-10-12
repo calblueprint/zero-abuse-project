@@ -1,10 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { updatePassword } from "@/actions/auth/actions";
+import { signOut, updatePassword } from "@/actions/auth/actions";
 import { PASSWORD_HINT, passwordIsValid } from "../password-rules";
 import {
-  CenterLink,
+  CenterButton,
   ErrorText,
   Field,
   Fields,
@@ -13,7 +13,7 @@ import {
   Label,
   PasswordInput,
   PasswordRules,
-  PrimaryButton,
+  SubmitButton,
 } from "../ui";
 
 export function UpdatePasswordForm({ error }: { error?: string }) {
@@ -25,8 +25,14 @@ export function UpdatePasswordForm({ error }: { error?: string }) {
   );
 
   const showRules = submitted;
+  const passwordInvalid = submitted && !passwordIsValid(password);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    if (submitter?.getAttribute("name") === "cancel") {
+      return;
+    }
+
     const mismatch = password !== confirmPassword;
     if (!passwordIsValid(password) || mismatch) {
       event.preventDefault();
@@ -50,6 +56,8 @@ export function UpdatePasswordForm({ error }: { error?: string }) {
             autoComplete="new-password"
             placeholder="Enter a new password"
             value={password}
+            $invalid={passwordInvalid}
+            aria-invalid={passwordInvalid}
             onChange={event => setPassword(event.target.value)}
             required
           />
@@ -90,8 +98,17 @@ export function UpdatePasswordForm({ error }: { error?: string }) {
           ) : null}
         </Field>
       </Fields>
-      <PrimaryButton type="submit">Reset password</PrimaryButton>
-      <CenterLink href="/login">Back to log in</CenterLink>
+      <SubmitButton pendingLabel="Resetting password…">
+        Reset password
+      </SubmitButton>
+      <CenterButton
+        type="submit"
+        name="cancel"
+        formAction={signOut}
+        formNoValidate
+      >
+        Back to log in
+      </CenterButton>
     </form>
   );
 }
