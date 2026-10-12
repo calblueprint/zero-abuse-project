@@ -3,8 +3,11 @@
 import type { OnboardingState } from "@/actions/onboarding/validation";
 import { redirect } from "next/navigation";
 import { parseOnboardingFormData } from "@/actions/onboarding/validation";
-import { completeOnboarding } from "@/actions/supabase/profile";
-import { getInitialUserAccess } from "@/lib/auth/access";
+import {
+  completeOnboarding,
+  markWelcomeSeen,
+} from "@/actions/supabase/profile";
+import { getInitialUserAccess, requireApprovedUser } from "@/lib/auth/access";
 import { requireVerifiedAuthUser } from "@/lib/auth/user";
 
 export async function submitOnboarding(
@@ -32,5 +35,11 @@ export async function submitOnboarding(
     };
   }
 
+  redirect("/");
+}
+
+export async function finishWelcome() {
+  const user = await requireApprovedUser();
+  await markWelcomeSeen(user.userId);
   redirect("/");
 }

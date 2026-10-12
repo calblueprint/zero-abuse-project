@@ -13,6 +13,7 @@ type AccessUser = {
   email: string;
   isAdmin: boolean;
   approvalStatus: ApprovalStatus;
+  welcomeSeenAt: string | null;
 };
 
 export type InitialUserAccess = Pick<AccessUser, "isAdmin" | "approvalStatus">;
@@ -37,6 +38,7 @@ export const requireAccessUser = cache(async (): Promise<AccessUser> => {
       onboardingComplete: users.onboardingComplete,
       isAdmin: users.isAdmin,
       approvalStatus: users.approvalStatus,
+      welcomeSeenAt: users.welcomeSeenAt,
     })
     .from(users)
     .where(eq(users.userId, authUser.id))
@@ -54,6 +56,7 @@ function toAccessUser(
     userId: string;
     isAdmin: boolean | null;
     approvalStatus: string | null;
+    welcomeSeenAt: string | null;
   },
   email: string,
 ): AccessUser {
@@ -70,6 +73,7 @@ function toAccessUser(
     email,
     isAdmin: user.isAdmin,
     approvalStatus: user.approvalStatus,
+    welcomeSeenAt: user.welcomeSeenAt,
   };
 }
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import { requireApprovedUser } from "@/lib/auth/access";
 
 type ApprovedLayoutProps = {
@@ -8,7 +9,11 @@ type ApprovedLayoutProps = {
 export default async function ApprovedLayout({
   children,
 }: ApprovedLayoutProps) {
-  await requireApprovedUser();
+  const user = await requireApprovedUser();
+
+  if (!user.welcomeSeenAt) {
+    redirect("/welcome");
+  }
 
   return children;
 }
