@@ -13,6 +13,7 @@ const uuidPattern =
 async function updateApprovalStatus(
   userId: string,
   approvalStatus: "approved" | "rejected",
+  currentStatus: "pending" | "rejected" = "pending",
 ) {
   const admin = await requireAdmin();
 
@@ -27,11 +28,15 @@ async function updateApprovalStatus(
       approvalDecidedBy: admin.userId,
       approvalDecidedAt: new Date().toISOString(),
     })
-    .where(and(eq(users.userId, userId), eq(users.approvalStatus, "pending")))
+    .where(
+      and(eq(users.userId, userId), eq(users.approvalStatus, currentStatus)),
+    )
     .returning({ userId: users.userId });
 
   if (!updatedUser) {
-    redirect("/admin/users?notice=already-reviewed");
+    redirect(
+      `/admin/users?notice=${currentStatus === "pending" ? "already-reviewed" : "user-changed"}`,
+    );
   }
 
   revalidatePath("/admin/users");
@@ -44,6 +49,10 @@ export async function approveUser(userId: string) {
 
 export async function rejectUser(userId: string) {
   await updateApprovalStatus(userId, "rejected");
+}
+
+export async function restoreUser(userId: string) {
+  await updateApprovalStatus(userId, "approved", "rejected");
 }
 
 export async function promoteUser(userId: string) {

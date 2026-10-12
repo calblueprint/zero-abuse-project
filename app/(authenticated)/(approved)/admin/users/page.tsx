@@ -12,6 +12,7 @@ import {
   demoteUser,
   promoteUser,
   rejectUser,
+  restoreUser,
   revokeUser,
 } from "./actions";
 
@@ -66,6 +67,17 @@ export default async function AdminUsersPage({
     })
     .from(users)
     .where(and(eq(users.approvalStatus, "approved"), eq(users.isAdmin, false)));
+
+  const rejectedUsers = await db
+    .select({
+      userId: users.userId,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      email: users.email,
+      organization: users.organization,
+    })
+    .from(users)
+    .where(eq(users.approvalStatus, "rejected"));
 
   return (
     <Page>
@@ -191,6 +203,41 @@ export default async function AdminUsersPage({
                     <form action={revokeUser.bind(null, user.userId)}>
                       <ActionButton type="submit" $secondaryColor={COLORS.navy}>
                         Revoke access
+                      </ActionButton>
+                    </form>
+                  </Actions>
+                </UserRow>
+              ))}
+            </UserList>
+          )}
+        </Section>
+        <Section aria-labelledby="rejected-users-heading">
+          <SectionHeading
+            id="rejected-users-heading"
+            $color={COLORS.navy}
+            $fontWeight={600}
+          >
+            Rejected users
+          </SectionHeading>
+          {rejectedUsers.length === 0 ? (
+            <EmptyState>No rejected users.</EmptyState>
+          ) : (
+            <UserList>
+              {rejectedUsers.map(user => (
+                <UserRow key={user.userId}>
+                  <UserInfo>
+                    <UserName $fontWeight={600}>
+                      {user.firstName} {user.lastName}
+                    </UserName>
+                    <UserDetail>{user.email ?? "Email unavailable"}</UserDetail>
+                    {user.organization && (
+                      <UserDetail>{user.organization}</UserDetail>
+                    )}
+                  </UserInfo>
+                  <Actions>
+                    <form action={restoreUser.bind(null, user.userId)}>
+                      <ActionButton type="submit" $primaryColor={COLORS.navy}>
+                        Restore access
                       </ActionButton>
                     </form>
                   </Actions>
