@@ -3,6 +3,7 @@ export type OnboardingFields = {
   lastName: string;
   phone: string;
   organization: string;
+  role: string;
 };
 
 export type OnboardingErrors = Partial<
@@ -22,6 +23,7 @@ export const onboardingFieldLimits = {
   lastName: 100,
   phone: 20,
   organization: 255,
+  role: 100,
 } as const;
 
 type OnboardingParseResult =
@@ -44,6 +46,7 @@ export function parseOnboardingFormData(
     lastName: String(formData.get("lastName") ?? ""),
     phone: String(formData.get("phone") ?? ""),
     organization: String(formData.get("organization") ?? ""),
+    role: String(formData.get("role") ?? ""),
   };
   const phoneDigits = fields.phone.replace(/[\s\-().]/g, "");
   const data: OnboardingFields = {
@@ -51,6 +54,7 @@ export function parseOnboardingFormData(
     lastName: fields.lastName.trim(),
     phone: phoneDigits.replace(/^\+?1(?=\d{10}$)/, ""),
     organization: fields.organization.trim(),
+    role: fields.role.trim(),
   };
   const errors: OnboardingErrors = {};
 
@@ -74,10 +78,12 @@ export function parseOnboardingFormData(
     errors.phone = "Enter a valid 10-digit US phone number.";
   }
 
-  if (!data.organization) {
-    errors.organization = "Enter your organization.";
-  } else if (data.organization.length > onboardingFieldLimits.organization) {
+  if (data.organization.length > onboardingFieldLimits.organization) {
     errors.organization = "Organization must be 255 characters or fewer.";
+  }
+
+  if (data.role.length > onboardingFieldLimits.role) {
+    errors.role = "Role must be 100 characters or fewer.";
   }
 
   if (Object.keys(errors).length > 0) {

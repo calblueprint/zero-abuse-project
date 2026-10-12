@@ -2,7 +2,7 @@ import "server-only";
 import type { OnboardingFields } from "@/actions/onboarding/validation";
 import type { InitialUserAccess } from "@/lib/auth/access";
 import type { VerifiedAuthUser } from "@/lib/auth/user";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 
@@ -25,7 +25,8 @@ export async function completeOnboarding(
     lastName: profile.lastName,
     email: user.email.trim().toLowerCase(),
     phone: profile.phone,
-    organization: profile.organization,
+    organization: profile.organization || null,
+    role: profile.role || null,
     onboardingComplete: true,
   };
 
@@ -51,7 +52,15 @@ export async function updateUserProfile(
       firstName: profile.firstName,
       lastName: profile.lastName,
       phone: profile.phone,
-      organization: profile.organization,
+      organization: profile.organization || null,
+      role: profile.role || null,
     })
     .where(eq(users.userId, userId));
+}
+
+export async function markWelcomeSeen(userId: string) {
+  await db
+    .update(users)
+    .set({ welcomeSeenAt: new Date().toISOString() })
+    .where(and(eq(users.userId, userId), isNull(users.welcomeSeenAt)));
 }

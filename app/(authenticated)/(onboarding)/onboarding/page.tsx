@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getUserProfile } from "@/actions/supabase/profile";
-import OnboardingForm from "@/app/(authenticated)/onboarding/OnboardingForm";
+import OnboardingForm from "@/app/(authenticated)/(onboarding)/onboarding/OnboardingForm";
 import { requireVerifiedAuthUser } from "@/lib/auth/user";
 
 export default async function OnboardingPage() {
@@ -11,10 +11,5 @@ export default async function OnboardingPage() {
     redirect("/");
   }
 
-  return (
-    <main>
-      <h1>Complete your profile</h1>
-      <OnboardingForm />
-    </main>
-  );
+  return <OnboardingForm splitSteps />;
 }

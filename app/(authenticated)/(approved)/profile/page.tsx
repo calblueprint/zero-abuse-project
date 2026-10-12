@@ -20,6 +20,7 @@ export default async function ProfilePage() {
       name={`${profile.firstName} ${profile.lastName}`}
       email={emailState.email}
       organization={profile.organization ?? ""}
+      role={profile.role ?? ""}
       phone={profile.phone ?? ""}
       pendingEmail={emailState.pendingEmail}
     />

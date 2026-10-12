@@ -42,6 +42,7 @@ export default async function AdminUsersPage({
       email: users.email,
       phone: users.phone,
       organization: users.organization,
+      role: users.role,
     })
     .from(users)
     .where(eq(users.approvalStatus, "pending"));
@@ -109,9 +110,10 @@ export default async function AdminUsersPage({
                       {user.firstName} {user.lastName}
                     </UserName>
                     <UserDetail>{user.email ?? "Email unavailable"}</UserDetail>
-                    {user.organization && (
-                      <UserDetail>{user.organization}</UserDetail>
-                    )}
+                    <UserDetail>
+                      {user.organization ?? "No organization"}
+                    </UserDetail>
+                    <UserDetail>{user.role ?? "No role"}</UserDetail>
                     {user.phone && <UserDetail>{user.phone}</UserDetail>}
                   </UserInfo>
                   <Actions>
