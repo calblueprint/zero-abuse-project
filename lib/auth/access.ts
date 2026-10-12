@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -28,7 +29,7 @@ export function getInitialUserAccess(email: string): InitialUserAccess {
     : { isAdmin: false, approvalStatus: "pending" as const };
 }
 
-export async function requireAccessUser(): Promise<AccessUser> {
+export const requireAccessUser = cache(async (): Promise<AccessUser> => {
   const authUser = await requireVerifiedAuthUser();
   const [existingUser] = await db
     .select({
@@ -46,7 +47,7 @@ export async function requireAccessUser(): Promise<AccessUser> {
   }
 
   return toAccessUser(existingUser, authUser.email);
-}
+});
 
 function toAccessUser(
   user: {
@@ -72,7 +73,7 @@ function toAccessUser(
   };
 }
 
-export async function requireApprovedUser(): Promise<AccessUser> {
+export const requireApprovedUser = cache(async (): Promise<AccessUser> => {
   const user = await requireAccessUser();
 
   if (user.approvalStatus === "pending") {
@@ -84,7 +85,7 @@ export async function requireApprovedUser(): Promise<AccessUser> {
   }
 
   return user;
-}
+});
 
 export async function requireAdmin(): Promise<AccessUser> {
   const user = await requireApprovedUser();

@@ -1,27 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { signIn } from "@/actions/auth/actions";
 import { getVerifiedAuthUser } from "@/lib/auth/user";
+import { StatusBlock } from "../ui";
+import { LoginForm } from "./login-form";
 
 type LoginPageProps = {
   searchParams: Promise<{ error?: string; message?: string }>;
-};
-
-const errorMessages: Record<string, string> = {
-  "email-not-confirmed":
-    "Verify your email address before signing in. Check your inbox for the verification link.",
-  "expired-session": "Your session has expired. Please sign in again.",
-  "invalid-auth-link": "The authentication link is invalid or has expired.",
-  "invalid-credentials": "The email or password is incorrect.",
-  "invalid-email": "Enter a valid email address.",
-  "invalid-reset-link":
-    "The password reset link is invalid or has expired. Request a new one.",
-  "missing-password": "Enter your password.",
-  "signin-failed": "Unable to start your session. Please try again.",
-};
-
-const successMessages: Record<string, string> = {
-  "password-updated": "Your password was updated. Please sign in again.",
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
@@ -31,40 +14,42 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   const { error, message } = await searchParams;
 
-  return (
-    <main>
-      <h1>Sign in</h1>
-      {error && errorMessages[error] && (
-        <p role="alert">{errorMessages[error]}</p>
-      )}
-      {message && successMessages[message] && (
-        <p role="status">{successMessages[message]}</p>
-      )}
-      <form action={signIn}>
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          required
-        />
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-        />
-        <button type="submit">Sign in</button>
-      </form>
-      <p>
-        <Link href="/reset-password">Forgot your password?</Link>
-      </p>
-      <p>
-        Need an account? <Link href="/sign-up">Sign up</Link>
-      </p>
-    </main>
-  );
+  if (message === "password-updated") {
+    return (
+      <StatusBlock
+        title="Password reset"
+        description="Your password was updated. Sign in with your new password."
+        primaryHref="/login"
+        primaryLabel="Log in"
+      />
+    );
+  }
+
+  if (error === "invalid-reset-link") {
+    return (
+      <StatusBlock
+        title="Reset link expired"
+        description="Request a new reset link."
+        primaryHref="/reset-password"
+        primaryLabel="Send a new link"
+        secondaryHref="/login"
+        secondaryLabel="Back to log in"
+      />
+    );
+  }
+
+  if (error === "invalid-auth-link") {
+    return (
+      <StatusBlock
+        title="Link expired"
+        description="This authentication link is invalid or has expired."
+        primaryHref="/login"
+        primaryLabel="Back to log in"
+        secondaryHref="/sign-up"
+        secondaryLabel="Create an account"
+      />
+    );
+  }
+
+  return <LoginForm error={error} />;
 }

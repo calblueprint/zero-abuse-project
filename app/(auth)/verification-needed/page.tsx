@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resendVerification } from "@/actions/auth/actions";
+import { Body, CenterLink, ErrorText, Heading, SubmitButton } from "../ui";
 
 type VerificationNeededPageProps = {
   searchParams: Promise<{
@@ -20,24 +20,25 @@ export default async function VerificationNeededPage({
   }
 
   return (
-    <main>
-      <h1>Verify your email</h1>
-      <p>
-        We sent a verification link to {email}. Check your inbox to continue.
-      </p>
-      {error === "resend-failed" && (
-        <p role="alert">Unable to resend the email. Please try again.</p>
-      )}
-      {message === "resent" && (
-        <p role="status">The verification email was resent.</p>
-      )}
+    <div>
+      <Heading>Verify your email</Heading>
+      <Body>We sent a verification link to {email}. Check your inbox.</Body>
+      {error === "resend-failed" ? (
+        <ErrorText role="alert">
+          Unable to resend the verification email. Please try again.
+        </ErrorText>
+      ) : null}
+      {message === "resent" ? (
+        <Body role="status">The verification email was resent.</Body>
+      ) : null}
       <form action={resendVerification}>
         <input type="hidden" name="email" value={email} />
-        <button type="submit">Resend verification email</button>
+        <SubmitButton pendingLabel="Resending…">
+          Resend verification email
+        </SubmitButton>
       </form>
-      <p>
-        <Link href="/sign-up">Use another account</Link>
-      </p>
-    </main>
+      <CenterLink href="/sign-up">Use a different account</CenterLink>
+      <CenterLink href="/login">Back to log in</CenterLink>
+    </div>
   );
 }
