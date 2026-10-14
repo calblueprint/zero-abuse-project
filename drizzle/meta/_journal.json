@@ -48,7 +48,7 @@
       "idx": 6,
       "version": "7",
       "when": 1791574815394,
-      "tag": "0006_add_user_role_and_welcome",
+      "tag": "0006_add_user_role",
       "breakpoints": true
     }
   ]

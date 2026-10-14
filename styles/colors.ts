@@ -14,6 +14,7 @@ const COLORS = {
   inputBackground: "#FBFCFC",
   yellow: "#FFD400",
   error: "#A12E2F",
+  success: "#1F7A4D",
 };
 
 export default COLORS;

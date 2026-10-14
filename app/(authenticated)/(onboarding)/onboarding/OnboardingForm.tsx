@@ -24,7 +24,7 @@ import {
   Label,
   PrimaryButton,
   TextButton,
-} from "@/components/auth/form";
+} from "@/components/auth/ui";
 import COLORS from "@/styles/colors";
 
 type OnboardingFormProps = {

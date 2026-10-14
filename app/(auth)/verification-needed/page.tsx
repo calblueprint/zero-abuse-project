@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import { resendVerification } from "@/actions/auth/actions";
-import { Body, CenterLink, ErrorText, Heading, SubmitButton } from "../ui";
+import {
+  Body,
+  CenterLink,
+  ErrorText,
+  Heading,
+  SubmitButton,
+} from "@/components/auth/ui";
 
 type VerificationNeededPageProps = {
   searchParams: Promise<{

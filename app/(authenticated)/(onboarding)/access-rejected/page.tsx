@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { signOut } from "@/actions/auth/actions";
-import { Body, Heading, PrimaryButton } from "@/components/auth/form";
+import { Body, Heading, PrimaryButton } from "@/components/auth/ui";
 import { requireAccessUser } from "@/lib/auth/access";
 
 export default async function AccessRejectedPage() {
   const user = await requireAccessUser();
 
   if (user.approvalStatus === "approved") {
-    redirect("/");
+    redirect("/welcome");
   }
 
   if (user.approvalStatus === "pending") {

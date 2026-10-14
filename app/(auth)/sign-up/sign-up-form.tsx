@@ -2,8 +2,10 @@
 
 import { FormEvent, useState } from "react";
 import { signUp } from "@/actions/auth/actions";
-import { PASSWORD_HINT, passwordIsValid } from "../password-rules";
-import { setSessionValue, useSessionValue } from "../session-value";
+import {
+  PASSWORD_HINT,
+  passwordIsValid,
+} from "@/components/auth/password-rules";
 import {
   CenterLink,
   ErrorLink,
@@ -17,7 +19,8 @@ import {
   PasswordInput,
   PasswordRules,
   SubmitButton,
-} from "../ui";
+} from "@/components/auth/ui";
+import { setSessionValue, useSessionValue } from "../session-value";
 
 const EMAIL_KEY = "zap-signup-email";
 

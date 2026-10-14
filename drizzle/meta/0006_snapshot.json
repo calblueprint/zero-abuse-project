@@ -506,12 +506,6 @@
           "type": "json",
           "primaryKey": false,
           "notNull": false
-        },
-        "welcome_seen_at": {
-          "name": "welcome_seen_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {},

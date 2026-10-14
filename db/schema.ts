@@ -58,10 +58,6 @@ export const users = pgTable(
       mode: "string",
     }),
     recentlyAccessed: json("recently_accessed"),
-    welcomeSeenAt: timestamp("welcome_seen_at", {
-      withTimezone: true,
-      mode: "string",
-    }),
   },
   table => [
     check(

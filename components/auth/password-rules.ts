@@ -1,4 +1,4 @@
-export type PasswordRule = {
+type PasswordRule = {
   id: string;
   label: string;
   test: (password: string) => boolean;
