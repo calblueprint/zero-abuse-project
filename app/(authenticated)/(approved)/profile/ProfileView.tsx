@@ -10,6 +10,7 @@ interface ProfileViewProps {
   email: string;
   phone: string;
   organization: string;
+  role: string;
   pendingEmail: string | null;
 }
 
@@ -19,6 +20,7 @@ export default function ProfileView({
   email,
   phone,
   organization,
+  role,
   pendingEmail,
 }: ProfileViewProps) {
   return (
@@ -54,7 +56,11 @@ export default function ProfileView({
           </Row>
           <Row>
             <Label>Organization</Label>
-            <Value>{organization}</Value>
+            <Value>{organization || "—"}</Value>
+          </Row>
+          <Row>
+            <Label>Role</Label>
+            <Value>{role || "—"}</Value>
           </Row>
           <EditLink href="/profile/edit">Edit profile</EditLink>
         </Card>
@@ -63,13 +69,13 @@ export default function ProfileView({
   );
 }
 
-const Page = styled.main`
+export const Page = styled.main`
   min-height: 100vh;
   padding: 72px 24px;
   background: ${COLORS.background};
 `;
 
-const Card = styled.section`
+export const Card = styled.section`
   margin-top: 24px;
   padding: 24px 50px 30px 35px;
   background: ${COLORS.surface};

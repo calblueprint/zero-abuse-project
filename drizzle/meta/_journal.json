@@ -43,6 +43,13 @@
       "when": 1791308590460,
       "tag": "0005_sync_user_email_and_access",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791574815394,
+      "tag": "0006_add_user_role",
+      "breakpoints": true
     }
   ]
 }

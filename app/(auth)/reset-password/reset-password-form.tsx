@@ -2,7 +2,6 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { requestPasswordReset } from "@/actions/auth/actions";
-import { setSessionValue, useSessionValue } from "../session-value";
 import {
   Body,
   CenterLink,
@@ -17,7 +16,8 @@ import {
   Overlay,
   PrimaryButton,
   SubmitButton,
-} from "../ui";
+} from "@/components/auth/ui";
+import { setSessionValue, useSessionValue } from "../session-value";
 
 const EMAIL_KEY = "zap-reset-email";
 

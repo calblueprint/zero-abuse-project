@@ -1,7 +1,6 @@
 "use client";
 
 import { signIn } from "@/actions/auth/actions";
-import { setSessionValue, useSessionValue } from "../session-value";
 import {
   Body,
   CenterLink,
@@ -15,7 +14,8 @@ import {
   MetaRow,
   PasswordInput,
   SubmitButton,
-} from "../ui";
+} from "@/components/auth/ui";
+import { setSessionValue, useSessionValue } from "../session-value";
 
 const EMAIL_KEY = "zap-login-email";
 

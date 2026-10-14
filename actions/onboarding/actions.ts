@@ -18,12 +18,10 @@ export async function submitOnboarding(
     return { fields: result.fields, errors: result.errors };
   }
 
+  const access = getInitialUserAccess(user.email);
+
   try {
-    await completeOnboarding(
-      user,
-      result.data,
-      getInitialUserAccess(user.email),
-    );
+    await completeOnboarding(user, result.data, access);
   } catch (error) {
     console.error("Onboarding failed:", error);
     return {
@@ -32,5 +30,7 @@ export async function submitOnboarding(
     };
   }
 
-  redirect("/");
+  redirect(
+    access.approvalStatus === "approved" ? "/welcome" : "/waiting-for-approval",
+  );
 }

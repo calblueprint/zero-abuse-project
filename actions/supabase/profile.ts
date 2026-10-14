@@ -25,7 +25,8 @@ export async function completeOnboarding(
     lastName: profile.lastName,
     email: user.email.trim().toLowerCase(),
     phone: profile.phone,
-    organization: profile.organization,
+    organization: profile.organization || null,
+    role: profile.role || null,
     onboardingComplete: true,
   };
 
@@ -51,7 +52,8 @@ export async function updateUserProfile(
       firstName: profile.firstName,
       lastName: profile.lastName,
       phone: profile.phone,
-      organization: profile.organization,
+      organization: profile.organization || null,
+      role: profile.role || null,
     })
     .where(eq(users.userId, userId));
 }

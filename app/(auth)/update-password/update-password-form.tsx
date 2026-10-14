@@ -2,7 +2,10 @@
 
 import { FormEvent, useState } from "react";
 import { signOut, updatePassword } from "@/actions/auth/actions";
-import { PASSWORD_HINT, passwordIsValid } from "../password-rules";
+import {
+  PASSWORD_HINT,
+  passwordIsValid,
+} from "@/components/auth/password-rules";
 import {
   CenterButton,
   ErrorText,
@@ -14,7 +17,7 @@ import {
   PasswordInput,
   PasswordRules,
   SubmitButton,
-} from "../ui";
+} from "@/components/auth/ui";
 
 export function UpdatePasswordForm({ error }: { error?: string }) {
   const [password, setPassword] = useState("");

@@ -46,6 +46,7 @@ export const users = pgTable(
     email: varchar("email"),
     phone: varchar("phone"),
     organization: varchar("organization"),
+    role: varchar("role"),
     onboardingComplete: boolean("onboarding_complete").default(false).notNull(),
     isAdmin: boolean("is_admin").default(false).notNull(),
     approvalStatus: varchar("approval_status", { enum: approvalStatuses })

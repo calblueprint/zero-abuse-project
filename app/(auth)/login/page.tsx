@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
+import { StatusBlock } from "@/components/auth/ui";
 import { getVerifiedAuthUser } from "@/lib/auth/user";
-import { StatusBlock } from "../ui";
 import { LoginForm } from "./login-form";
 
 type LoginPageProps = {

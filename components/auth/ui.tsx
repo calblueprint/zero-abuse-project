@@ -7,11 +7,12 @@ import Image from "next/image";
 import Link from "next/link";
 import styled, { css } from "styled-components";
 import ZapLogo from "@/assets/images/zap-logo.jpg";
+import COLORS from "@/styles/colors";
 import { PASSWORD_RULES } from "./password-rules";
 
 const headingStyles = css`
   margin: 0;
-  color: #002f6d;
+  color: ${COLORS.navy};
   font-size: 28px;
   font-weight: 600;
   line-height: 36px;
@@ -27,8 +28,8 @@ const primaryStyles = css`
   justify-content: center;
   border: 0;
   border-radius: 6px;
-  background: #002f6d;
-  color: #ffffff;
+  background: ${COLORS.navy};
+  color: ${COLORS.surface};
   font-family: inherit;
   font-size: 15px;
   font-weight: 500;
@@ -37,11 +38,11 @@ const primaryStyles = css`
   cursor: pointer;
 
   &:hover {
-    background: #002454;
+    background: ${COLORS.navyHover};
   }
 
   &:focus-visible {
-    outline: 2px solid #002f6d;
+    outline: 2px solid ${COLORS.navy};
     outline-offset: 2px;
   }
 
@@ -55,14 +56,14 @@ const Shell = styled.div`
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
-  color: #15233e;
+  background: ${COLORS.surface};
+  color: ${COLORS.ink};
 `;
 
 const Accent = styled.div`
   height: 4px;
   flex: none;
-  background: #002f6d;
+  background: ${COLORS.navy};
   position: relative;
 
   &::before {
@@ -72,7 +73,7 @@ const Accent = styled.div`
     top: 0;
     bottom: 0;
     width: 72px;
-    background: #ffd400;
+    background: ${COLORS.yellow};
   }
 `;
 
@@ -102,7 +103,7 @@ export const DialogTitle = styled.h2`
 
 export const Body = styled.p`
   margin: 8px 0 0;
-  color: #53627a;
+  color: ${COLORS.muted};
   font-size: 14px;
   font-weight: 400;
   line-height: 21px;
@@ -122,7 +123,7 @@ export const Field = styled.div`
 `;
 
 export const Label = styled.label`
-  color: #15233e;
+  color: ${COLORS.ink};
   font-size: 13px;
   font-weight: 500;
   line-height: 20px;
@@ -133,21 +134,23 @@ export const Input = styled.input<{ $invalid?: boolean }>`
   height: 48px;
   padding: 0 16px;
   border-radius: 6px;
-  border: 1px solid ${({ $invalid }) => ($invalid ? "#a12e2f" : "#cfd4de")};
-  background: #fbfcfc;
-  color: #15233e;
+  border: 1px solid
+    ${({ $invalid }) => ($invalid ? COLORS.error : COLORS.inputBorder)};
+  background: ${COLORS.inputBackground};
+  color: ${COLORS.ink};
   font-family: inherit;
   font-size: 15px;
   font-weight: 500;
   line-height: 1.45;
 
   &::placeholder {
-    color: #53627a;
+    color: ${COLORS.muted};
     opacity: 1;
   }
 
   &:focus {
-    outline: 2px solid ${({ $invalid }) => ($invalid ? "#a12e2f" : "#002f6d")};
+    outline: 2px solid
+      ${({ $invalid }) => ($invalid ? COLORS.error : COLORS.navy)};
     outline-offset: 1px;
   }
 `;
@@ -172,15 +175,15 @@ const PasswordToggle = styled.button`
   padding: 0;
   border: 0;
   background: transparent;
-  color: #53627a;
+  color: ${COLORS.muted};
   cursor: pointer;
 
   &:hover {
-    color: #15233e;
+    color: ${COLORS.ink};
   }
 
   &:focus-visible {
-    outline: 2px solid #002f6d;
+    outline: 2px solid ${COLORS.navy};
     outline-offset: -4px;
     border-radius: 4px;
   }
@@ -250,7 +253,7 @@ export function PasswordInput(
 
 export const Helper = styled.p`
   margin: 0;
-  color: #53627a;
+  color: ${COLORS.muted};
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
@@ -258,7 +261,7 @@ export const Helper = styled.p`
 
 export const ErrorText = styled.p`
   margin: 0;
-  color: #a12e2f;
+  color: ${COLORS.error};
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
@@ -280,7 +283,7 @@ export const RuleList = styled.ul`
 `;
 
 export const Rule = styled.li<{ $met: boolean }>`
-  color: ${({ $met }) => ($met ? "#1f7a4d" : "#a12e2f")};
+  color: ${({ $met }) => ($met ? COLORS.success : COLORS.error)};
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
@@ -317,9 +320,31 @@ export const PrimaryLink = styled(Link)`
   ${primaryStyles}
 `;
 
+export const TextButton = styled.button`
+  padding: 0;
+  border: 0;
+  background: none;
+  color: ${COLORS.navy};
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${COLORS.navy};
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+`;
+
 export const InlineLink = styled(Link)`
   margin-left: auto;
-  color: #002f6d;
+  color: ${COLORS.navy};
   font-size: 13px;
   font-weight: 500;
   line-height: 20px;
@@ -334,7 +359,7 @@ export const InlineLink = styled(Link)`
 export const CenterLink = styled(Link)`
   display: block;
   margin-top: 16px;
-  color: #002f6d;
+  color: ${COLORS.navy};
   font-size: 13px;
   font-weight: 500;
   line-height: 20px;
@@ -346,24 +371,19 @@ export const CenterLink = styled(Link)`
   }
 `;
 
-export const CenterButton = styled.button`
+export const CenterButton = styled(TextButton)`
   display: block;
   width: 100%;
   margin-top: 16px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #002f6d;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 20px;
   text-align: center;
-  cursor: pointer;
+`;
 
-  &:hover {
-    text-decoration: underline;
-  }
+export const Eyebrow = styled.p`
+  margin: 0 0 8px;
+  color: ${COLORS.muted};
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
 `;
 
 export const Overlay = styled.div`
@@ -381,7 +401,7 @@ export const Dialog = styled.div`
   width: min(360px, 100%);
   padding: 28px 24px 24px;
   border-radius: 8px;
-  background: #ffffff;
+  background: ${COLORS.surface};
   box-shadow: 0 16px 40px rgba(21, 35, 62, 0.18);
 `;
 
