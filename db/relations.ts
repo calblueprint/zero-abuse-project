@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm/relations";
 import {
   itelItems,
+  llmProviderConnections,
   savedGroups,
   sources,
   trendMetrics,
@@ -16,6 +17,7 @@ export const savedGroupsRelations = relations(savedGroups, ({ one }) => ({
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
+  llmProviderConnections: many(llmProviderConnections),
   savedGroups: many(savedGroups),
   trends_reviewedBy: many(trends, {
     relationName: "trends_reviewedBy_users_userId",
@@ -24,6 +26,16 @@ export const usersRelations = relations(users, ({ many }) => ({
     relationName: "trends_triggeredBy_users_userId",
   }),
 }));
+
+export const llmProviderConnectionsRelations = relations(
+  llmProviderConnections,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [llmProviderConnections.userId],
+      references: [users.userId],
+    }),
+  }),
+);
 
 export const trendsRelations = relations(trends, ({ one, many }) => ({
   user_reviewedBy: one(users, {

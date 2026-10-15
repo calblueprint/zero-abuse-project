@@ -3,16 +3,30 @@ import {
   boolean,
   check,
   foreignKey,
+  index,
   json,
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 import { authUsers } from "drizzle-orm/supabase/rls";
 
 export const approvalStatuses = ["pending", "approved", "rejected"] as const;
+export const llmProviderTypes = [
+  "openai",
+  "openrouter",
+  "ollama",
+  "lm_studio",
+  "openai_compatible",
+] as const;
+export const llmProviderTestStatuses = [
+  "untested",
+  "success",
+  "failed",
+] as const;
 
 export const savedGroups = pgTable(
   "saved_groups",
@@ -69,6 +83,58 @@ export const users = pgTable(
       foreignColumns: [table.userId],
       name: "users_approval_decided_by_fkey",
     }).onDelete("set null"),
+  ],
+).enableRLS();
+
+export const llmProviderConnections = pgTable(
+  "llm_provider_connections",
+  {
+    connectionId: uuid("connection_id").defaultRandom().primaryKey().notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.userId, { onDelete: "cascade" }),
+    providerType: varchar("provider_type", {
+      enum: llmProviderTypes,
+    }).notNull(),
+    baseUrl: varchar("base_url").notNull(),
+    modelId: varchar("model_id").notNull(),
+    encryptedApiKey: text("encrypted_api_key"),
+    apiKeyHint: varchar("api_key_hint"),
+    isDefault: boolean("is_default").default(false).notNull(),
+    isEnabled: boolean("is_enabled").default(true).notNull(),
+    capabilities: json("capabilities")
+      .$type<Record<string, boolean | string | number | null>>()
+      .default({})
+      .notNull(),
+    lastTestStatus: varchar("last_test_status", {
+      enum: llmProviderTestStatuses,
+    })
+      .default("untested")
+      .notNull(),
+    lastTestedAt: timestamp("last_tested_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  table => [
+    index("llm_provider_connections_user_id_idx").on(table.userId),
+    uniqueIndex("llm_provider_connections_one_default_per_user_idx")
+      .on(table.userId)
+      .where(sql`${table.isDefault} = true`),
+    check(
+      "llm_provider_connections_provider_type_check",
+      sql`${table.providerType} IN ('openai', 'openrouter', 'ollama', 'lm_studio', 'openai_compatible')`,
+    ),
+    check(
+      "llm_provider_connections_test_status_check",
+      sql`${table.lastTestStatus} IN ('untested', 'success', 'failed')`,
+    ),
   ],
 ).enableRLS();
 

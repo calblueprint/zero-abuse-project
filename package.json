@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "pnpm exec eslint .",
     "lint:fix": "pnpm exec eslint . --fix",
+    "test:provider-connections": "node --experimental-strip-types --test tests/llm-provider-connections.test.mjs",
     "tsc": "pnpm exec tsc --noEmit",
     "prettier": "pnpm exec prettier --check .",
     "prettier:fix": "pnpm exec prettier --write .",
