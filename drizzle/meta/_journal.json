@@ -50,6 +50,13 @@
       "when": 1791574815394,
       "tag": "0006_add_user_role",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792197787345,
+      "tag": "0007_add_source_added_by",
+      "breakpoints": true
     }
   ]
 }
