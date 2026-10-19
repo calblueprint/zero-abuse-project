@@ -86,6 +86,30 @@ class CrawlerTests(PublicNetworkTestCase):
         result = crawl_site(ROOT + "/blog", session=session, request_delay=0, **options)
         return result, session
 
+    def test_source_mode_traverses_seed_without_returning_listing_as_article(self):
+        result, _ = self.crawl({
+            ROOT + "/blog": article(links=["/blog/a"]),
+            ROOT + "/blog/a": article(),
+        }, include_seed=False)
+        self.assertEqual([str(page.url) for page in result.pages], [ROOT + "/blog/a"])
+        self.assertEqual(result.visited_urls, [ROOT + "/blog", ROOT + "/blog/a"])
+
+    def test_unexpected_extractor_failure_does_not_stop_next_page(self):
+        from scripts.scraper.scraper import scrape_url as real_scrape
+
+        def scrape(url, **kwargs):
+            if url.endswith("/blog/bad"):
+                raise RuntimeError("Unexpected parser error")
+            return real_scrape(url, **kwargs)
+
+        with patch("scripts.scraper.crawler.scrape_url", side_effect=scrape):
+            result, _ = self.crawl({
+                ROOT + "/blog": article(links=["/blog/bad", "/blog/good"]),
+                ROOT + "/blog/good": article(),
+            }, include_seed=False)
+        self.assertEqual([str(page.url) for page in result.pages], [ROOT + "/blog/good"])
+        self.assertEqual(result.failures[0].url, ROOT + "/blog/bad")
+
     def test_breadth_first_page_budget_and_duplicate_links(self):
         pages = {
             ROOT + "/blog": article(
