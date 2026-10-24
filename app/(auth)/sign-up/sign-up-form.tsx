@@ -87,11 +87,8 @@ export function SignUpForm({ error }: { error?: string }) {
             required
           />
           <input type="hidden" name="confirmPassword" value={password} />
-          {showRules ? (
+          
             <PasswordRules password={password} />
-          ) : (
-            <Helper>{PASSWORD_HINT}</Helper>
-          )}
           {error === "signup-failed" ? (
             <ErrorText role="alert">
               Unable to create your account. Please try again.

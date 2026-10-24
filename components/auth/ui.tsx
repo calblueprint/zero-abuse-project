@@ -231,6 +231,45 @@ function EyeOffIcon() {
   );
 }
 
+function CheckIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+function CircleIcon() {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="16" 
+      height="16" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      stroke-width="2" 
+      stroke-linecap="round" 
+      stroke-linejoin="round" 
+      class="lucide lucide-circle-small preview-icon"><circle 
+      cx="12" 
+      cy="12" 
+      r="6"/>
+    </svg>
+  );
+}
+
 export function PasswordInput(
   props: Omit<ComponentProps<typeof Input>, "type">,
 ) {
@@ -279,14 +318,36 @@ export const ErrorLink = styled(Link)`
 
 export const RuleList = styled.ul`
   margin: 0;
-  padding-left: 18px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `;
 
-export const Rule = styled.li<{ $met: boolean }>`
-  color: ${({ $met }) => ($met ? COLORS.success : COLORS.error)};
+export const Rule = styled.li<{ $tone: "idle" | "error" | "success" }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: ${({ $tone }) =>
+    $tone === "success"
+      ? COLORS.success
+      : $tone === "error"
+        ? "#A34B47"
+        :" #596159"};
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
+`;
+
+export const RuleIcon = styled.span<{ $tone: "idle" | "error" | "success" }>`
+  display: inline-flex;
+  color: ${({ $tone }) =>
+    $tone === "success"
+      ? COLORS.success
+      : $tone === "error"
+        ? "#A12E2F"
+        : "#596159"};
 `;
 
 export const MetaRow = styled.div`
@@ -467,12 +528,19 @@ export function StatusBlock({
 }
 
 export function PasswordRules({ password }: { password: string }) {
+  const hasTyped = password.length > 0;
+
   return (
     <RuleList>
       {PASSWORD_RULES.map(rule => {
         const met = rule.test(password);
+        const tone = met ? "success" : hasTyped ? "error" : "idle";
+
         return (
-          <Rule key={rule.id} $met={met}>
+          <Rule key={rule.id} $tone={tone}>
+            <RuleIcon $tone={tone}>
+              {met ? <CheckIcon /> : <CircleIcon />}
+            </RuleIcon>
             {rule.label}
           </Rule>
         );
