@@ -78,12 +78,13 @@ export const trends = pgTable(
   "trends",
   {
     trendId: uuid("trend_id").defaultRandom().primaryKey().notNull(),
+    title: varchar().notNull(),
     emergedAt: timestamp("emerged_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
     signalStatus: varchar("signal_status"),
     evidenceStatus: varchar("evidence_status"),
-    itemIds: uuid("item_ids"),
+    itemIds: uuid("item_ids").array(),
     triggeredBy: uuid("triggered_by"),
     reviewedBy: uuid("reviewed_by"),
     description: text(),
