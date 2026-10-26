@@ -7,3 +7,5 @@ pydantic==2.13.5
 python-dotenv==1.2.3
 requests==2.34.2
 trafilatura==2.3.0
+us==4.0.0
+rapidfuzz==3.14.6

@@ -1,4 +1,13 @@
-from enum import Enum
+from enum import Enum, StrEnum
+
+
+class USRegion(StrEnum):
+    NORTHEAST = "Northeast"
+    MIDWEST = "Midwest"
+    SOUTH = "South"
+    WEST = "West"
+    EAST_COAST = "East Coast"
+    WEST_COAST = "West Coast"
 
 
 class ExploitationType(str, Enum):
