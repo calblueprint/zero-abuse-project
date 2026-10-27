@@ -5,7 +5,16 @@ from instructor.core.exceptions import InstructorRetryException, ResponseParsing
 from openai import APIError, OpenAI, RateLimitError
 from pydantic import ValidationError
 
-from scripts.intelligence.models import ExtractionResult, IntelligenceItem
+from scripts.intelligence.location_resolver import (
+    LocationResolver,
+    get_default_resolver,
+)
+from scripts.intelligence.models import (
+    ExtractedIntelligenceItem,
+    ExtractionResult,
+    Geography,
+    IntelligenceItem,
+)
 from scripts.models import Article
 
 logger = logging.getLogger(__name__)
@@ -56,7 +65,38 @@ digital platform involved in the development. Do not infer platform or technolog
 from the topic, a TV show, or a broadcaster. Do not infer gaming or encryption from
 a platform name. Use other only for an explicitly described item outside the listed
 categories, never to fill missing information. Return [] when no value is supported.
-For geography, include only countries explicitly named in the article.
+
+For geography, extract cities, counties, states/provinces, regions, and countries
+explicitly connected to the development, including locations outside the US.
+Each entry describes one place and its geographic context. Keep a city's or
+county's stated state/province and country together in the same raw_extracted
+object. Do not drop the state/province when a more specific place is named, and
+do not split the levels of one location into separate entries. For multiple
+places, attach only the context belonging to each place.
+Return all five raw_extracted fields: country_code, state, city, county, region.
+Use null for unknown values; never omit a field.
+Only extract a city when the article identifies a city. A county name is not
+evidence of its same-named city: "Orange County" alone requires city=null, even
+though a city named Orange exists. Keep a city only when separately supported.
+Use a two-letter country_code only when the article establishes the country;
+otherwise leave it null. An unambiguous US state reference can establish US context
+even when the United States is not named. Use standard two-letter codes for US
+states and preserve foreign state/province names. Do not guess a state or country
+from an ambiguous city or region name. Keep the named location with unknown fields
+null. Extract a county only when the article names it; reference data will supply
+a US city's primary county. Extract a region only when explicitly named, including
+foreign regions. Do not infer regions from cities or states; the resolver does that.
+For US regions use Northeast, Midwest, South, West, East Coast, or West Coast.
+Return [] only when no location is supported by the article. Keep distinct
+locations in separate entries. Only provide raw_extracted fields; US standardized
+locations are produced by the application, not by you.
+
+Examples of raw_extracted objects (use the article's actual locations):
+- "Portland, Oregon": {"city": "Portland", "state": "OR", "country_code": "US", "county": null, "region": null}.
+- "Maricopa County, Arizona": {"county": "Maricopa County", "state": "AZ", "country_code": "US", "city": null, "region": null}.
+- "the Midwest of the United States": {"region": "Midwest", "country_code": "US", "state": null, "county": null, "city": null}.
+- "Vancouver, British Columbia, Canada": {"city": "Vancouver", "state": "British Columbia", "country_code": "CA", "county": null, "region": null}.
+- "Springfield" with no further location context: {"city": "Springfield", "state": null, "country_code": null, "county": null, "region": null}.
 
 Before returning, check every label against the article and remove unsupported or
 duplicate labels. Do not invent facts. Return all fields even when lists are empty.
@@ -103,18 +143,27 @@ def extract_intelligence(
     article: Article,
     client: instructor.Instructor,
     model: str = "openrouter/free",
+    *,
+    resolver: LocationResolver | None = None,
 ) -> ExtractionResult:
     """Return validated intelligence or raise ExtractionError for expected failures."""
     if not model.strip():
         raise ConfigurationError("Set the model to a structured-output model ID.")
+    if resolver is None:
+        try:
+            resolver = get_default_resolver()
+        except (OSError, ValueError) as exc:
+            raise ConfigurationError(
+                f"Cannot load US geography reference data: {exc}"
+            ) from exc
 
     # Try schema mode first, with one format fallback for JSON-only providers.
-    intel: IntelligenceItem | None = None
+    intel: ExtractedIntelligenceItem | None = None
     for format_attempt in range(2):
         try:
             intel = client.chat.completions.create(
                 model=model,
-                response_model=IntelligenceItem,
+                response_model=ExtractedIntelligenceItem,
                 context={"article_text": article.article_text},
                 max_retries=3,
                 temperature=0,
@@ -163,5 +212,16 @@ def extract_intelligence(
     if intel is None:
         raise ExtractionError("The provider returned no extraction result.")
 
+    resolved = IntelligenceItem(
+        **intel.model_dump(exclude={"geography"}),
+        geography=[
+            Geography(
+                raw_extracted=geo.raw_extracted,
+                standardized=resolver.standardize(geo.raw_extracted),
+            )
+            for geo in intel.geography
+        ],
+    )
+
     logger.info("Extracted article successfully.")
-    return ExtractionResult(article=article, intelligence=intel)
+    return ExtractionResult(article=article, intelligence=resolved)
