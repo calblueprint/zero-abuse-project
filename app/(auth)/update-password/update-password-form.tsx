@@ -2,17 +2,13 @@
 
 import { FormEvent, useState } from "react";
 import { signOut, updatePassword } from "@/actions/auth/actions";
-import {
-  PASSWORD_HINT,
-  passwordIsValid,
-} from "@/components/auth/password-rules";
+import { passwordIsValid } from "@/components/auth/password-rules";
 import {
   CenterButton,
   ErrorText,
   Field,
   Fields,
   Heading,
-  Helper,
   Label,
   PasswordInput,
   PasswordRules,
@@ -27,7 +23,6 @@ export function UpdatePasswordForm({ error }: { error?: string }) {
     error === "password-mismatch",
   );
 
-  const showRules = submitted;
   const passwordInvalid = submitted && !passwordIsValid(password);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -89,11 +84,7 @@ export function UpdatePasswordForm({ error }: { error?: string }) {
               Passwords don&apos;t match. Try again.
             </ErrorText>
           ) : null}
-          {showRules ? (
-            <PasswordRules password={password} />
-          ) : (
-            <Helper>{PASSWORD_HINT}</Helper>
-          )}
+          <PasswordRules password={password} />
           {error === "update-failed" ? (
             <ErrorText role="alert">
               Unable to update your password. Please try again.
