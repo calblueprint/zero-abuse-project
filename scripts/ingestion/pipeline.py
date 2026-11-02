@@ -53,6 +53,8 @@ def process_article(
             return PageOutcome(url, "skipped", stage, "Article already saved.")
         stage = "intelligence"
         result = extract_intelligence(article, client=client, model=model)
+        if result.relevance == "irrelevant":
+            return PageOutcome(url, "irrelevant", "relevance", result.relevance_reason)
         stage = "save"
         item_id = repository.save_intelligence(source_id, result)
         if item_id is None:
@@ -93,7 +95,7 @@ def ingest_url(
 
 
 def ingest_source(
-    source_id: str, *, max_pages: int = 20, max_depth: int = 1,
+    source_id: str, *, max_pages: int = 20, max_depth: int = 2,
     request_delay: float = 1.0, article_filter=None, follow_filter=None,
     repository: Repository | None = None, client=None, model: str = "openrouter/free",
 ) -> IngestionSummary:

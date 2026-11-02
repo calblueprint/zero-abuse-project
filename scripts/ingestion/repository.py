@@ -62,6 +62,8 @@ class PostgresRepository:
         ).fetchone() is not None
 
     def save_intelligence(self, source_id: str, result: ExtractionResult) -> str | None:
+        if result.relevance != "relevant" or result.intelligence is None:
+            raise ValueError("Only relevant, validated intelligence can be saved.")
         url = normalize_url(str(result.article.url))
         intelligence = result.intelligence.model_dump(mode="json")
         fields = (

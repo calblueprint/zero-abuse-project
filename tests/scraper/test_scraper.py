@@ -129,7 +129,7 @@ class CrawlerTests(PublicNetworkTestCase):
         result, session = self.crawl(pages, max_pages=4, max_depth=2)
         expected = [ROOT + path for path in ["/blog", "/blog/a", "/blog/b", "/blog/c"]]
         self.assertEqual(result.visited_urls, expected)
-        self.assertEqual([str(page.url) for page in result.pages], expected)
+        self.assertEqual([str(page.url) for page in result.pages], expected[1:])
         self.assertEqual(session.calls, [ROOT + "/robots.txt", *expected])
         self.assertFalse(result.failures)
         self.assertNotIn("Copyright", result.pages[0].article_text)
@@ -144,7 +144,7 @@ class CrawlerTests(PublicNetworkTestCase):
             max_depth=1,
             article_filter=lambda url: "/features/" in url,
         )
-        self.assertEqual(len(result.pages), 2)
+        self.assertEqual(len(result.pages), 1)
         result, _ = self.crawl(pages, max_depth=0)
         self.assertEqual(len(result.visited_urls), 1)
 
@@ -202,7 +202,65 @@ class CrawlerTests(PublicNetworkTestCase):
         )
 
         self.assertEqual(result.visited_urls, [seed, listing, story])
-        self.assertEqual([page.title for page in result.pages], ["Seed page", "Feature story"])
+        self.assertEqual([page.title for page in result.pages], ["Feature story"])
+
+    def test_broad_paths_and_category_pagination_are_discovered(self):
+        result, _ = self.crawl({
+            ROOT + "/blog": article(links=["/category/safety", "/help-for-survivors"]),
+            ROOT + "/category/safety": article(links=["/category/safety?page=2"]),
+            ROOT + "/help-for-survivors": article("Support resource"),
+            ROOT + "/category/safety?page=2": article(links=["/unusual-slug"]),
+            ROOT + "/unusual-slug": article("Guidance"),
+        }, max_depth=3)
+        self.assertEqual([page.title for page in result.pages], ["Support resource", "Guidance"])
+        self.assertEqual(len(result.visited_urls), 5)
+        self.assertFalse(result.failures)
+
+    def test_query_variations_are_bounded(self):
+        result, session = self.crawl({
+            ROOT + "/blog": article(links=[f"/archive?page={n}" for n in range(10)]),
+            **{ROOT + f"/archive?page={n}": article() for n in range(3)},
+        }, max_query_variants=3)
+        self.assertEqual(len(result.visited_urls), 4)
+        self.assertEqual(result.pages, [])
+        self.assertFalse(result.failures)
+
+    def test_seed_can_explicitly_be_included(self):
+        result, _ = self.crawl({ROOT + "/blog": article()}, include_seed=True)
+        self.assertEqual([str(page.url) for page in result.pages], [ROOT + "/blog"])
+
+    def test_unexpected_extraction_failure_does_not_abort_other_pages(self):
+        pages = {
+            ROOT + "/blog": article(links=["/broken", "/good"]),
+            ROOT + "/good": article("Good resource"),
+        }
+        original = scrape_url
+
+        def scrape(url, **options):
+            if url.endswith("/broken"):
+                raise ValueError("Bad parser output")
+            return original(url, **options)
+
+        with patch("scripts.scraper.crawler.scrape_url", side_effect=scrape):
+            result, _ = self.crawl(pages)
+        self.assertEqual([page.title for page in result.pages], ["Good resource"])
+        self.assertEqual(result.failures[0].stage, "extract")
+
+    def test_redirect_from_candidate_to_index_does_not_return_index(self):
+        result, _ = self.crawl({
+            ROOT + "/blog": article(links=["/old-story"]),
+            ROOT + "/old-story": (302, {"Location": "/news"}, ""),
+            ROOT + "/news": article("News listing"),
+        })
+        self.assertEqual(result.pages, [])
+
+    def test_default_depth_reaches_document_through_listing(self):
+        result, _ = self.crawl({
+            ROOT + "/blog": article(links=["/tags/safety"]),
+            ROOT + "/tags/safety": article(links=["/guide"]),
+            ROOT + "/guide": article("Safety guide"),
+        })
+        self.assertEqual([page.title for page in result.pages], ["Safety guide"])
 
     def test_each_page_is_scraped_through_scrape_url(self):
         pages = {
@@ -212,7 +270,7 @@ class CrawlerTests(PublicNetworkTestCase):
         with patch("scripts.scraper.crawler.scrape_url", wraps=scrape_url) as scrape:
             result, _ = self.crawl(pages)
         self.assertEqual([call.args[0] for call in scrape.call_args_list], result.visited_urls)
-        self.assertEqual(len(result.pages), 2)
+        self.assertEqual(len(result.pages), 1)
 
     def test_fetch_failure_counts_towards_budget_and_does_not_stop_crawl(self):
         pages = {
@@ -221,7 +279,7 @@ class CrawlerTests(PublicNetworkTestCase):
             ROOT + "/blog/good": article(),
         }
         result, _ = self.crawl(pages, max_pages=3)
-        self.assertEqual(len(result.pages), 2)
+        self.assertEqual(len(result.pages), 1)
         self.assertEqual(result.failures[0].stage, "fetch")
         self.assertEqual(len(result.visited_urls), 3)
 
@@ -230,7 +288,7 @@ class CrawlerTests(PublicNetworkTestCase):
             ROOT + "/blog": '<html><body><nav><a href="/blog/story">Menu</a></nav></body></html>',
             ROOT + "/blog/story": article(),
         })
-        self.assertEqual(result.failures[0].stage, "extract")
+        self.assertFalse(result.failures)
         self.assertEqual([str(page.url) for page in result.pages], [ROOT + "/blog/story"])
 
     def test_robots_disallow_prevents_request_and_other_pages_continue(self):
@@ -240,7 +298,7 @@ class CrawlerTests(PublicNetworkTestCase):
         }, robots="User-agent: *\nDisallow: /blog/private\n")
         self.assertNotIn(ROOT + "/blog/private", session.calls)
         self.assertEqual(result.failures[0].stage, "access")
-        self.assertEqual(len(result.pages), 2)
+        self.assertEqual(len(result.pages), 1)
 
     def test_robots_unavailable_fails_closed(self):
         session = FixtureSession({}, robots=(503, {}, "Unavailable"))
@@ -254,7 +312,7 @@ class CrawlerTests(PublicNetworkTestCase):
                 result, session = self.crawl(
                     {ROOT + "/blog": article()}, robots=(status, {}, ""),
                 )
-                self.assertEqual(bool(result.pages), allowed)
+                self.assertEqual(ROOT + "/blog" in result.visited_urls and not result.failures, allowed)
                 self.assertEqual(ROOT + "/blog" in session.calls, allowed)
 
     def test_redirect_final_url_is_used_for_relative_links(self):
@@ -263,8 +321,7 @@ class CrawlerTests(PublicNetworkTestCase):
             ROOT + "/blog/": article(links=["story"]),
             ROOT + "/blog/story": article(),
         })
-        self.assertEqual(str(result.pages[0].url), ROOT + "/blog/")
-        self.assertEqual(str(result.pages[1].url), ROOT + "/blog/story")
+        self.assertEqual(str(result.pages[0].url), ROOT + "/blog/story")
         self.assertEqual(session.calls.count(ROOT + "/robots.txt"), 1)
 
     def test_redirect_cannot_cross_hostname_or_bypass_robots(self):
@@ -283,7 +340,7 @@ class CrawlerTests(PublicNetworkTestCase):
             ROOT + "/blog/story": article(),
         })
         self.assertEqual(session.calls.count(ROOT + "/blog/story"), 1)
-        self.assertEqual(len(result.pages), 2)
+        self.assertEqual(len(result.pages), 1)
 
     def test_crawl_delay_is_honored(self):
         session = FixtureSession(
@@ -308,6 +365,7 @@ class CrawlerTests(PublicNetworkTestCase):
             {"request_delay": float("nan")},
             {"timeout": 0},
             {"max_response_bytes": 0},
+            {"max_query_variants": 0},
         ]:
             with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
                 crawl_site(ROOT, **kwargs)
@@ -327,7 +385,7 @@ class LinkAndFetcherTests(PublicNetworkTestCase):
         self.assertTrue(is_article_url(ROOT + "/2025/10/story"))
         self.assertFalse(is_article_url(ROOT + "/news/tags/topic"))
         self.assertFalse(is_article_url(ROOT + "/news/file.pdf"))
-        self.assertFalse(is_article_url(ROOT + "/about"))
+        self.assertTrue(is_article_url(ROOT + "/about"))
         self.assertFalse(is_article_url(ROOT + "/contact"))
         self.assertTrue(is_discovery_url(ROOT + "/newsroom/releases"))
         self.assertTrue(is_discovery_url(ROOT + "/about/news"))

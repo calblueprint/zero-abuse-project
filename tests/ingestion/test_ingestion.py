@@ -22,7 +22,7 @@ def article(name):
 
 
 def extraction(page):
-    return ExtractionResult(article=page, intelligence=IntelligenceItem(
+    return ExtractionResult(article=page, relevance="relevant", relevance_reason="Child protection report.", intelligence=IntelligenceItem(
         title="Reported development", summary="Summary", description="Description",
         exploitation_type=[], platform=["Discord", "Telegram"], technology=[],
         affected_population=[], offender_tactic=[], geography=[], intel_type=[],
@@ -52,6 +52,41 @@ class PipelineTests(unittest.TestCase):
         self.client.client.close.assert_not_called()
         self.repository.close.assert_not_called()
         self.assertEqual(summary.pages[0].item_id, "item-id")
+
+    @patch("scripts.ingestion.pipeline.extract_intelligence")
+    @patch("scripts.ingestion.pipeline.scrape_url")
+    def test_single_irrelevant_article_never_reaches_storage(self, scrape, extract):
+        page = article("sports")
+        scrape.return_value = ScrapeResult(str(page.url), "html", page)
+        extract.return_value = ExtractionResult(
+            article=page, relevance="irrelevant", relevance_reason="Sports results.", intelligence=None,
+        )
+        summary = ingest_url(str(page.url), "source-id", **self.options)
+        self.assertEqual((summary.saved, summary.irrelevant, summary.failed), (0, 1, 0))
+        self.assertEqual(summary.pages[0].message, "Sports results.")
+        self.assertEqual(summary.to_dict()["irrelevant"], 1)
+        self.repository.save_intelligence.assert_not_called()
+
+    @patch("scripts.ingestion.pipeline.crawl_site")
+    @patch("scripts.ingestion.pipeline.extract_intelligence")
+    def test_batch_rejects_irrelevant_and_continues_to_relevant(self, extract, crawl):
+        unrelated, relevant = article("unrelated"), article("relevant")
+        crawl.return_value = CrawlResult("https://example.com", pages=[unrelated, relevant])
+        extract.side_effect = [ExtractionResult(
+            article=unrelated, relevance="irrelevant", relevance_reason="Unrelated crime.", intelligence=None,
+        ), extraction(relevant)]
+        summary = ingest_source("source-id", **self.options)
+        self.assertEqual((summary.saved, summary.irrelevant, summary.failed), (1, 1, 0))
+        self.repository.save_intelligence.assert_called_once_with("source-id", extraction(relevant))
+
+    @patch("scripts.ingestion.pipeline.extract_intelligence", side_effect=ExtractionError("Missing relevance decision"))
+    @patch("scripts.ingestion.pipeline.scrape_url")
+    def test_invalid_assessment_fails_without_saving(self, scrape, extract):
+        page = article("invalid-assessment")
+        scrape.return_value = ScrapeResult(str(page.url), "html", page)
+        summary = ingest_url(str(page.url), "source-id", **self.options)
+        self.assertEqual((summary.saved, summary.irrelevant, summary.failed), (0, 0, 1))
+        self.repository.save_intelligence.assert_not_called()
 
     @patch("scripts.ingestion.pipeline.scrape_url")
     def test_existing_url_skips_without_fetching(self, scrape):
@@ -234,6 +269,17 @@ class RepositoryTests(unittest.TestCase):
                 connection.rollback.assert_not_called()
                 connection.close.assert_not_called()
                 self.assertEqual(connection.autocommit, autocommit)
+
+    def test_repository_refuses_irrelevant_results_before_transaction(self):
+        connection = TransactionConnection()
+        repository = PostgresRepository(connection)
+        with self.assertRaises(ValueError):
+            repository.save_intelligence("source-id", ExtractionResult(
+                article=article("sports"), relevance="irrelevant",
+                relevance_reason="Sports results.", intelligence=None,
+            ))
+        self.assertEqual(connection.calls, [])
+        self.assertEqual(connection.events, [])
 
     def test_failed_save_rolls_back_only_its_transaction_and_next_save_works(self):
         connection = TransactionConnection()

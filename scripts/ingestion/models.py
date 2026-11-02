@@ -14,7 +14,7 @@ class Source:
 @dataclass(frozen=True)
 class PageOutcome:
     url: str
-    status: Literal["saved", "skipped", "failed"]
+    status: Literal["saved", "skipped", "irrelevant", "failed"]
     stage: str
     message: str | None = None
     item_id: str | None = None
@@ -40,10 +40,15 @@ class IngestionSummary:
     def failed(self) -> int:
         return sum(page.status == "failed" for page in self.pages)
 
+    @property
+    def irrelevant(self) -> int:
+        return sum(page.status == "irrelevant" for page in self.pages)
+
     def to_dict(self) -> dict:
         return {
             "saved": self.saved,
             "skipped": self.skipped,
             "failed": self.failed,
+            "irrelevant": self.irrelevant,
             **asdict(self),
         }

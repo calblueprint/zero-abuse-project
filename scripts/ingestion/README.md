@@ -1,7 +1,7 @@
 # Callable article ingestion
 
 `ingest_url()` and `ingest_source()` connect the existing scraper to Carolyn's
-`extract_intelligence()` and save successful intelligence records to PostgreSQL.
+`extract_intelligence()` and save relevant, validated intelligence records to PostgreSQL.
 There is no ingestion CLI. Call these functions from Python application code or a job.
 
 Install the repository's Python requirements. Set `DATABASE_URL` and
@@ -24,7 +24,7 @@ summary = ingest_url("https://example.com/news/story", source_id)
 print(json.dumps(summary.to_dict(), indent=2))
 
 # Or crawl from that source's base_url, then process the discovered articles.
-summary = ingest_source(source_id, max_pages=10, max_depth=1)
+summary = ingest_source(source_id, max_pages=10, max_depth=2)
 print(json.dumps(summary.to_dict(), indent=2))
 ```
 
@@ -37,6 +37,7 @@ status, and run errors. For example:
   "saved": 2,
   "skipped": 1,
   "failed": 1,
+  "irrelevant": 0,
   "source_id": "YOUR_SOURCE_UUID",
   "pages": [
     {"url": "https://example.com/news/down", "status": "failed", "stage": "fetch", "message": "HTTP 500", "item_id": null},
@@ -58,7 +59,8 @@ status, and run errors. For example:
   calls `process_article()` for each returned article. The crawl completes before
   intelligence extraction starts. Source records explicitly marked inactive are rejected.
 - `process_article()` checks the final URL (including redirect destinations),
-  calls `extract_intelligence()`, then calls `save_intelligence()`.
+  calls `extract_intelligence()`, and calls `save_intelligence()` only when the
+  assessment explicitly marks the content relevant.
 - The default `PostgresRepository` writes into the existing `itel_items` table,
   assigning the supplied `source_id`, final URL, publication date, insertion
   timestamp, extracted title, summary (`tldr`), and classifications.
@@ -67,7 +69,8 @@ status, and run errors. For example:
 URL already exists in `itel_items`, regardless of source. **Failed** means a page
 could not be accessed, fetched, extracted, checked for duplicates, or saved. A
 failed page does not stop other pages. Each save uses a separate transaction.
-Expected intelligence failures carry the extractor's safe explanation; unexpected
+**Irrelevant** means the model assessed the content as unrelated or discovery-only;
+it is not a duplicate or processing failure. Expected intelligence failures carry the extractor's safe explanation; unexpected
 exceptions expose only their type. Debug logging retains their tracebacks.
 
 Source crawling retains existing hostname, robots, redirect, public-address,
@@ -77,7 +80,9 @@ articles. The seed is depth zero. Listing pages are traversed without becoming
 intelligence records. Custom `article_filter` and `follow_filter` functions can
 be passed to `ingest_source()` for publishers with different URL structures.
 Discovery-only pages and links excluded by crawl policy are not counted as skipped.
-There is no relevance-based skip rule.
+Irrelevant pages have a separate `irrelevant` status and count, with the
+assessment's reason. They never reach the database insert. The repository also
+rejects irrelevant results if called directly.
 
 `ingest_source()` updates `sources.last_crawled_at` to a timezone-aware UTC time
 after article processing finishes, even if all attempted pages failed or no
@@ -86,6 +91,25 @@ timestamp write is returned in `run_errors`, leaving page counts intact.
 `ingest_url()` never updates this source-wide timestamp. Invalid source IDs,
 missing sources/base URLs, inactive sources, invalid limits, and configuration
 errors raise before a completed crawl and do not advance the timestamp.
+
+## Relevance contract
+
+One structured model call returns `relevance` (`relevant` or `irrelevant`), a
+nonblank `relevance_reason`, and `intelligence`. Relevant pages require the existing
+validated intelligence object; irrelevant pages require `intelligence: null`.
+Missing or inconsistent decisions fail validation and are not stored. Program
+classifications are independent labels, not the admission rule.
+
+The rubric includes child abuse prevention/protection, sexual abuse/exploitation,
+related investigation and justice, and survivor support. News, research, guidance,
+policy, and resources can qualify. General crime, AI, parenting, and education
+without a concrete connection do not. Listings are rejected even when their links
+mention relevant subjects. The decision is based on extracted page text and may be
+wrong; provider quality should be evaluated with labeled examples before a large run.
+
+The default crawl depth is now 2. Ordinary HTML paths are candidates, while known
+listings and bounded pagination are used for discovery. No existing database records
+are reclassified or deleted.
 
 ## Persistence boundaries
 
