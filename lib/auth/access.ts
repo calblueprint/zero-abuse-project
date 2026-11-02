@@ -11,6 +11,8 @@ export type ApprovalStatus = (typeof approvalStatuses)[number];
 type AccessUser = {
   userId: string;
   email: string;
+  firstName: string | null;
+  lastName: string | null;
   isAdmin: boolean;
   approvalStatus: ApprovalStatus;
 };
@@ -35,6 +37,8 @@ export const requireAccessUser = cache(async (): Promise<AccessUser> => {
     .select({
       userId: users.userId,
       onboardingComplete: users.onboardingComplete,
+      firstName: users.firstName,
+      lastName: users.lastName,
       isAdmin: users.isAdmin,
       approvalStatus: users.approvalStatus,
     })
@@ -52,6 +56,8 @@ export const requireAccessUser = cache(async (): Promise<AccessUser> => {
 function toAccessUser(
   user: {
     userId: string;
+    firstName: string | null;
+    lastName: string | null;
     isAdmin: boolean | null;
     approvalStatus: string | null;
   },
@@ -68,6 +74,8 @@ function toAccessUser(
   return {
     userId: user.userId,
     email,
+    firstName: user.firstName,
+    lastName: user.lastName,
     isAdmin: user.isAdmin,
     approvalStatus: user.approvalStatus,
   };
