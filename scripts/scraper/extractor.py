@@ -100,6 +100,7 @@ def extract_page(html: str, url: str) -> Article:
         article_text=text,
         source=_optional_text(data.get("sitename")) or _optional_text(data.get("hostname")),
         title=_optional_text(data.get("title")),
+        meta_description=_optional_text(data.get("excerpt")) or _optional_text(data.get("description")),
         author=_optional_text(data.get("author")),
         published_at=_optional_datetime(data.get("date")),
     )

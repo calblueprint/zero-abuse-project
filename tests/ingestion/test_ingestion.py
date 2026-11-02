@@ -10,10 +10,10 @@ from unittest.mock import Mock, patch
 from psycopg.pq import TransactionStatus
 
 from scripts.ingestion import PostgresRepository, Source, ingest_source, ingest_url
-from scripts.ingestion.cache import assessment_key, content_hash
+from scripts.ingestion.cache import article_hash, assessment_key
 from scripts.ingestion.models import ProcessedPage
 from scripts.intelligence.extractor import ExtractionError
-from scripts.intelligence.models import ExtractionResult, IntelligenceItem
+from scripts.intelligence.models import ExtractionResult, IntelligenceItem, ScreeningDecision
 from scripts.models import Article
 from scripts.scraper.models import CrawlFailure, CrawlResult, ScrapeResult
 from tests.scraper.test_scraper import FixtureSession, ROOT, article as html_article, public_dns
@@ -34,6 +34,10 @@ def extraction(page):
 
 class PipelineTests(unittest.TestCase):
     def setUp(self):
+        self.screen = self.enterContext(patch(
+            "scripts.ingestion.pipeline.screen_article",
+            return_value=ScreeningDecision(decision="uncertain", reason="Needs full text."),
+        ))
         self.repository = Mock()
         self.repository.get_source.return_value = Source("source-id", "https://example.com/news")
         self.repository.article_exists.return_value = False
@@ -96,7 +100,7 @@ class PipelineTests(unittest.TestCase):
         page = article("a")
         self.repository.article_exists.return_value = True
         self.repository.get_processed_page.return_value = ProcessedPage(
-            content_hash(page.article_text), assessment_key("openrouter/free"),
+            article_hash(page), assessment_key("openrouter/free"),
             "relevant", "Child protection report.",
         )
         scrape.return_value = ScrapeResult(str(page.url), "html", page)
@@ -113,7 +117,7 @@ class PipelineTests(unittest.TestCase):
         page = article("final")
         self.repository.article_exists.return_value = True
         self.repository.get_processed_page.return_value = ProcessedPage(
-            content_hash(page.article_text), assessment_key("openrouter/free"),
+            article_hash(page), assessment_key("openrouter/free"),
             "relevant", "Child protection report.",
         )
         scrape.return_value = ScrapeResult(str(page.url), "html", page)
@@ -141,7 +145,7 @@ class PipelineTests(unittest.TestCase):
         )
         self.repository.article_exists.side_effect = lambda url: url.endswith("/existing")
         self.repository.get_processed_page.side_effect = lambda url: (
-            ProcessedPage(content_hash(pages[0].article_text), assessment_key("openrouter/free"),
+            ProcessedPage(article_hash(pages[0]), assessment_key("openrouter/free"),
                           "relevant", "Child protection report.")
             if url.endswith("/existing") else None
         )
@@ -288,6 +292,10 @@ class ProcessingCacheTests(unittest.TestCase):
     """Exercise repeated ingestion calls through the actual repository adapter."""
 
     def setUp(self):
+        self.screen = self.enterContext(patch(
+            "scripts.ingestion.pipeline.screen_article",
+            return_value=ScreeningDecision(decision="uncertain", reason="Needs full text."),
+        ))
         self.connection = TransactionConnection()
         self.repository = PostgresRepository(self.connection)
         self.page = article("cached")
@@ -314,6 +322,55 @@ class ProcessingCacheTests(unittest.TestCase):
     def change_text(self):
         self.page = self.page.model_copy(update={"article_text": "Updated child protection report."})
 
+    def test_screen_rejection_is_cached_without_full_assessment(self):
+        self.screen.return_value = ScreeningDecision(decision="irrelevant", reason="Sports results.")
+        first = self.ingest()
+        second = self.ingest()
+        self.assertEqual(first.pages[0].stage, "screening")
+        self.assertEqual(second.pages[0].stage, "cache_check")
+        self.assertEqual((first.irrelevant, second.irrelevant), (1, 1))
+        self.screen.assert_called_once()
+        self.extract.assert_not_called()
+        self.assertEqual(self.connection.rows, {})
+
+    def test_metadata_change_invalidates_screen_rejection(self):
+        self.screen.return_value = ScreeningDecision(decision="irrelevant", reason="Sports results.")
+        self.ingest()
+        self.page = self.page.model_copy(update={"meta_description": "Supporting survivors of childhood abuse."})
+        self.screen.return_value = ScreeningDecision(decision="uncertain", reason="Needs full text.")
+        self.relevance = "relevant"
+        self.assertEqual(self.ingest().saved, 1)
+        self.assertEqual(self.ingest().skipped, 1)
+        self.assertEqual(self.screen.call_count, 2)
+        self.extract.assert_called_once()
+
+    def test_screen_failure_continues_to_full_assessment(self):
+        self.screen.side_effect = ExtractionError("Screening unavailable")
+        self.relevance = "relevant"
+        self.assertEqual(self.ingest().saved, 1)
+        self.extract.assert_called_once()
+
+    def test_both_requests_failing_does_not_create_cache_entry(self):
+        self.screen.side_effect = ExtractionError("Screening unavailable")
+        self.extract.side_effect = ExtractionError("Full assessment unavailable")
+        self.assertEqual(self.ingest().failed, 1)
+        self.assertEqual(self.connection.processed, {})
+
+    def test_screen_model_and_prompt_changes_invalidate_cache(self):
+        self.screen.return_value = ScreeningDecision(decision="irrelevant", reason="Sports results.")
+        self.ingest()
+        self.ingest(screening_model="another-screening-model")
+        with patch("scripts.ingestion.cache.SCREENING_PROMPT", "Revised conservative screen"):
+            self.ingest(screening_model="another-screening-model")
+        self.assertEqual(self.screen.call_count, 3)
+        self.extract.assert_not_called()
+
+    def test_blank_screening_model_is_rejected_before_fetching(self):
+        with self.assertRaises(ValueError):
+            self.ingest(screening_model="  ")
+        self.scrape.assert_not_called()
+        self.screen.assert_not_called()
+
     def test_unchanged_irrelevant_page_is_assessed_once_across_restarts(self):
         first = self.ingest()
         # Reopening a repository still finds the persisted decision.
@@ -323,6 +380,7 @@ class ProcessingCacheTests(unittest.TestCase):
         self.assertEqual(second.pages[0].stage, "cache_check")
         self.assertEqual(second.pages[0].message, "Unrelated content.")
         self.assertEqual(self.extract.call_count, 1)
+        self.assertEqual(self.screen.call_count, 1)
         self.assertEqual(self.scrape.call_count, 2)
         self.assertEqual(self.connection.rows, {})
 
@@ -336,7 +394,7 @@ class ProcessingCacheTests(unittest.TestCase):
         self.assertEqual(self.extract.call_count, 2)
         record = self.repository.get_processed_page(str(self.page.url))
         self.assertEqual(record.relevance, "relevant")
-        self.assertEqual(record.content_hash, content_hash(self.page.article_text))
+        self.assertEqual(record.content_hash, article_hash(self.page))
         self.assertEqual(len(self.connection.processed), 1)
 
     def test_saved_page_is_reassessed_if_its_text_changes(self):

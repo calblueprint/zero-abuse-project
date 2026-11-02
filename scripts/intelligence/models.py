@@ -88,6 +88,20 @@ class IntelligenceItem(BaseModel):
         return unique
 
 
+class ScreeningDecision(BaseModel):
+    """Reject only clearly unrelated previews; uncertainty must continue."""
+
+    decision: Literal["irrelevant", "potentially_relevant", "uncertain"]
+    reason: str = Field(min_length=1, max_length=240)
+
+    @field_validator("reason")
+    @classmethod
+    def reject_blank_reason(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Screening reason must not be blank")
+        return value
+
+
 class IntelligenceAssessment(BaseModel):
     """Required admission decision; unrelated pages need no invented intelligence."""
 

@@ -508,6 +508,22 @@ class ArticleContractTests(unittest.TestCase):
         self.assertEqual(extract.call_count, 1)
         self.assertTrue(extract.call_args.kwargs["fast"])
 
+    def test_meta_description_is_extracted_from_html(self):
+        html = article("Useful guidance").replace(
+            "</head>", '<meta name="description" content="Resources for survivors of childhood abuse."></head>',
+        )
+        page = extract_page(html, ROOT + "/guidance")
+        self.assertEqual(page.meta_description, "Resources for survivors of childhood abuse.")
+
+    def test_meta_description_is_preserved_by_both_extraction_paths(self):
+        extracted = json.dumps({"text": "Substantial content " * 100, "excerpt": "Publisher description."})
+        for outputs in [[extracted], [None, extracted]]:
+            with self.subTest(outputs=outputs), patch(
+                "scripts.scraper.extractor.trafilatura.extract", side_effect=outputs,
+            ):
+                page = extract_page("<html>fixture</html>", ROOT + "/guide")
+                self.assertEqual(page.meta_description, "Publisher description.")
+
     def test_substantial_fallback_article_is_accepted(self):
         fallback = json.dumps({
             "text": "Substantial article evidence " * 50,

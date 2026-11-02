@@ -1,9 +1,10 @@
 import logging
+from typing import TypeVar
 
 import instructor
 from instructor.core.exceptions import InstructorRetryException, ResponseParsingError
 from openai import APIError, OpenAI, RateLimitError
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from scripts.intelligence.models import ExtractionResult, IntelligenceAssessment
 from scripts.models import Article
@@ -117,33 +118,37 @@ def _failure_message(cause: object) -> str:
     return f"Model output could not be processed ({type(cause).__name__})."
 
 
-def extract_intelligence(
-    article: Article,
-    client: instructor.Instructor,
-    model: str = "openrouter/free",
-) -> ExtractionResult:
-    """Return validated intelligence or raise ExtractionError for expected failures."""
+T = TypeVar("T", bound=BaseModel)
+
+
+def _request_structured(
+    *, client: instructor.Instructor, model: str, response_model: type[T],
+    system_prompt: str, user_content: str, context=None,
+    max_retries: int = 3, max_tokens: int | None = None,
+) -> T:
+    """Share existing provider validation and format fallback across both requests."""
     if not model.strip():
         raise ConfigurationError("Set the model to a structured-output model ID.")
 
     # Try schema mode first, with one format fallback for JSON-only providers.
-    assessment: IntelligenceAssessment | None = None
+    assessment: T | None = None
     for format_attempt in range(2):
         try:
             assessment = client.chat.completions.create(
                 model=model,
-                response_model=IntelligenceAssessment,
-                context={"article_text": article.article_text},
-                max_retries=3,
+                response_model=response_model,
+                context=context,
+                max_retries=max_retries,
                 temperature=0,
                 extra_body={"provider": {"require_parameters": True}},
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": system_prompt},
                     {
                         "role": "user",
-                        "content": f"Extract intel from this text:\n\n{article.article_text}",
+                        "content": user_content,
                     },
                 ],
+                **({"max_tokens": max_tokens} if max_tokens is not None else {}),
             )
             break
         except (
@@ -181,5 +186,20 @@ def extract_intelligence(
     if assessment is None:
         raise ExtractionError("The provider returned no extraction result.")
 
+    return assessment
+
+
+def extract_intelligence(
+    article: Article,
+    client: instructor.Instructor,
+    model: str = "openrouter/free",
+) -> ExtractionResult:
+    """Assess full text and return validated intelligence or an explicit rejection."""
+    assessment = _request_structured(
+        client=client, model=model, response_model=IntelligenceAssessment,
+        system_prompt=SYSTEM_PROMPT,
+        user_content=f"Extract intel from this text:\n\n{article.article_text}",
+        context={"article_text": article.article_text},
+    )
     logger.info("Extracted article successfully.")
     return ExtractionResult(article=article, **assessment.model_dump())

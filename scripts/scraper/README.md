@@ -13,7 +13,7 @@ python -m scripts.scraper.scrape_cli https://example.com/article
 ```
 
 The command prints the validated shared `Article` fields as JSON: URL, article
-text, source, title, author, and publication timestamp.
+text, source, title, meta description, author, and publication timestamp.
 
 Application code can use the same flow directly:
 
@@ -35,7 +35,7 @@ responses raise `FetchError`. The single-page CLI prints only the extracted
 page fields and reports failures without dumping raw HTML.
 
 `requests` streams the page with a 10 MB response limit, and Trafilatura
-extracts its main text, title, author, publication date, and available source
+extracts its main text, title, meta description, author, publication date, and available source
 metadata into the shared `Article` contract. JavaScript-rendered content may
 not be included.
 
@@ -151,5 +151,5 @@ set is known. Page and robots responses have independent size limits.
 Run the offline checks without fetching external websites:
 
 ```bash
-python3 -B -m unittest tests.scraper.test_scraper tests.intelligence.test_intelligence_unit tests.ingestion.test_ingestion -v
+python3 -B -m unittest tests.scraper.test_scraper tests.intelligence.test_intelligence_unit tests.intelligence.test_screening tests.ingestion.test_ingestion -v
 ```
