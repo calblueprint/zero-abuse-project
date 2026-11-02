@@ -12,6 +12,14 @@ class Source:
 
 
 @dataclass(frozen=True)
+class ProcessedPage:
+    content_hash: str
+    assessment_key: str
+    relevance: Literal["relevant", "irrelevant"]
+    relevance_reason: str
+
+
+@dataclass(frozen=True)
 class PageOutcome:
     url: str
     status: Literal["saved", "skipped", "irrelevant", "failed"]

@@ -9,12 +9,14 @@ from urllib.parse import urlsplit
 from scripts.intelligence.models import ExtractionResult
 from scripts.scraper.crawler import normalize_url
 
-from .models import Source
+from .models import ProcessedPage, Source
 
 
 class Repository(Protocol):
     def get_source(self, source_id: str) -> Source: ...
     def article_exists(self, url: str) -> bool: ...
+    def get_processed_page(self, url: str) -> ProcessedPage | None: ...
+    def record_processing(self, url: str, page: ProcessedPage) -> None: ...
     def save_intelligence(self, source_id: str, result: ExtractionResult) -> str | None: ...
     def update_last_crawled_at(self, source_id: str, at: datetime) -> None: ...
 
@@ -60,6 +62,30 @@ class PostgresRepository:
             "SELECT 1 FROM itel_items WHERE source_url = %s LIMIT 1",
             (normalize_url(url),),
         ).fetchone() is not None
+
+    def get_processed_page(self, url: str) -> ProcessedPage | None:
+        row = self.connection.execute(
+            """SELECT content_hash, assessment_key, relevance, relevance_reason
+               FROM processed_pages WHERE source_url = %s""",
+            (normalize_url(url),),
+        ).fetchone()
+        return ProcessedPage(*row) if row is not None else None
+
+    def record_processing(self, url: str, page: ProcessedPage) -> None:
+        with self.connection.transaction():
+            self.connection.execute(
+                """INSERT INTO processed_pages (
+                    source_url, content_hash, assessment_key, relevance, relevance_reason
+                ) VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (source_url) DO UPDATE SET
+                    content_hash = EXCLUDED.content_hash,
+                    assessment_key = EXCLUDED.assessment_key,
+                    relevance = EXCLUDED.relevance,
+                    relevance_reason = EXCLUDED.relevance_reason,
+                    processed_at = now()""",
+                (normalize_url(url), page.content_hash, page.assessment_key,
+                 page.relevance, page.relevance_reason),
+            )
 
     def save_intelligence(self, source_id: str, result: ExtractionResult) -> str | None:
         if result.relevance != "relevant" or result.intelligence is None:

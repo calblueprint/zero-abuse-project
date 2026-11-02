@@ -53,21 +53,22 @@ status, and run errors. For example:
 
 ## Flow and outcomes
 
-- `ingest_url()` checks the requested URL for an existing item, calls
-  `scrape_url()`, and passes the extracted `Article` to `process_article()`.
+- `ingest_url()` calls `scrape_url()` and passes the extracted `Article` to
+  `process_article()`. Even saved URLs are fetched so changed text can be detected.
 - `ingest_source()` loads the source's `base_url`, calls `crawl_site()`, and then
   calls `process_article()` for each returned article. The crawl completes before
   intelligence extraction starts. Source records explicitly marked inactive are rejected.
-- `process_article()` checks the final URL (including redirect destinations),
-  calls `extract_intelligence()`, and calls `save_intelligence()` only when the
-  assessment explicitly marks the content relevant.
+- `process_article()` checks the processing cache using the final URL (including
+  redirect destinations), text hash, and assessment configuration. A cache miss
+  calls `extract_intelligence()` and calls `save_intelligence()` only when the
+  assessment explicitly marks the content relevant. Successful decisions are cached.
 - The default `PostgresRepository` writes into the existing `itel_items` table,
   assigning the supplied `source_id`, final URL, publication date, insertion
   timestamp, extracted title, summary (`tldr`), and classifications.
 
 **Saved** means the insert transaction committed. **Skipped** means the normalized
 URL already exists in `itel_items`, regardless of source. **Failed** means a page
-could not be accessed, fetched, extracted, checked for duplicates, or saved. A
+could not be accessed, fetched, extracted, checked, or saved. A
 failed page does not stop other pages. Each save uses a separate transaction.
 **Irrelevant** means the model assessed the content as unrelated or discovery-only;
 it is not a duplicate or processing failure. Expected intelligence failures carry the extractor's safe explanation; unexpected
@@ -113,7 +114,8 @@ are reclassified or deleted.
 
 ## Persistence boundaries
 
-This change deliberately keeps the existing database schema and library queries.
+The existing intelligence table and library queries are unchanged. The separate
+`processed_pages` table stores processing decisions.
 Carolyn's classification lists (including geography objects) are stored as JSON
 strings in the current varchar columns. They can be decoded without losing list
 values, but the current library's exact scalar filters do **not** match individual
@@ -127,6 +129,39 @@ additional check under a PostgreSQL transaction advisory lock prevents duplicate
 saves by workers using this adapter. Other database writers must cooperate with
 that locking convention; there is no new database uniqueness constraint.
 
+## Processing cache
+
+Apply the new `0009_cache_processed_pages` migration with `pnpm db:migrate` before
+using this version of ingestion. The migration creates a table with RLS enabled
+and no browser-client policies; use the existing trusted backend database connection.
+No tables are created automatically by the Python code.
+
+The cache keeps one row per normalized final URL: a SHA-256 hash of extracted text,
+the assessment configuration fingerprint, relevance decision/reason, and assessment
+timestamp. Article text and raw HTML are not stored in this table. The configuration
+fingerprint includes the requested model ID, system prompt, and output schema;
+changing any of these causes reassessment. It cannot detect a provider silently
+changing the model behind the same ID (including the `openrouter/free` alias).
+
+After fetching and extracting text:
+
+- Unchanged irrelevant pages return `irrelevant` with the cached reason.
+- Unchanged relevant pages with a saved library item return `skipped`.
+- Changed text, changed configuration, or a missing cache row runs the model.
+- If a cached relevant item's library record was removed, it is assessed again.
+
+Cache hits use the `cache_check` outcome stage. Both ingestion entry points share
+this behavior. This saves model requests, not HTTP requests. Existing library URLs
+without cache entries are assessed once to populate the cache. The existing
+duplicate protection still prevents another insert; library entries are not
+rewritten or deleted if their text or relevance changes.
+
+Fetch/model failures and failed item saves are not cached, allowing retries. An
+irrelevant decision is complete only after its cache write succeeds. A cache write
+failure after an item has already committed preserves its saved outcome and adds a
+warning in the page's message; a later run may reassess it. Concurrent runs can both
+assess the same uncached page; this cache does not add a distributed work queue.
+
 ## Calling from another application
 
 You may pass `repository=` (implementing the `Repository` protocol) and `client=`
@@ -136,6 +171,8 @@ The pipeline closes resources it creates; caller-supplied resources stay open.
 Use a dedicated database connection for each concurrently running ingestion call.
 `PostgresRepository(connection)` requires an idle connection with `autocommit=True`;
 connections with autocommit disabled or an open transaction are rejected.
+Custom repositories must also implement `get_processed_page()` and
+`record_processing()` using the exported `ProcessedPage` record.
 No credentials are loaded, connections opened, or requests made on import.
 
 ## Offline verification

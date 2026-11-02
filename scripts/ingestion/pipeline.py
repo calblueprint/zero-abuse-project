@@ -10,7 +10,8 @@ from scripts.models import Article
 from scripts.scraper import crawl_site, scrape_url
 from scripts.scraper.crawler import normalize_url
 
-from .models import IngestionSummary, PageOutcome
+from .cache import assessment_key, content_hash
+from .models import IngestionSummary, PageOutcome, ProcessedPage
 from .repository import PostgresRepository, Repository
 
 logger = logging.getLogger(__name__)
@@ -47,19 +48,43 @@ def process_article(
 ) -> PageOutcome:
     """Return one outcome; a bad article cannot abort the surrounding batch."""
     url = str(article.url)
-    stage = "duplicate_check"
+    stage = "cache_check"
     try:
-        if repository.article_exists(url):
-            return PageOutcome(url, "skipped", stage, "Article already saved.")
+        fingerprint = content_hash(article.article_text)
+        configuration = assessment_key(model)
+        cached = repository.get_processed_page(url)
+        if (
+            cached is not None
+            and cached.content_hash == fingerprint
+            and cached.assessment_key == configuration
+        ):
+            if cached.relevance == "irrelevant":
+                return PageOutcome(url, "irrelevant", stage, cached.relevance_reason)
+            # A relevant decision is reusable only while its saved item exists.
+            if repository.article_exists(url):
+                return PageOutcome(url, "skipped", stage, "Unchanged article already processed.")
         stage = "intelligence"
         result = extract_intelligence(article, client=client, model=model)
+        processed = ProcessedPage(
+            fingerprint, configuration, result.relevance, result.relevance_reason,
+        )
         if result.relevance == "irrelevant":
+            stage = "cache_save"
+            repository.record_processing(url, processed)
             return PageOutcome(url, "irrelevant", "relevance", result.relevance_reason)
         stage = "save"
         item_id = repository.save_intelligence(source_id, result)
+        # The item transaction has already committed. A cache failure must not
+        # misreport that save as failed; the next run can retry the assessment.
+        message = None
+        try:
+            repository.record_processing(url, processed)
+        except Exception:
+            logger.debug("Could not cache saved article assessment", exc_info=True)
+            message = "Processing cache write failed; next run may reassess this article."
         if item_id is None:
-            return PageOutcome(url, "skipped", stage, "Article already saved.")
-        return PageOutcome(url, "saved", stage, item_id=item_id)
+            return PageOutcome(url, "skipped", stage, message or "Article already saved.")
+        return PageOutcome(url, "saved", stage, message, item_id=item_id)
     except Exception as exc:
         return _failure(url, stage, exc)
 
@@ -72,12 +97,8 @@ def ingest_url(
     url = normalize_url(article_url)
     with _resources(source_id, repository, client, model) as (_, repository, client):
         summary = IngestionSummary(source_id)
-        stage = "duplicate_check"
+        stage = "scrape"
         try:
-            if repository.article_exists(url):
-                summary.pages.append(PageOutcome(url, "skipped", stage, "Article already saved."))
-                return summary
-            stage = "scrape"
             summary.visited_urls.append(url)
             scraped = scrape_url(url)
             if scraped.page is None:
