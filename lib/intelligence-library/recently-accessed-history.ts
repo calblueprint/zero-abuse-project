@@ -1,5 +1,4 @@
-export const uuidPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isUuid } from "../validation/uuid.ts";
 
 export function storedItemIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -8,7 +7,7 @@ export function storedItemIds(value: unknown): string[] {
   const ids: string[] = [];
 
   for (const entry of value) {
-    if (typeof entry !== "string" || !uuidPattern.test(entry)) continue;
+    if (!isUuid(entry)) continue;
     const id = entry.toLowerCase();
     if (seen.has(id)) continue;
     seen.add(id);

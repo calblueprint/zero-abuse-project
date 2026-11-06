@@ -3,8 +3,8 @@ import test from "node:test";
 import {
   orderExistingItems,
   storedItemIds,
-  uuidPattern,
 } from "../lib/intelligence-library/recently-accessed-history.ts";
+import { isUuid } from "../lib/validation/uuid.ts";
 
 const ids = [1, 2, 3, 4].map(
   number => `aa000046-2001-4000-8000-${String(number).padStart(12, "0")}`,
@@ -21,8 +21,8 @@ test("malformed entries and invalid UUIDs are ignored", () => {
     storedItemIds([null, 42, {}, [ids[0]], "not-a-uuid", ids[0]]),
     [ids[0]],
   );
-  assert.equal(uuidPattern.test(ids[0]), true);
-  assert.equal(uuidPattern.test("not-a-uuid"), false);
+  assert.equal(isUuid(ids[0]), true);
+  assert.equal(isUuid("not-a-uuid"), false);
 });
 
 test("stored recency order is retained and duplicates are removed", () => {

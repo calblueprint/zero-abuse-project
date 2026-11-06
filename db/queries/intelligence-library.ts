@@ -34,6 +34,24 @@ export type IntelligenceLibraryItem = {
   zapRelevance: string | null;
 };
 
+export const intelligenceLibraryItemSelection = {
+  itemId: itelItems.itemId,
+  sourceId: itelItems.sourceId,
+  sourceName: sources.name,
+  sourceUrl: itelItems.sourceUrl,
+  publishedAt: itelItems.publishedAt,
+  title: itelItems.title,
+  tldr: itelItems.tldr,
+  exploitationType: itelItems.exploitationType,
+  platform: itelItems.platform,
+  technology: itelItems.technology,
+  affectedPopulation: itelItems.affectedPopulation,
+  offenderTactic: itelItems.offenderTactic,
+  geography: itelItems.geography,
+  intelType: itelItems.intelType,
+  zapRelevance: itelItems.zapRelevance,
+};
+
 export type IntelligenceLibraryFilterOptions = {
   exploitationTypes: string[];
   platforms: string[];
@@ -110,23 +128,7 @@ export const getIntelligenceLibraryItems = async (
   ];
 
   return db
-    .select({
-      itemId: itelItems.itemId,
-      sourceId: itelItems.sourceId,
-      sourceName: sources.name,
-      sourceUrl: itelItems.sourceUrl,
-      publishedAt: itelItems.publishedAt,
-      title: itelItems.title,
-      tldr: itelItems.tldr,
-      exploitationType: itelItems.exploitationType,
-      platform: itelItems.platform,
-      technology: itelItems.technology,
-      affectedPopulation: itelItems.affectedPopulation,
-      offenderTactic: itelItems.offenderTactic,
-      geography: itelItems.geography,
-      intelType: itelItems.intelType,
-      zapRelevance: itelItems.zapRelevance,
-    })
+    .select(intelligenceLibraryItemSelection)
     .from(itelItems)
     .innerJoin(sources, eq(itelItems.sourceId, sources.sourceId))
     .where(and(...conditions))

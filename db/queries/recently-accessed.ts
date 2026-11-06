@@ -2,18 +2,19 @@ import "server-only";
 import type { IntelligenceLibraryItem } from "@/db/queries/intelligence-library";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { intelligenceLibraryItemSelection } from "@/db/queries/intelligence-library";
 import { itelItems, sources, users } from "@/db/schema";
 import { requireApprovedUser } from "@/lib/auth/access";
 import {
   orderExistingItems,
   storedItemIds,
-  uuidPattern,
 } from "@/lib/intelligence-library/recently-accessed-history";
+import { isUuid, UUID_PATTERN } from "@/lib/validation/uuid";
 
 export async function recordRecentlyAccessed(itemId: string): Promise<boolean> {
   const user = await requireApprovedUser();
 
-  if (!uuidPattern.test(itemId)) {
+  if (!isUuid(itemId)) {
     throw new Error("Invalid intelligence item ID");
   }
 
@@ -36,7 +37,7 @@ export async function recordRecentlyAccessed(itemId: string): Promise<boolean> {
                 end
               ) with ordinality as entry(value, position)
               where jsonb_typeof(entry.value) = 'string'
-                and (entry.value #>> '{}') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                and (entry.value #>> '{}') ~* ${UUID_PATTERN.source}
                 and lower(entry.value #>> '{}') <> ${id}
               group by lower(entry.value #>> '{}')
               order by min(entry.position)
@@ -75,23 +76,7 @@ export async function getRecentlyAccessedItems(): Promise<
   if (ids.length === 0) return [];
 
   const items = await db
-    .select({
-      itemId: itelItems.itemId,
-      sourceId: itelItems.sourceId,
-      sourceName: sources.name,
-      sourceUrl: itelItems.sourceUrl,
-      publishedAt: itelItems.publishedAt,
-      title: itelItems.title,
-      tldr: itelItems.tldr,
-      exploitationType: itelItems.exploitationType,
-      platform: itelItems.platform,
-      technology: itelItems.technology,
-      affectedPopulation: itelItems.affectedPopulation,
-      offenderTactic: itelItems.offenderTactic,
-      geography: itelItems.geography,
-      intelType: itelItems.intelType,
-      zapRelevance: itelItems.zapRelevance,
-    })
+    .select(intelligenceLibraryItemSelection)
     .from(itelItems)
     .innerJoin(sources, eq(itelItems.sourceId, sources.sourceId))
     .where(inArray(itelItems.itemId, ids));

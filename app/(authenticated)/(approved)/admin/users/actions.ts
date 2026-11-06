@@ -6,9 +6,7 @@ import { and, count, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/access";
-
-const uuidPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { isUuid } from "@/lib/validation/uuid";
 
 async function updateApprovalStatus(
   userId: string,
@@ -17,7 +15,7 @@ async function updateApprovalStatus(
 ) {
   const admin = await requireAdmin();
 
-  if (!uuidPattern.test(userId)) {
+  if (!isUuid(userId)) {
     redirect("/admin/users?notice=invalid-user");
   }
 
@@ -58,7 +56,7 @@ export async function restoreUser(userId: string) {
 export async function promoteUser(userId: string) {
   await requireAdmin();
 
-  if (!uuidPattern.test(userId)) {
+  if (!isUuid(userId)) {
     redirect("/admin/users?notice=invalid-user");
   }
 
@@ -85,7 +83,7 @@ export async function promoteUser(userId: string) {
 export async function demoteUser(userId: string) {
   const admin = await requireAdmin();
 
-  if (!uuidPattern.test(userId)) {
+  if (!isUuid(userId)) {
     redirect("/admin/users?notice=invalid-user");
   }
 
@@ -134,7 +132,7 @@ export async function demoteUser(userId: string) {
 export async function revokeUser(userId: string) {
   const admin = await requireAdmin();
 
-  if (!uuidPattern.test(userId)) {
+  if (!isUuid(userId)) {
     redirect("/admin/users?notice=invalid-user");
   }
 

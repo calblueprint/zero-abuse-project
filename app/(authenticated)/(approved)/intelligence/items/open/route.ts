@@ -5,9 +5,7 @@ import { db } from "@/db";
 import { recordRecentlyAccessed } from "@/db/queries/recently-accessed";
 import { itelItems } from "@/db/schema";
 import { requireApprovedUser } from "@/lib/auth/access";
-
-const uuidPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isUuid } from "@/lib/validation/uuid";
 
 export async function POST(request: NextRequest) {
   let trustedOrigin: string;
@@ -36,7 +34,7 @@ export async function POST(request: NextRequest) {
     if (
       values.length !== 1 ||
       typeof values[0] !== "string" ||
-      !uuidPattern.test(values[0])
+      !isUuid(values[0])
     ) {
       return new Response("Invalid item ID", { status: 400 });
     }
