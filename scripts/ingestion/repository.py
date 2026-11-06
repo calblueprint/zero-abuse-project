@@ -23,6 +23,10 @@ class PostgresRepository:
     """Own a dedicated autocommit connection; each write gets its own transaction."""
 
     def __init__(self, connection):
+        from psycopg.pq import TransactionStatus
+
+        if not connection.autocommit or connection.info.transaction_status != TransactionStatus.IDLE:
+            raise ValueError("PostgresRepository requires an idle connection with autocommit=True.")
         self.connection = connection
 
     @classmethod

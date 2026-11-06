@@ -4,7 +4,10 @@ import json
 import unittest
 from contextlib import contextmanager
 from datetime import timezone
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
+
+from psycopg.pq import TransactionStatus
 
 from scripts.ingestion import PostgresRepository, Source, ingest_source, ingest_url
 from scripts.intelligence.extractor import ExtractionError
@@ -180,6 +183,8 @@ class TransactionConnection:
     """Exercise transaction boundaries with a deliberately failing second insert."""
 
     def __init__(self):
+        self.autocommit = True
+        self.info = SimpleNamespace(transaction_status=TransactionStatus.IDLE)
         self.rows = {}
         self.events = []
         self.calls = []
@@ -212,6 +217,24 @@ class TransactionConnection:
 
 
 class RepositoryTests(unittest.TestCase):
+    def test_rejects_connections_that_cannot_commit_each_save_independently(self):
+        cases = [(False, TransactionStatus.IDLE)] + [
+            (True, status) for status in TransactionStatus if status != TransactionStatus.IDLE
+        ]
+        for autocommit, status in cases:
+            with self.subTest(autocommit=autocommit, status=status):
+                connection = Mock(
+                    autocommit=autocommit,
+                    info=SimpleNamespace(transaction_status=status),
+                )
+                with self.assertRaisesRegex(ValueError, "idle connection with autocommit=True"):
+                    PostgresRepository(connection)
+                connection.execute.assert_not_called()
+                connection.commit.assert_not_called()
+                connection.rollback.assert_not_called()
+                connection.close.assert_not_called()
+                self.assertEqual(connection.autocommit, autocommit)
+
     def test_failed_save_rolls_back_only_its_transaction_and_next_save_works(self):
         connection = TransactionConnection()
         repository = PostgresRepository(connection)
