@@ -4,6 +4,7 @@ import type {
 } from "@/db/queries/intelligence-library";
 import type { IntelligenceFilters } from "@/lib/intelligence-library/filters";
 import Link from "next/link";
+import RefreshOnFocus from "./RefreshOnFocus";
 
 type FilterDefinition = {
   label: string;
@@ -15,6 +16,7 @@ type FilterDefinition = {
 type IntelligenceLibraryProps = {
   filters: IntelligenceFilters;
   items: IntelligenceLibraryItem[];
+  recentlyAccessedItems: IntelligenceLibraryItem[];
   options: IntelligenceLibraryFilterOptions;
 };
 
@@ -24,9 +26,45 @@ const formatDateInput = (date: Date | undefined) =>
 const formatPublishedAt = (publishedAt: string | null) =>
   publishedAt ? new Date(publishedAt).toLocaleString() : "Unknown date";
 
+function IntelligenceItemCard({ item }: { item: IntelligenceLibraryItem }) {
+  return (
+    <article style={{ border: "1px solid #ccc", padding: "1rem" }}>
+      <h3>{item.title ?? "Untitled intelligence item"}</h3>
+      <p>
+        {item.sourceName} · {formatPublishedAt(item.publishedAt)}
+      </p>
+      {item.tldr && <p style={{ marginTop: "0.5rem" }}>{item.tldr}</p>}
+      <form
+        action="/intelligence/items/open"
+        method="POST"
+        rel="noopener"
+        style={{ display: "inline" }}
+        target="_blank"
+      >
+        <input name="itemId" type="hidden" value={item.itemId} />
+        <button
+          style={{
+            background: "none",
+            border: 0,
+            color: "LinkText",
+            cursor: "pointer",
+            font: "inherit",
+            padding: 0,
+            textDecoration: "underline",
+          }}
+          type="submit"
+        >
+          View source
+        </button>
+      </form>
+    </article>
+  );
+}
+
 export default function IntelligenceLibrary({
   filters,
   items,
+  recentlyAccessedItems,
   options,
 }: IntelligenceLibraryProps) {
   const taxonomyFilters: FilterDefinition[] = [
@@ -83,6 +121,20 @@ export default function IntelligenceLibrary({
   return (
     <main style={{ margin: "0 auto", maxWidth: "1200px", padding: "2rem" }}>
       <h1>Intelligence Library</h1>
+      <RefreshOnFocus />
+
+      <section aria-labelledby="recently-accessed-heading">
+        <h2 id="recently-accessed-heading">Recently accessed</h2>
+        {recentlyAccessedItems.length === 0 ? (
+          <p>Items you open will appear here.</p>
+        ) : (
+          <div style={{ display: "grid", gap: "1rem" }}>
+            {recentlyAccessedItems.map(item => (
+              <IntelligenceItemCard key={item.itemId} item={item} />
+            ))}
+          </div>
+        )}
+      </section>
 
       <form action="/" method="get" style={{ margin: "1.5rem 0" }}>
         <div
@@ -154,43 +206,12 @@ export default function IntelligenceLibrary({
         </div>
       </form>
 
+      <h2>All intelligence</h2>
       <p>{items.length} item(s) found</p>
 
       <section style={{ display: "grid", gap: "1rem", marginTop: "1rem" }}>
         {items.map(item => (
-          <article
-            key={item.itemId}
-            style={{ border: "1px solid #ccc", padding: "1rem" }}
-          >
-            <h2>{item.title ?? "Untitled intelligence item"}</h2>
-            <p>
-              {item.sourceName} · {formatPublishedAt(item.publishedAt)}
-            </p>
-            {item.tldr && <p style={{ marginTop: "0.5rem" }}>{item.tldr}</p>}
-            <form
-              action="/intelligence/items/open"
-              method="POST"
-              rel="noopener noreferrer"
-              style={{ display: "inline" }}
-              target="_blank"
-            >
-              <input name="itemId" type="hidden" value={item.itemId} />
-              <button
-                style={{
-                  background: "none",
-                  border: 0,
-                  color: "LinkText",
-                  cursor: "pointer",
-                  font: "inherit",
-                  padding: 0,
-                  textDecoration: "underline",
-                }}
-                type="submit"
-              >
-                View source
-              </button>
-            </form>
-          </article>
+          <IntelligenceItemCard key={item.itemId} item={item} />
         ))}
       </section>
     </main>

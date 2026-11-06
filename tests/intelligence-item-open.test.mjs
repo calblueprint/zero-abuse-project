@@ -1,3 +1,5 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -21,7 +23,7 @@ const route = ts.transpileModule(
   { compilerOptions: { module: ts.ModuleKind.CommonJS } },
 ).outputText;
 
-function loadRoute(t, { siteUrl = origin } = {}) {
+function loadRoute(t) {
   const authorize = t.mock.fn(async () => {});
   const getSource = t.mock.fn(async () => sourceUrl);
   const record = t.mock.fn(async () => true);
@@ -45,16 +47,15 @@ function loadRoute(t, { siteUrl = origin } = {}) {
     },
     URL,
     Response,
-    process: { env: { NEXT_PUBLIC_SITE_URL: siteUrl } },
     console: { error() {}, warn() {} },
   });
   return { POST: exports.POST, authorize, getSource, record };
 }
 
-function request(ids = [itemId], requestOrigin = origin) {
+function request(ids = [itemId], requestOrigin = origin, requestUrl = origin) {
   const body = new FormData();
   for (const id of ids) body.append("itemId", id);
-  return new Request(`${origin}/intelligence/items/open`, {
+  return new Request(`${requestUrl}/intelligence/items/open`, {
     method: "POST",
     headers: requestOrigin ? { origin: requestOrigin } : {},
     body,
@@ -66,13 +67,14 @@ test("records the item and redirects with GET", async t => {
   const response = await POST(request());
   assert.equal(response.status, 303);
   assert.equal(response.headers.get("location"), sourceUrl);
+  assert.equal(response.headers.get("referrer-policy"), "no-referrer");
   assert.equal(authorize.mock.callCount(), 1);
   assert.deepEqual(Array.from(getSource.mock.calls[0].arguments), [itemId]);
   assert.deepEqual(Array.from(record.mock.calls[0].arguments), [itemId]);
 });
 
 test("rejects missing or foreign origins before authorization", async t => {
-  for (const requestOrigin of [null, "https://other.example.com"]) {
+  for (const requestOrigin of [null, "null", "https://other.example.com"]) {
     const { POST, authorize, getSource, record } = loadRoute(t);
     assert.equal((await POST(request([itemId], requestOrigin))).status, 403);
     assert.equal(authorize.mock.callCount(), 0);
@@ -100,11 +102,17 @@ test("rejects malformed request bodies", async t => {
   assert.equal((await POST(malformed)).status, 400);
 });
 
-test("fails closed when the site URL is missing or unsafe", async t => {
-  for (const siteUrl of ["", "not a URL", "file:///tmp/site"]) {
-    const { POST, authorize } = loadRoute(t, { siteUrl });
-    assert.equal((await POST(request())).status, 503);
-    assert.equal(authorize.mock.callCount(), 0);
+test("uses the receiving origin without requiring a site URL setting", async t => {
+  for (const requestOrigin of [
+    origin,
+    "http://localhost:3000",
+    "https://preview.example.com",
+  ]) {
+    const { POST } = loadRoute(t);
+    const response = await POST(
+      request([itemId], requestOrigin, requestOrigin),
+    );
+    assert.equal(response.status, 303);
   }
 });
 
@@ -166,4 +174,75 @@ test("preserves authentication redirects during a history write", async t => {
     throw redirectError;
   });
   await assert.rejects(POST(request()), error => error === redirectError);
+});
+
+test("recent items are rendered in history order and source forms preserve Origin", () => {
+  const component = ts.transpileModule(
+    readFileSync(
+      new URL(
+        "../components/intelligence-library/IntelligenceLibrary.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        jsx: ts.JsxEmit.ReactJSX,
+      },
+    },
+  ).outputText;
+  const exports = {};
+  runInNewContext(component, {
+    exports,
+    require(name) {
+      return name === "./RefreshOnFocus"
+        ? { default: () => null }
+        : require(name);
+    },
+  });
+  const filterNames = [
+    "exploitationTypes",
+    "platforms",
+    "technologies",
+    "affectedPopulations",
+    "offenderTactics",
+    "geographies",
+    "intelTypes",
+    "zapRelevances",
+    "sourceIds",
+  ];
+  const filters = Object.fromEntries(filterNames.map(name => [name, []]));
+  const item = title => ({
+    itemId,
+    title,
+    sourceName: "Test source",
+    publishedAt: null,
+    tldr: null,
+  });
+  const html = renderToStaticMarkup(
+    createElement(exports.default, {
+      filters,
+      options: { ...filters, sources: [] },
+      items: [item("Library item")],
+      recentlyAccessedItems: [
+        item("Newest item"),
+        {
+          ...item("Older item"),
+          itemId: "aa000046-2001-4000-8000-000000000002",
+        },
+      ],
+    }),
+  );
+  assert.ok(html.includes("Recently accessed"));
+  assert.ok(html.indexOf("Newest item") < html.indexOf("Older item"));
+  const forms = html.match(
+    /<form[^>]*action="\/intelligence\/items\/open"[^>]*>/g,
+  );
+  assert.equal(forms.length, 3);
+  for (const form of forms) {
+    assert.match(form, /method="POST"/);
+    assert.match(form, /rel="noopener"/);
+    assert.doesNotMatch(form, /noreferrer/);
+  }
 });

@@ -6,20 +6,7 @@ import { requireApprovedUser } from "@/lib/auth/access";
 import { isUuid } from "@/lib/validation/uuid";
 
 export async function POST(request: Request) {
-  let trustedOrigin: string;
-
-  try {
-    const siteUrl = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "");
-    if (siteUrl.protocol !== "http:" && siteUrl.protocol !== "https:") {
-      throw new Error("Invalid site URL protocol");
-    }
-    trustedOrigin = siteUrl.origin;
-  } catch (error) {
-    console.error("Invalid NEXT_PUBLIC_SITE_URL for item-open route:", error);
-    return new Response("Service unavailable", { status: 503 });
-  }
-
-  if (request.headers.get("origin") !== trustedOrigin) {
+  if (request.headers.get("origin") !== new URL(request.url).origin) {
     return new Response("Forbidden", { status: 403 });
   }
 
@@ -69,5 +56,7 @@ export async function POST(request: Request) {
     console.error("Failed to record recently accessed item:", error);
   }
 
-  return NextResponse.redirect(destination, 303);
+  const response = NextResponse.redirect(destination, 303);
+  response.headers.set("Referrer-Policy", "no-referrer");
+  return response;
 }
