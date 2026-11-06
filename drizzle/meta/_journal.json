@@ -64,6 +64,13 @@
       "when": 1794001338697,
       "tag": "0008_unique_source_urls",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792879156667,
+      "tag": "0009_add_trend_title_item_ids",
+      "breakpoints": true
     }
   ]
 }

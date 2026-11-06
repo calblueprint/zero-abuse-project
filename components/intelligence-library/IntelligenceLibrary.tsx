@@ -136,7 +136,7 @@ export default function IntelligenceLibrary({
         )}
       </section>
 
-      <form action="/" method="get" style={{ margin: "1.5rem 0" }}>
+      <form action="/intelligence" method="get" style={{ margin: "1.5rem 0" }}>
         <div
           style={{
             display: "grid",
@@ -202,7 +202,7 @@ export default function IntelligenceLibrary({
 
         <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
           <button type="submit">Apply filters</button>
-          <Link href="/">Reset filters</Link>
+          <Link href="/intelligence">Reset filters</Link>
         </div>
       </form>
 

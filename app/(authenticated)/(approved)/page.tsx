@@ -1,32 +1,24 @@
-import type { IntelligenceFilterParams } from "@/lib/intelligence-library/filters";
-import IntelligenceLibrary from "@/components/intelligence-library/IntelligenceLibrary";
-import {
-  getIntelligenceLibraryFilterOptions,
-  getIntelligenceLibraryItems,
-} from "@/db/queries/intelligence-library";
-import { getRecentlyAccessedItems } from "@/db/queries/recently-accessed";
+import HomeView from "@/components/home/HomeView";
+import { getLatestTrends } from "@/db/queries/trends";
 import { requireApprovedUser } from "@/lib/auth/access";
-import { parseIntelligenceFilters } from "@/lib/intelligence-library/filters";
 
-type HomeProps = {
-  searchParams: Promise<IntelligenceFilterParams>;
-};
-
-export default async function Home({ searchParams }: HomeProps) {
-  await requireApprovedUser();
-  const filters = parseIntelligenceFilters(await searchParams);
-  const [items, options, recentlyAccessedItems] = await Promise.all([
-    getIntelligenceLibraryItems(filters),
-    getIntelligenceLibraryFilterOptions(),
-    getRecentlyAccessedItems(),
-  ]);
+export default async function Home() {
+  const user = await requireApprovedUser();
+  const { trends, total } = await getLatestTrends(3);
+  // Array.from keeps characters outside the BMP whole.
+  const initials = [user.firstName, user.lastName]
+    .map(name => Array.from(name)[0] ?? "")
+    .join("")
+    .toUpperCase();
 
   return (
-    <IntelligenceLibrary
-      filters={filters}
-      items={items}
-      options={options}
-      recentlyAccessedItems={recentlyAccessedItems}
+    <HomeView
+      firstName={user.firstName}
+      initials={initials}
+      isAdmin={user.isAdmin}
+      today={new Date().toISOString()}
+      trends={trends}
+      totalTrends={total}
     />
   );
 }
