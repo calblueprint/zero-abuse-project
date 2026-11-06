@@ -1,6 +1,6 @@
 import { isUuid } from "../validation/uuid.ts";
 
-export function storedItemIds(value: unknown): string[] {
+export function parseRecentlyAccessedItemIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
 
   const seen = new Set<string>();

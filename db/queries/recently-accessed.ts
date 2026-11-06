@@ -7,7 +7,7 @@ import { itelItems, sources, users } from "@/db/schema";
 import { requireApprovedUser } from "@/lib/auth/access";
 import {
   orderExistingItems,
-  storedItemIds,
+  parseRecentlyAccessedItemIds,
 } from "@/lib/intelligence-library/recently-accessed-history";
 import { isUuid, UUID_PATTERN } from "@/lib/validation/uuid";
 
@@ -71,7 +71,7 @@ export async function getRecentlyAccessedItems(): Promise<
     .from(users)
     .where(eq(users.userId, user.userId))
     .limit(1);
-  const ids = storedItemIds(profile?.recentlyAccessed);
+  const ids = parseRecentlyAccessedItemIds(profile?.recentlyAccessed);
 
   if (ids.length === 0) return [];
 

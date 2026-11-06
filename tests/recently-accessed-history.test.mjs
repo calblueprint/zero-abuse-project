@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   orderExistingItems,
-  storedItemIds,
+  parseRecentlyAccessedItemIds,
 } from "../lib/intelligence-library/recently-accessed-history.ts";
 import { isUuid } from "../lib/validation/uuid.ts";
 
@@ -12,13 +12,20 @@ const ids = [1, 2, 3, 4].map(
 
 test("null, empty, and non-array histories return no IDs", () => {
   for (const value of [null, undefined, [], {}, "[]", 42]) {
-    assert.deepEqual(storedItemIds(value), []);
+    assert.deepEqual(parseRecentlyAccessedItemIds(value), []);
   }
 });
 
 test("malformed entries and invalid UUIDs are ignored", () => {
   assert.deepEqual(
-    storedItemIds([null, 42, {}, [ids[0]], "not-a-uuid", ids[0]]),
+    parseRecentlyAccessedItemIds([
+      null,
+      42,
+      {},
+      [ids[0]],
+      "not-a-uuid",
+      ids[0],
+    ]),
     [ids[0]],
   );
   assert.equal(isUuid(ids[0]), true);
@@ -26,19 +33,17 @@ test("malformed entries and invalid UUIDs are ignored", () => {
 });
 
 test("stored recency order is retained and duplicates are removed", () => {
-  assert.deepEqual(storedItemIds([ids[2], ids[0], ids[2], ids[1]]), [
-    ids[2],
-    ids[0],
-    ids[1],
-  ]);
+  assert.deepEqual(
+    parseRecentlyAccessedItemIds([ids[2], ids[0], ids[2], ids[1]]),
+    [ids[2], ids[0], ids[1]],
+  );
 });
 
 test("UUID duplicates are case-insensitive and the result is capped at three", () => {
-  assert.deepEqual(storedItemIds([ids[0].toUpperCase(), ...ids]), [
-    ids[0],
-    ids[1],
-    ids[2],
-  ]);
+  assert.deepEqual(
+    parseRecentlyAccessedItemIds([ids[0].toUpperCase(), ...ids]),
+    [ids[0], ids[1], ids[2]],
+  );
 });
 
 test("retrieved items follow history order, not database row order", () => {
