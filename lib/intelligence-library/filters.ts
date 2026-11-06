@@ -1,4 +1,6 @@
+import type { SearchParams } from "@/lib/validation/search-params";
 import INTELLIGENCE_TAXONOMY from "@/lib/intelligence-library/taxonomy";
+import { getAllowedValues, getValues } from "@/lib/validation/search-params";
 import { isUuid } from "@/lib/validation/uuid";
 
 export type IntelligenceFilters = {
@@ -14,26 +16,6 @@ export type IntelligenceFilters = {
   hasInvalidSourceIds: boolean;
   publishedFrom?: Date;
   publishedTo?: Date;
-};
-
-export type IntelligenceFilterParams = {
-  [key: string]: string | string[] | undefined;
-};
-
-const getValues = (params: IntelligenceFilterParams, key: string) => {
-  const value = params[key];
-  const values = Array.isArray(value) ? value : value ? [value] : [];
-
-  return [...new Set(values.map(item => item.trim()).filter(Boolean))];
-};
-
-const getAllowedValues = (
-  params: IntelligenceFilterParams,
-  key: string,
-  allowedValues: readonly string[],
-) => {
-  const allowed = new Set(allowedValues);
-  return getValues(params, key).filter(value => allowed.has(value));
 };
 
 const parseDate = (value: string | undefined) => {
@@ -58,7 +40,7 @@ const parseDate = (value: string | undefined) => {
 };
 
 export const parseIntelligenceFilters = (
-  params: IntelligenceFilterParams,
+  params: SearchParams,
 ): IntelligenceFilters => {
   const publishedFrom = parseDate(getValues(params, "publishedFrom")[0]);
   const publishedTo = parseDate(getValues(params, "publishedTo")[0]);

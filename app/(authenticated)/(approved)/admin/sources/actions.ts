@@ -2,7 +2,6 @@
 
 import type { SourceFormState } from "./validation";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { sources } from "@/db/schema";
@@ -92,30 +91,48 @@ export async function addSource(
   }
 
   revalidatePath("/admin/sources");
-  redirect(
-    `/admin/sources?notice=${reactivateId === null ? "source-added" : "source-reactivated"}`,
-  );
+  return { status: reactivateId === null ? "added" : "reactivated" };
 }
 
-async function updateSourceStatus(sourceId: string, isActive: boolean) {
+export type SourceStatusResult = { ok: boolean; message: string };
+
+async function updateSourceStatus(
+  sourceId: unknown,
+  isActive: boolean,
+): Promise<SourceStatusResult> {
   await requireAdmin();
 
   if (!isUuid(sourceId)) {
-    redirect("/admin/sources?notice=invalid-source");
+    return { ok: false, message: "The selected source is invalid." };
   }
 
-  if (!(await setSourceActive(sourceId, isActive))) {
-    redirect("/admin/sources?notice=source-changed");
+  try {
+    const updated = await setSourceActive(sourceId, isActive);
+
+    // Refresh either way: a stale row means the list is out of date.
+    revalidatePath("/admin/sources");
+
+    if (!updated) {
+      return {
+        ok: false,
+        message: "That source has changed. Please try again.",
+      };
+    }
+  } catch (error) {
+    console.error("Updating source status failed:", error);
+    return { ok: false, message: "Something went wrong. Please try again." };
   }
 
-  revalidatePath("/admin/sources");
-  redirect("/admin/sources");
+  return {
+    ok: true,
+    message: isActive ? "Source reactivated" : "Source deactivated",
+  };
 }
 
 export async function deactivateSource(sourceId: string) {
-  await updateSourceStatus(sourceId, false);
+  return updateSourceStatus(sourceId, false);
 }
 
 export async function reactivateSource(sourceId: string) {
-  await updateSourceStatus(sourceId, true);
+  return updateSourceStatus(sourceId, true);
 }

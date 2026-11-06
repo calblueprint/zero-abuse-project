@@ -36,12 +36,18 @@ export default function NeedsAttention({ trends, total }: NeedsAttentionProps) {
                 <RowTitle title={trend.title}>{trend.title}</RowTitle>
                 <RowMeta>
                   Built from {trend.itemCount}{" "}
-                  {trend.itemCount === 1 ? "item" : "items"} · Surfaced{" "}
-                  <LocalDate
-                    value={trend.emergedAt}
-                    locale="en-GB"
-                    options={{ day: "numeric", month: "short" }}
-                  />
+                  {trend.itemCount === 1 ? "item" : "items"}
+                  {trend.emergedAt && (
+                    <>
+                      {" "}
+                      · Surfaced{" "}
+                      <LocalDate
+                        value={trend.emergedAt}
+                        locale="en-GB"
+                        options={{ day: "numeric", month: "short" }}
+                      />
+                    </>
+                  )}
                 </RowMeta>
               </RowText>
             </Card>
