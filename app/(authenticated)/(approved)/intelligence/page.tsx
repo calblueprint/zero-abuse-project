@@ -17,11 +17,11 @@ export default async function IntelligenceLibraryPage({
 }: IntelligenceLibraryPageProps) {
   await requireApprovedUser();
   const filters = parseIntelligenceFilters(await searchParams);
-  const [items, options, recentlyAccessedItems] = await Promise.all([
-    getIntelligenceLibraryItems(filters),
-    getIntelligenceLibraryFilterOptions(),
-    getRecentlyAccessedItems(),
-  ]);
+  // One query at a time: db/index.ts has a single pooled connection, and
+  // queries sent on it together never return through Supabase's pooler.
+  const items = await getIntelligenceLibraryItems(filters);
+  const options = await getIntelligenceLibraryFilterOptions();
+  const recentlyAccessedItems = await getRecentlyAccessedItems();
 
   return (
     <IntelligenceLibrary
