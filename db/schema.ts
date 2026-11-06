@@ -7,10 +7,12 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 import { authUsers } from "drizzle-orm/supabase/rls";
+import { sourceUrlKey } from "./source-url";
 
 export const approvalStatuses = ["pending", "approved", "rejected"] as const;
 
@@ -175,5 +177,6 @@ export const sources = pgTable(
       foreignColumns: [users.userId],
       name: "sources_added_by_fkey",
     }).onDelete("set null"),
+    uniqueIndex("sources_url_key_unique").on(sourceUrlKey(table.baseUrl)),
   ],
 ).enableRLS();

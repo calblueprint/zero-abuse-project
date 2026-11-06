@@ -1,18 +1,15 @@
 "use server";
 
-import type { SQLWrapper } from "drizzle-orm";
 import type { SourceFormState } from "./validation";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { sources } from "@/db/schema";
+import { sourceUrlKey } from "@/db/source-url";
 import { requireAdmin } from "@/lib/auth/access";
 import { isUuid } from "@/lib/validation/uuid";
 import { parseSourceFormData } from "./validation";
-
-const urlKey = (url: SQLWrapper | string) =>
-  sql`regexp_replace(${url}, '^https?://(www[.])?', '')`;
 
 async function setSourceActive(sourceId: string, isActive: boolean) {
   const [updatedSource] = await db
@@ -48,36 +45,46 @@ export async function addSource(
       return { fields, errors: result.errors };
     } else {
       const { data } = result;
-      const [match] = await db
-        .select({
-          sourceId: sources.sourceId,
-          name: sources.name,
-          isActive: sources.isActive,
+      const [addedSource] = await db
+        .insert(sources)
+        .values({
+          name: data.name,
+          tier: data.tier,
+          type: data.type,
+          baseUrl: data.url,
+          addedAt: new Date().toISOString(),
+          addedBy: admin.userId,
         })
-        .from(sources)
-        .where(eq(urlKey(sources.baseUrl), urlKey(data.url)))
-        .orderBy(desc(sources.isActive))
-        .limit(1);
+        .onConflictDoNothing()
+        .returning({ sourceId: sources.sourceId });
 
-      if (match?.isActive) {
+      if (!addedSource) {
+        const [match] = await db
+          .select({
+            sourceId: sources.sourceId,
+            name: sources.name,
+            isActive: sources.isActive,
+          })
+          .from(sources)
+          .where(eq(sourceUrlKey(sources.baseUrl), sourceUrlKey(data.url)))
+          .limit(1);
+
+        if (match?.isActive) {
+          return {
+            fields,
+            errors: { url: `This source already exists as "${match.name}".` },
+          };
+        }
+
+        if (match) {
+          return { fields, inactiveMatch: match };
+        }
+
         return {
           fields,
-          errors: { url: `This source already exists as "${match.name}".` },
+          message: "That source has changed. Please try again.",
         };
       }
-
-      if (match) {
-        return { fields, inactiveMatch: match };
-      }
-
-      await db.insert(sources).values({
-        name: data.name,
-        tier: data.tier,
-        type: data.type,
-        baseUrl: data.url,
-        addedAt: new Date().toISOString(),
-        addedBy: admin.userId,
-      });
     }
   } catch (error) {
     console.error("Saving source failed:", error);
