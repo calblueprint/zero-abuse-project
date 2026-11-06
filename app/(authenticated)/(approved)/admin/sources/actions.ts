@@ -1,8 +1,8 @@
 "use server";
 
-import type { SourceFormState } from "./validation";
+import type { SourceFields, SourceFormState } from "./validation";
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { sources } from "@/db/schema";
 import { sourceUrlKey } from "@/db/source-url";
@@ -18,6 +18,33 @@ async function setSourceActive(sourceId: string, isActive: boolean) {
     .returning({ sourceId: sources.sourceId });
 
   return Boolean(updatedSource);
+}
+
+async function getDuplicateSourceState(
+  fields: SourceFields,
+  url: string,
+): Promise<SourceFormState | undefined> {
+  const [match] = await db
+    .select({
+      sourceId: sources.sourceId,
+      name: sources.name,
+      isActive: sources.isActive,
+    })
+    .from(sources)
+    .where(eq(sourceUrlKey(sources.baseUrl), sourceUrlKey(url)))
+    .orderBy(desc(sources.isActive))
+    .limit(1);
+
+  if (match?.isActive) {
+    return {
+      fields,
+      errors: { url: `This source already exists as "${match.name}".` },
+    };
+  }
+
+  if (match) {
+    return { fields, inactiveMatch: match };
+  }
 }
 
 export async function addSource(
@@ -44,6 +71,9 @@ export async function addSource(
       return { fields, errors: result.errors };
     } else {
       const { data } = result;
+      const duplicate = await getDuplicateSourceState(fields, data.url);
+      if (duplicate) return duplicate;
+
       const [addedSource] = await db
         .insert(sources)
         .values({
@@ -58,31 +88,12 @@ export async function addSource(
         .returning({ sourceId: sources.sourceId });
 
       if (!addedSource) {
-        const [match] = await db
-          .select({
-            sourceId: sources.sourceId,
-            name: sources.name,
-            isActive: sources.isActive,
-          })
-          .from(sources)
-          .where(eq(sourceUrlKey(sources.baseUrl), sourceUrlKey(data.url)))
-          .limit(1);
-
-        if (match?.isActive) {
-          return {
+        return (
+          (await getDuplicateSourceState(fields, data.url)) ?? {
             fields,
-            errors: { url: `This source already exists as "${match.name}".` },
-          };
-        }
-
-        if (match) {
-          return { fields, inactiveMatch: match };
-        }
-
-        return {
-          fields,
-          message: "That source has changed. Please try again.",
-        };
+            message: "That source has changed. Please try again.",
+          }
+        );
       }
     }
   } catch (error) {
