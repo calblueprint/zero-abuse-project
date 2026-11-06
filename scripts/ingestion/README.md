@@ -110,6 +110,8 @@ You may pass `repository=` (implementing the `Repository` protocol) and `client=
 Pass `model=` to override the extractor's existing `openrouter/free` default.
 The pipeline closes resources it creates; caller-supplied resources stay open.
 Use a dedicated database connection for each concurrently running ingestion call.
+`PostgresRepository(connection)` requires an idle connection with `autocommit=True`;
+connections with autocommit disabled or an open transaction are rejected.
 No credentials are loaded, connections opened, or requests made on import.
 
 ## Offline verification
