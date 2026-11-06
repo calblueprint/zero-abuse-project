@@ -4,8 +4,6 @@ type PasswordRule = {
   test: (password: string) => boolean;
 };
 
-export const PASSWORD_HINT =
-  "Atleast 8 characters, Contains a special character (e.g. ^&*), Atleast 1 number, Atleast 1 lowercase character, Atleast 1 uppercase character";
 export const PASSWORD_RULES: PasswordRule[] = [
   {
     id: "length",

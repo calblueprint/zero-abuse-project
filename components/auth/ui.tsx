@@ -7,8 +7,8 @@ import Image from "next/image";
 import Link from "next/link";
 import styled, { css } from "styled-components";
 import ZapLogo from "@/assets/images/zap-logo.jpg";
+import { PASSWORD_RULES } from "@/lib/validation/password";
 import COLORS from "@/styles/colors";
-import { PASSWORD_RULES } from "./password-rules";
 
 const headingStyles = css`
   margin: 0;
@@ -259,10 +259,10 @@ function CircleIcon() {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      className="lucide lucide-circle-small preview-icon"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
     >
       <circle cx="12" cy="12" r="6" />
     </svg>

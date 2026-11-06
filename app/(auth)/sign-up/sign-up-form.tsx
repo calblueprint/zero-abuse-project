@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import { signUp } from "@/actions/auth/actions";
-import { passwordIsValid } from "@/components/auth/password-rules";
 import {
   CenterLink,
   ErrorLink,
@@ -16,6 +15,7 @@ import {
   PasswordRules,
   SubmitButton,
 } from "@/components/auth/ui";
+import { passwordIsValid } from "@/lib/validation/password";
 import { setSessionValue, useSessionValue } from "../session-value";
 
 const EMAIL_KEY = "zap-signup-email";
@@ -23,7 +23,7 @@ const EMAIL_KEY = "zap-signup-email";
 export function SignUpForm({ error }: { error?: string }) {
   const email = useSessionValue(EMAIL_KEY);
   const [password, setPassword] = useState("");
-  const [submitted, setSubmitted] = useState(error === "short-password");
+  const [submitted, setSubmitted] = useState(error === "invalid-password");
 
   const emailInvalid =
     error === "email-already-registered" || error === "invalid-email";

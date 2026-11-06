@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import { signOut, updatePassword } from "@/actions/auth/actions";
-import { passwordIsValid } from "@/components/auth/password-rules";
 import {
   CenterButton,
   ErrorText,
@@ -14,11 +13,12 @@ import {
   PasswordRules,
   SubmitButton,
 } from "@/components/auth/ui";
+import { passwordIsValid } from "@/lib/validation/password";
 
 export function UpdatePasswordForm({ error }: { error?: string }) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [submitted, setSubmitted] = useState(error === "short-password");
+  const [submitted, setSubmitted] = useState(error === "invalid-password");
   const [showMismatch, setShowMismatch] = useState(
     error === "password-mismatch",
   );
