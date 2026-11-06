@@ -8,7 +8,6 @@
     "start": "next start",
     "lint": "pnpm exec eslint .",
     "lint:fix": "pnpm exec eslint . --fix",
-    "test:recently-accessed": "node --experimental-strip-types --test tests/recently-accessed-history.test.mjs tests/intelligence-item-open.test.mjs",
     "tsc": "pnpm exec tsc --noEmit",
     "prettier": "pnpm exec prettier --check .",
     "prettier:fix": "pnpm exec prettier --write .",
