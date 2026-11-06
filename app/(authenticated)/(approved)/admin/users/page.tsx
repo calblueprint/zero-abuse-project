@@ -86,7 +86,7 @@ export default async function AdminUsersPage({
         <PageHeading $color={COLORS.navy} $fontWeight={700}>
           User management
         </PageHeading>
-        {notice && notice in notices && (
+        {notice && Object.hasOwn(notices, notice) && (
           <Notice role="status">
             {notices[notice as keyof typeof notices]}
           </Notice>
