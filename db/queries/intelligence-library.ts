@@ -135,6 +135,18 @@ export const getIntelligenceLibraryItems = async (
     .orderBy(desc(itelItems.publishedAt), desc(itelItems.itemId));
 };
 
+export async function getIntelligenceItemSourceUrl(
+  itemId: string,
+): Promise<string | null> {
+  const [item] = await db
+    .select({ sourceUrl: itelItems.sourceUrl })
+    .from(itelItems)
+    .where(eq(itelItems.itemId, itemId))
+    .limit(1);
+
+  return item?.sourceUrl ?? null;
+}
+
 export const getIntelligenceLibraryFilterOptions =
   async (): Promise<IntelligenceLibraryFilterOptions> => {
     const geographies = await getDynamicFilterValues(itelItems.geography);

@@ -1,13 +1,11 @@
 import { unstable_rethrow } from "next/navigation";
-import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
+import { NextResponse } from "next/server";
+import { getIntelligenceItemSourceUrl } from "@/db/queries/intelligence-library";
 import { recordRecentlyAccessed } from "@/db/queries/recently-accessed";
-import { itelItems } from "@/db/schema";
 import { requireApprovedUser } from "@/lib/auth/access";
 import { isUuid } from "@/lib/validation/uuid";
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   let trustedOrigin: string;
 
   try {
@@ -31,11 +29,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const values = formData.getAll("itemId");
-    if (
-      values.length !== 1 ||
-      typeof values[0] !== "string" ||
-      !isUuid(values[0])
-    ) {
+    if (values.length !== 1 || !isUuid(values[0])) {
       return new Response("Invalid item ID", { status: 400 });
     }
     itemId = values[0];
@@ -45,14 +39,9 @@ export async function POST(request: NextRequest) {
 
   let sourceUrl: string;
   try {
-    const [item] = await db
-      .select({ sourceUrl: itelItems.sourceUrl })
-      .from(itelItems)
-      .where(eq(itelItems.itemId, itemId))
-      .limit(1);
-
-    if (!item) return new Response("Item not found", { status: 404 });
-    sourceUrl = item.sourceUrl;
+    const url = await getIntelligenceItemSourceUrl(itemId);
+    if (url === null) return new Response("Item not found", { status: 404 });
+    sourceUrl = url;
   } catch (error) {
     console.error("Failed to load intelligence item source:", error);
     return new Response("Unable to open item", { status: 500 });

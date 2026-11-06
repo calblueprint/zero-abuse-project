@@ -170,7 +170,7 @@ export default function IntelligenceLibrary({
             <form
               action="/intelligence/items/open"
               method="POST"
-              rel="noopener"
+              rel="noopener noreferrer"
               style={{ display: "inline" }}
               target="_blank"
             >
