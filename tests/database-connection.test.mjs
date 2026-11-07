@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
+import { Client } from "pg";
 import ts from "typescript";
 
 const source = ts.transpileModule(
@@ -12,50 +13,53 @@ const source = ts.transpileModule(
 ).outputText;
 
 function connection(databaseUrl) {
-  let actual;
+  let options;
+  const handlers = new Map();
   runInNewContext(source, {
     exports: {},
     URL,
+    console,
     process: { env: { DATABASE_URL: databaseUrl } },
     require(name) {
-      if (name === "postgres") {
-        return (url, options) => {
-          actual = { url: new URL(url), options };
-          return {};
+      if (name === "pg")
+        return {
+          Pool: class {
+            constructor(config) {
+              options = config;
+            }
+            on(event, listener) {
+              handlers.set(event, listener);
+            }
+          },
         };
-      }
-      if (name === "drizzle-orm/postgres-js") return { drizzle: () => ({}) };
+      if (name === "drizzle-orm/node-postgres") return { drizzle: () => ({}) };
       if (["server-only", "./schema", "./relations"].includes(name)) return {};
       throw new Error(`Unexpected import: ${name}`);
     },
   });
-  return actual;
+  return { options, handlers };
 }
 
-test("shared transaction pooler uses session mode and retains credentials and URL options", () => {
-  const { url, options } = connection(
+test("configured connection URI is preserved for transaction, session, and custom endpoints", () => {
+  for (const url of [
     "postgres://postgres.test:p%40ss@aws-0-test.pooler.supabase.com:6543/postgres?application_name=test",
-  );
-  assert.equal(url.port, "5432");
-  assert.equal(url.username, "postgres.test");
-  assert.equal(decodeURIComponent(url.password), "p@ss");
-  assert.equal(url.pathname, "/postgres");
-  assert.equal(url.searchParams.get("application_name"), "test");
-  assert.equal(options.ssl, "require");
-  assert.equal(options.max, 1);
-  assert.equal(options.idle_timeout, 5);
-  assert.equal(options.connect_timeout, 10);
+    "postgres://u:p@aws-0-test.pooler.supabase.com:5432/db",
+    "postgres://u:p@database.example.com:6543/db",
+  ]) {
+    const { options, handlers } = connection(url);
+    assert.equal(options.connectionString, url);
+    assert.equal(options.max, 1);
+    assert.equal(options.idleTimeoutMillis, 5000);
+    assert.equal(options.connectionTimeoutMillis, 10000);
+    assert.equal(options.ssl.rejectUnauthorized, false);
+    assert.equal(typeof handlers.get("error"), "function");
+  }
 });
 
-test("custom endpoints and existing session poolers keep their configured ports", () => {
-  for (const host of ["database.example.com", "db.test.supabase.co"]) {
-    assert.equal(connection(`postgres://u:p@${host}:6543/db`).url.port, "6543");
-  }
-  assert.equal(
-    connection("postgres://u:p@aws-0-test.pooler.supabase.com:5432/db").url
-      .port,
-    "5432",
-  );
+test("driver queues concurrent commands instead of pipelining them", () => {
+  const { options } = connection("postgres://u:p@database.example.com:6543/db");
+  assert.equal(options.pipeline, false);
+  assert.equal(new Client(options).pipeline, false);
 });
 
 test("local databases retain non-TLS support and missing configuration fails early", () => {

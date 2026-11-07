@@ -1,6 +1,6 @@
 import "server-only";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import * as relations from "./relations";
 import * as tables from "./schema";
 
@@ -12,24 +12,22 @@ if (!databaseUrl) {
   );
 }
 
-const connectionUrl = new URL(databaseUrl);
-const hostname = connectionUrl.hostname;
+const hostname = new URL(databaseUrl).hostname;
 const isLocalDatabase = hostname === "localhost" || hostname === "127.0.0.1";
 
-// Postgres.js pipelining is incompatible with Supabase's shared transaction pooler.
-if (
-  hostname.endsWith(".pooler.supabase.com") &&
-  connectionUrl.port === "6543"
-) {
-  connectionUrl.port = "5432";
-}
-
-const client = postgres(connectionUrl.toString(), {
+const client = new Pool({
+  connectionString: databaseUrl,
   max: 1,
-  prepare: false,
-  idle_timeout: 5,
-  connect_timeout: 10,
-  ssl: isLocalDatabase ? false : "require",
+  // Queue commands on each connection; transaction poolers do not support pipelining.
+  pipeline: false,
+  idleTimeoutMillis: 5000,
+  connectionTimeoutMillis: 10000,
+  // Preserve the existing encrypted, non-verifying ssl: "require" behavior.
+  ssl: isLocalDatabase ? false : { rejectUnauthorized: false },
+});
+
+client.on("error", error => {
+  console.error("Idle database connection failed", error);
 });
 
 export const db = drizzle(client, {
