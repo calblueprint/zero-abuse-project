@@ -1,8 +1,8 @@
 """Validated data contracts produced by intelligence extraction."""
 
-from typing import TypeVar
+from typing import Literal, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from scripts.intelligence.enums import (
     AffectedPopulation,
@@ -88,8 +88,44 @@ class IntelligenceItem(BaseModel):
         return unique
 
 
-class ExtractionResult(BaseModel):
+class ScreeningDecision(BaseModel):
+    """Reject only clearly unrelated previews; uncertainty must continue."""
+
+    decision: Literal["irrelevant", "potentially_relevant", "uncertain"]
+    reason: str = Field(min_length=1, max_length=240)
+
+    @field_validator("reason")
+    @classmethod
+    def reject_blank_reason(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Screening reason must not be blank")
+        return value
+
+
+class IntelligenceAssessment(BaseModel):
+    """Required admission decision; unrelated pages need no invented intelligence."""
+
     model_config = ConfigDict(use_enum_values=True)
 
+    relevance: Literal["relevant", "irrelevant"]
+    relevance_reason: str = Field(min_length=1, description="Explain the decision using facts from the page.")
+    intelligence: IntelligenceItem | None = Field(
+        description="Validated intelligence for relevant substantive content; null for unrelated or listing pages.",
+    )
+
+    @field_validator("relevance_reason")
+    @classmethod
+    def reject_blank_reason(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Relevance reason must not be blank")
+        return value
+
+    @model_validator(mode="after")
+    def validate_decision(self):
+        if (self.relevance == "relevant") != (self.intelligence is not None):
+            raise ValueError("Relevant content requires intelligence; irrelevant content requires null")
+        return self
+
+
+class ExtractionResult(IntelligenceAssessment):
     article: Article
-    intelligence: IntelligenceItem

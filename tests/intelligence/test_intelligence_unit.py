@@ -22,7 +22,7 @@ from scripts.intelligence.extractor import (
     create_client,
     extract_intelligence,
 )
-from scripts.intelligence.models import IntelligenceItem
+from scripts.intelligence.models import IntelligenceAssessment, IntelligenceItem
 from scripts.models import Article
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,6 +45,15 @@ def valid_intelligence(**overrides):
     }
 
 
+def valid_assessment(**overrides):
+    return {
+        "relevance": "relevant",
+        "relevance_reason": "The report concerns child protection.",
+        "intelligence": valid_intelligence(),
+        **overrides,
+    }
+
+
 class ModelTests(unittest.TestCase):
     def test_classifications_are_required_but_can_be_empty(self):
         self.assertEqual(IntelligenceItem(**valid_intelligence()).platform, [])
@@ -54,6 +63,16 @@ class ModelTests(unittest.TestCase):
                 del data[field]
                 with self.assertRaises(ValidationError):
                     IntelligenceItem(**data)
+
+    def test_assessment_requires_consistent_decision_and_nonblank_reason(self):
+        for overrides in [
+            {"relevance": "relevant", "intelligence": None},
+            {"relevance": "irrelevant"},
+            {"relevance": "maybe"},
+            {"relevance_reason": "   "},
+        ]:
+            with self.subTest(overrides=overrides), self.assertRaises(ValidationError):
+                IntelligenceAssessment(**valid_assessment(**overrides))
 
     def test_invalid_enum_rejected(self):
         with self.assertRaises(ValidationError):
@@ -153,19 +172,32 @@ class ExtractionTests(unittest.TestCase):
         result = extract_intelligence(
             article,
             client=self.make_client(
-                [json.dumps(valid_intelligence(zap_program_relevance=relevance))]
+                [json.dumps(valid_assessment(intelligence=valid_intelligence(zap_program_relevance=relevance)))]
             ),
             model="requested-test-model",
         )
         self.assertEqual(result.intelligence.zap_program_relevance, relevance)
 
     def test_success_preserves_source_without_extraction_metadata(self):
-        result = self.extract(self.make_client([json.dumps(valid_intelligence())]))
+        result = self.extract(self.make_client([json.dumps(valid_assessment())]))
         self.assertEqual(result.article, self.article)
-        self.assertEqual(set(result.model_dump()), {"article", "intelligence"})
+        self.assertEqual(set(result.model_dump()), {"article", "intelligence", "relevance", "relevance_reason"})
         request = self.requests[0]
         self.assertEqual(request["response_format"]["type"], "json_schema")
         self.assertTrue(request["provider"]["require_parameters"])
+
+    def test_irrelevant_page_returns_reason_without_intelligence(self):
+        result = self.extract(self.make_client([json.dumps(valid_assessment(
+            relevance="irrelevant", relevance_reason="Unrelated sports results.", intelligence=None,
+        ))]))
+        self.assertEqual(result.relevance, "irrelevant")
+        self.assertIsNone(result.intelligence)
+
+    def test_missing_relevance_is_not_accepted(self):
+        data = valid_assessment()
+        del data["relevance"]
+        with self.assertRaises(ExtractionError):
+            self.extract(self.make_client([json.dumps(data)]))
 
     def test_malformed_json_fails_after_bounded_retries(self):
         with self.assertRaises(ExtractionError):
@@ -189,7 +221,7 @@ class ExtractionTests(unittest.TestCase):
 
     def test_json_only_provider_falls_back_and_still_validates(self):
         client = self.make_client(
-            ["{}", json.dumps(valid_intelligence())],
+            ["{}", json.dumps(valid_assessment())],
             initial_error=self.json_only_error(),
         )
         result = self.extract(client)
@@ -227,10 +259,10 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual(len(self.requests), 2)
 
     def test_omitted_classification_is_retried(self):
-        data = valid_intelligence()
-        del data["affected_population"]
+        data = valid_assessment()
+        del data["intelligence"]["affected_population"]
         self.extract(
-            self.make_client([json.dumps(data), json.dumps(valid_intelligence())])
+            self.make_client([json.dumps(data), json.dumps(valid_assessment())])
         )
         self.assertEqual(len(self.requests), 2)
 

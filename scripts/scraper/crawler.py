@@ -1,12 +1,11 @@
 """Small, sequential crawler for public article pages on one hostname."""
 
 import math
-import re
 import time
 from collections import deque
 from collections.abc import Callable
 from html.parser import HTMLParser
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import parse_qs, urljoin, urlsplit, urlunsplit
 from urllib.robotparser import RobotFileParser
 
 import requests
@@ -49,19 +48,12 @@ _NON_HTML_SUFFIXES = (
     ".js",
 )
 _EXCLUDED_SEGMENTS = {
-    "tag",
-    "tags",
-    "category",
-    "categories",
-    "author",
-    "authors",
-    "search",
-    "login",
-    "signin",
-    "account",
-    "page",
-    "archive",
-    "archives",
+    "login", "signin", "logout", "signout", "account", "register",
+    "signup", "cart", "checkout", "search", "contact", "privacy", "terms",
+}
+_LISTING_SEGMENTS = {
+    "tag", "tags", "category", "categories", "author", "authors",
+    "archive", "archives", "page",
 }
 _ARTICLE_SECTIONS = {
     "blog",
@@ -138,30 +130,34 @@ def discover_links(html: str, page_url: str) -> list[str]:
     return links
 
 
-def is_article_url(url: str) -> bool:
-    """Conservative default filter; callers can supply source-specific rules."""
-    path = urlsplit(url).path.lower()
-    segments = [segment for segment in path.split("/") if segment]
-    if not segments:
-        return False
-    if path.endswith(_NON_HTML_SUFFIXES):
-        return False
-    if _EXCLUDED_SEGMENTS.intersection(segments):
-        return False
-    return any(part in _ARTICLE_SECTIONS for part in segments[:-1]) or bool(
-        re.search(r"/(?:19|20)\d{2}/\d{1,2}/", path)
+def _eligible_path(url: str) -> bool:
+    parsed = urlsplit(url)
+    segments = [part for part in parsed.path.lower().split("/") if part]
+    return (
+        parsed.scheme in {"http", "https"}
+        and not parsed.path.lower().endswith(_NON_HTML_SUFFIXES)
+        and not _EXCLUDED_SEGMENTS.intersection(segments)
+        and not {"s", "search", "q"}.intersection(parse_qs(parsed.query))
     )
 
 
 def is_discovery_url(url: str) -> bool:
-    """Return whether a non-article URL is a useful listing or index page."""
-    path = urlsplit(url).path.lower()
-    segments = [segment for segment in path.split("/") if segment]
-    if not segments or path.endswith(_NON_HTML_SUFFIXES):
+    """Known indexes may be traversed, including categories and pagination."""
+    if not _eligible_path(url):
         return False
-    if _EXCLUDED_SEGMENTS.intersection(segments):
-        return False
-    return segments[-1] in _DISCOVERY_SECTIONS
+    parsed = urlsplit(url)
+    segments = [part for part in parsed.path.lower().split("/") if part]
+    return (
+        not segments
+        or segments[-1] in _DISCOVERY_SECTIONS
+        or bool(_LISTING_SEGMENTS.intersection(segments))
+        or bool({"page", "paged", "offset"}.intersection(parse_qs(parsed.query)))
+    )
+
+
+def is_article_url(url: str) -> bool:
+    """Accept ordinary HTML paths; relevance is decided from content downstream."""
+    return _eligible_path(url) and not is_discovery_url(url)
 
 
 class _CrawlRules:
@@ -244,25 +240,32 @@ def crawl_site(
     start_url: str,
     *,
     max_pages: int = 20,
-    max_depth: int = 1,
+    max_depth: int = 2,
     request_delay: float = 1.0,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     max_response_bytes: int = DEFAULT_MAX_RESPONSE_BYTES,
     article_filter: Callable[[str], bool] | None = None,
     follow_filter: Callable[[str], bool] | None = None,
-    include_seed: bool = True,
+    include_seed: bool = False,
+    max_query_variants: int = 3,
     session: requests.Session | None = None,
 ) -> CrawlResult:
-    """Crawl matching article links on the seed hostname in breadth-first order.
+    """Crawl public HTML links on the seed hostname in breadth-first order.
 
     The seed is always attempted at depth zero. ``max_pages`` counts attempted
     queued pages (including failures), excluding robots and redirect requests.
     Article pages are included in ``pages``. Listing pages allowed by
     ``follow_filter`` are traversed without becoming results. Access and fetch
     errors are always recorded; extraction errors are recorded for article
-    candidates and the seed. Set ``include_seed=False`` to treat the seed like
-    other pages: only return it if it matches the article filter.
+    candidates. ``include_seed=True`` explicitly returns an extractable seed even
+    when it is an index. ``max_query_variants`` bounds queued URLs per path.
     """
+    if (
+        isinstance(max_query_variants, bool)
+        or not isinstance(max_query_variants, int)
+        or max_query_variants < 1
+    ):
+        raise ValueError("max_query_variants must be a positive integer")
     seed = normalize_url(start_url)
     if isinstance(max_pages, bool) or not isinstance(max_pages, int) or max_pages < 1:
         raise ValueError("max_pages must be a positive integer")
@@ -285,13 +288,16 @@ def crawl_site(
     rules = _CrawlRules(host, client, timeout, request_delay)
     select_article = is_article_url if article_filter is None else article_filter
     follow_link = is_discovery_url if follow_filter is None else follow_filter
-    queue = deque([(seed, 0, include_seed or select_article(seed))])
+    queue = deque([(seed, 0, include_seed)])
     queued = {seed}
+    # Bound pagination and faceted URLs even when every query is unique.
+    seed_parts = urlsplit(seed)
+    variants = {(seed_parts.netloc, seed_parts.path): 1}
     result = CrawlResult(seed_url=seed)
 
     try:
         while queue and len(result.visited_urls) < max_pages:
-            url, depth, include_candidate = queue.popleft()
+            url, depth, force_include = queue.popleft()
             if url in rules.requested:
                 continue
             result.visited_urls.append(url)
@@ -310,11 +316,10 @@ def crawl_site(
                 result.failures.append(CrawlFailure(url, stage, str(exc)))
                 continue
             except Exception as exc:
-                # Isolate unexpected parser/validation failures to this page too.
                 result.failures.append(CrawlFailure(url, "extract", type(exc).__name__))
                 continue
             final_url = normalize_url(scraped.url)
-            include_page = include_candidate or select_article(final_url)
+            include_page = force_include or select_article(final_url)
             if scraped.page is not None and include_page:
                 result.pages.append(scraped.page)
             elif scraped.page is None and include_page:
@@ -326,10 +331,15 @@ def crawl_site(
             for link in discover_links(scraped.html, final_url):
                 if urlsplit(link).hostname != host or link in queued or link in rules.requested:
                     continue
+                parts = urlsplit(link)
+                key = (parts.netloc, parts.path)
+                if variants.get(key, 0) >= max_query_variants:
+                    continue
                 article_candidate = select_article(link)
                 if article_candidate or follow_link(link):
                     queued.add(link)
-                    queue.append((link, depth + 1, article_candidate))
+                    variants[key] = variants.get(key, 0) + 1
+                    queue.append((link, depth + 1, False))
     finally:
         if session is None:
             client.close()
