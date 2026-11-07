@@ -50,6 +50,8 @@ export default function SourcesView({ sources, now }: SourcesViewProps) {
     parseSourceView(toSearchParams(searchParams)),
   );
   const [seenUrlQuery, setSeenUrlQuery] = useState(urlQuery);
+  // The query string ("" or "?…") this view last wrote with replaceState.
+  const [writtenQuery, setWrittenQuery] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [deactivating, setDeactivating] = useState<SourceRecord | null>(null);
   // One status change at a time: Next stalled when a second server action
@@ -57,21 +59,25 @@ export default function SourcesView({ sources, now }: SourcesViewProps) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [clientNow, setClientNow] = useState(0);
   // The row whose button a status change swaps out, to put focus back on.
-  const focusAfterChange = useRef<{ id: string; wasActive: boolean } | null>(
-    null,
-  );
+  const focusAfterChange = useRef<{
+    id: string;
+    wasActive: boolean;
+    failed?: boolean;
+  } | null>(null);
   const { toast, showToast } = useToast();
   const nowMs = Math.max(Date.parse(now), clientNow);
   const { rows, counts } = applySourceView(sources, view, nowMs);
   const query = view.q.trim();
   const hasFilters = view.tiers.length > 0 || view.types.length > 0;
 
-  // A navigation (e.g. the top bar's Sources link) changed the URL to
-  // something other than what this view last wrote: follow it.
+  // A navigation (e.g. the top bar's Sources link) changed the URL: follow
+  // it. Our own replaceState also shows up here, sometimes after more typing,
+  // so a URL this view wrote itself must not reset the view.
   if (urlQuery !== seenUrlQuery) {
     setSeenUrlQuery(urlQuery);
+    const incoming = urlQuery && `?${urlQuery}`;
 
-    if (toQueryString(view) !== (urlQuery && `?${urlQuery}`)) {
+    if (incoming !== writtenQuery && incoming !== toQueryString(view)) {
       setView(parseSourceView(toSearchParams(searchParams)));
     }
   }
@@ -82,16 +88,19 @@ export default function SourcesView({ sources, now }: SourcesViewProps) {
     return () => clearInterval(timer);
   }, []);
 
-  // A status change swaps the row's button, or moves the row to another
-  // tab, which drops focus to <body>. Once the new row state arrives, focus
-  // its new button, or the selected tab when the row has left.
+  // A status change disables and then swaps the row's button, or moves the
+  // row to another tab, which drops focus to <body>. Once the new row state
+  // arrives (or the change fails), focus the row's button, or the selected
+  // tab when the row has left.
   useEffect(() => {
     const change = focusAfterChange.current;
 
     if (!change || pendingId === change.id) return;
 
     const source = sources.find(item => item.sourceId === change.id);
-    if (source && source.isActive === change.wasActive) return;
+    if (!change.failed && source && source.isActive === change.wasActive) {
+      return;
+    }
 
     focusAfterChange.current = null;
 
@@ -117,6 +126,7 @@ export default function SourcesView({ sources, now }: SourcesViewProps) {
       const next = toQueryString(view);
 
       if (next !== search) {
+        setWrittenQuery(next);
         window.history.replaceState(null, "", `${pathname}${next}`);
       }
     }, 300);
@@ -152,8 +162,8 @@ export default function SourcesView({ sources, now }: SourcesViewProps) {
 
     // Lands together with the refreshed rows.
     startTransition(() => {
-      if (!result.ok) {
-        focusAfterChange.current = null;
+      if (!result.ok && focusAfterChange.current) {
+        focusAfterChange.current.failed = true;
       }
       setPendingId(null);
       showToast(result.message);

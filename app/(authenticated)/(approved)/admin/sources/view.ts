@@ -170,12 +170,18 @@ function matchSources(sources: SourceRecord[], view: SourceView) {
     .replace(/^(https?:\/\/)?(www\.)?/, "")
     .replace(/\/$/, "");
 
+  // A query that is only "https://" or "www." leaves urlQuery empty, which
+  // would match every URL; match those against the full URL instead.
+  const matchesUrl = (baseUrl: string) =>
+    urlQuery
+      ? displayUrl(baseUrl).toLowerCase().includes(urlQuery)
+      : baseUrl.toLowerCase().includes(query);
+
   return sources.filter(
     source =>
       (!query ||
         source.name.toLowerCase().includes(query) ||
-        (source.baseUrl !== null &&
-          displayUrl(source.baseUrl).toLowerCase().includes(urlQuery))) &&
+        (source.baseUrl !== null && matchesUrl(source.baseUrl))) &&
       (view.tiers.length === 0 ||
         view.tiers.some(tier => tier === source.tier)) &&
       (view.types.length === 0 ||

@@ -7,7 +7,12 @@ import SelectMenu, { fieldBox } from "@/components/SelectMenu";
 import COLORS from "@/styles/colors";
 import { addSource } from "./actions";
 import { PrimaryButton, SecondaryButton, TextButton } from "./styles";
-import { SOURCE_TIERS, SOURCE_TYPES, TIER_DESCRIPTIONS } from "./validation";
+import {
+  parseSourceFormData,
+  SOURCE_TIERS,
+  SOURCE_TYPES,
+  TIER_DESCRIPTIONS,
+} from "./validation";
 
 type AddSourceFormProps = {
   onCancel: () => void;
@@ -29,8 +34,21 @@ export default function AddSourceForm({
   onSaved,
 }: AddSourceFormProps) {
   const [state, formAction, isPending] = useActionState(
-    async (previousState: SourceFormState, formData: FormData) => {
-      const result = await addSource(previousState, formData);
+    async (
+      previousState: SourceFormState,
+      formData: FormData,
+    ): Promise<SourceFormState> => {
+      let result: SourceFormState;
+      try {
+        result = await addSource(previousState, formData);
+      } catch {
+        // The request itself failed. Keep what was typed, since React
+        // resets the form after the action.
+        return {
+          fields: parseSourceFormData(formData).fields,
+          message: "Something went wrong. Please try again.",
+        };
+      }
       const { status } = result;
 
       if (status) {
