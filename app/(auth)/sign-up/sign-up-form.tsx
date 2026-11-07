@@ -3,23 +3,19 @@
 import { FormEvent, useState } from "react";
 import { signUp } from "@/actions/auth/actions";
 import {
-  PASSWORD_HINT,
-  passwordIsValid,
-} from "@/components/auth/password-rules";
-import {
   CenterLink,
   ErrorLink,
   ErrorText,
   Field,
   Fields,
   Heading,
-  Helper,
   Input,
   Label,
   PasswordInput,
   PasswordRules,
   SubmitButton,
 } from "@/components/auth/ui";
+import { passwordIsValid } from "@/lib/validation/password";
 import { setSessionValue, useSessionValue } from "../session-value";
 
 const EMAIL_KEY = "zap-signup-email";
@@ -27,11 +23,10 @@ const EMAIL_KEY = "zap-signup-email";
 export function SignUpForm({ error }: { error?: string }) {
   const email = useSessionValue(EMAIL_KEY);
   const [password, setPassword] = useState("");
-  const [submitted, setSubmitted] = useState(error === "short-password");
+  const [submitted, setSubmitted] = useState(error === "invalid-password");
 
   const emailInvalid =
     error === "email-already-registered" || error === "invalid-email";
-  const showRules = submitted;
   const passwordInvalid = submitted && !passwordIsValid(password);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -87,11 +82,8 @@ export function SignUpForm({ error }: { error?: string }) {
             required
           />
           <input type="hidden" name="confirmPassword" value={password} />
-          {showRules ? (
-            <PasswordRules password={password} />
-          ) : (
-            <Helper>{PASSWORD_HINT}</Helper>
-          )}
+
+          <PasswordRules password={password} />
           {error === "signup-failed" ? (
             <ErrorText role="alert">
               Unable to create your account. Please try again.

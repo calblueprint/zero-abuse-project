@@ -250,6 +250,7 @@ def crawl_site(
     max_response_bytes: int = DEFAULT_MAX_RESPONSE_BYTES,
     article_filter: Callable[[str], bool] | None = None,
     follow_filter: Callable[[str], bool] | None = None,
+    include_seed: bool = True,
     session: requests.Session | None = None,
 ) -> CrawlResult:
     """Crawl matching article links on the seed hostname in breadth-first order.
@@ -259,7 +260,8 @@ def crawl_site(
     Article pages are included in ``pages``. Listing pages allowed by
     ``follow_filter`` are traversed without becoming results. Access and fetch
     errors are always recorded; extraction errors are recorded for article
-    candidates and the seed.
+    candidates and the seed. Set ``include_seed=False`` to treat the seed like
+    other pages: only return it if it matches the article filter.
     """
     seed = normalize_url(start_url)
     if isinstance(max_pages, bool) or not isinstance(max_pages, int) or max_pages < 1:
@@ -283,7 +285,7 @@ def crawl_site(
     rules = _CrawlRules(host, client, timeout, request_delay)
     select_article = is_article_url if article_filter is None else article_filter
     follow_link = is_discovery_url if follow_filter is None else follow_filter
-    queue = deque([(seed, 0, True)])
+    queue = deque([(seed, 0, include_seed or select_article(seed))])
     queued = {seed}
     result = CrawlResult(seed_url=seed)
 
@@ -306,6 +308,10 @@ def crawl_site(
             except FetchError as exc:
                 stage = "access" if isinstance(exc, _AccessError) else "fetch"
                 result.failures.append(CrawlFailure(url, stage, str(exc)))
+                continue
+            except Exception as exc:
+                # Isolate unexpected parser/validation failures to this page too.
+                result.failures.append(CrawlFailure(url, "extract", type(exc).__name__))
                 continue
             final_url = normalize_url(scraped.url)
             include_page = include_candidate or select_article(final_url)

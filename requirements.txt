@@ -4,6 +4,7 @@ instructor==1.17.0
 lxml-html-clean==0.4.5
 openai==3.3.0
 pydantic==2.13.5
+psycopg[binary]==3.3.6
 python-dotenv==1.2.3
 requests==2.34.2
 trafilatura==2.3.0

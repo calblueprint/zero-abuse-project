@@ -1,4 +1,5 @@
 import INTELLIGENCE_TAXONOMY from "@/lib/intelligence-library/taxonomy";
+import { isUuid } from "@/lib/validation/uuid";
 
 export type IntelligenceFilters = {
   exploitationTypes: string[];
@@ -25,9 +26,6 @@ const getValues = (params: IntelligenceFilterParams, key: string) => {
 
   return [...new Set(values.map(item => item.trim()).filter(Boolean))];
 };
-
-const isUuid = (value: string) =>
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 const getAllowedValues = (
   params: IntelligenceFilterParams,
