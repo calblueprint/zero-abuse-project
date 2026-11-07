@@ -2,12 +2,13 @@ import "server-only";
 import { desc, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { trends } from "@/db/schema";
+import { toIsoTimestamp } from "@/lib/utils";
 
 export type LatestTrend = {
   trendId: string;
   title: string;
   itemCount: number;
-  emergedAt: string;
+  emergedAt: string | null;
 };
 
 export const getLatestTrends = async (limit: number) => {
@@ -32,8 +33,7 @@ export const getLatestTrends = async (limit: number) => {
     trendId: row.trendId,
     title: row.title,
     itemCount: row.itemCount,
-    // Drizzle returns raw Postgres timestamptz text, which Safari can't parse.
-    emergedAt: new Date(row.emergedAt).toISOString(),
+    emergedAt: toIsoTimestamp(row.emergedAt),
   }));
 
   return { trends: latestTrends, total: rows[0]?.total ?? 0 };
