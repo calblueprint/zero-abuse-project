@@ -55,6 +55,9 @@ the bounded response body instead of relying on Requests' HTML default.
 
 ## Crawling
 
+To send scraped articles through intelligence extraction and save the results,
+use the callable [`ingest_url()` and `ingest_source()` functions](../ingestion/README.md).
+
 Run a crawl from a public listing page:
 
 ```bash
@@ -88,6 +91,10 @@ failure on the seed or an article candidate still permits link discovery.
 Discovery-only index pages are not added to `pages`, and their extraction
 failures are not reported because their purpose is link traversal. The CLI
 exits with status 0 if at least one article was extracted, otherwise 1.
+
+Python callers can set `include_seed=False` to return the seed only when it
+matches the article filter. Source ingestion uses this option so starting listing
+pages can be traversed without becoming saved intelligence records.
 
 The crawler has separate article and traversal policies. The conservative
 article policy recognizes paths under blog, news, article, post, report, press,
