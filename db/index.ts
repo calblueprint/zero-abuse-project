@@ -7,18 +7,28 @@ import * as tables from "./schema";
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-  throw new Error("DATABASE_URL is not set");
+  throw new Error(
+    "DATABASE_URL is not set. Add the server-only PostgreSQL connection URI from Supabase's Connect panel; SUPABASE_URL is an HTTP API URL and cannot replace it.",
+  );
 }
 
-const hostname = new URL(databaseUrl).hostname;
+const connectionUrl = new URL(databaseUrl);
+const hostname = connectionUrl.hostname;
 const isLocalDatabase = hostname === "localhost" || hostname === "127.0.0.1";
 
-// Supabase's transaction pooler does not support prepared statements. Keeping
-// the pool at one connection also prevents each serverless instance from
-// exhausting the project's connection limit.
-const client = postgres(databaseUrl, {
+// Postgres.js pipelining is incompatible with Supabase's shared transaction pooler.
+if (
+  hostname.endsWith(".pooler.supabase.com") &&
+  connectionUrl.port === "6543"
+) {
+  connectionUrl.port = "5432";
+}
+
+const client = postgres(connectionUrl.toString(), {
   max: 1,
   prepare: false,
+  idle_timeout: 5,
+  connect_timeout: 10,
   ssl: isLocalDatabase ? false : "require",
 });
 
