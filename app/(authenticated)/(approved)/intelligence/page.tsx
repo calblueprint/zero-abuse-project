@@ -4,7 +4,6 @@ import {
   getIntelligenceLibraryFilterOptions,
   getIntelligenceLibraryItems,
 } from "@/db/queries/intelligence-library";
-import { getRecentlyAccessedItems } from "@/db/queries/recently-accessed";
 import { requireApprovedUser } from "@/lib/auth/access";
 import { parseIntelligenceFilters } from "@/lib/intelligence-library/filters";
 
@@ -17,18 +16,12 @@ export default async function IntelligenceLibraryPage({
 }: IntelligenceLibraryPageProps) {
   await requireApprovedUser();
   const filters = parseIntelligenceFilters(await searchParams);
-  const [items, options, recentlyAccessedItems] = await Promise.all([
+  const [items, options] = await Promise.all([
     getIntelligenceLibraryItems(filters),
     getIntelligenceLibraryFilterOptions(),
-    getRecentlyAccessedItems(),
   ]);
 
   return (
-    <IntelligenceLibrary
-      filters={filters}
-      items={items}
-      options={options}
-      recentlyAccessedItems={recentlyAccessedItems}
-    />
+    <IntelligenceLibrary filters={filters} items={items} options={options} />
   );
 }

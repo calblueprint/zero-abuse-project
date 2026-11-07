@@ -4,7 +4,6 @@ import type {
 } from "@/db/queries/intelligence-library";
 import type { IntelligenceFilters } from "@/lib/intelligence-library/filters";
 import Link from "next/link";
-import RefreshOnFocus from "./RefreshOnFocus";
 
 type FilterDefinition = {
   label: string;
@@ -16,7 +15,6 @@ type FilterDefinition = {
 type IntelligenceLibraryProps = {
   filters: IntelligenceFilters;
   items: IntelligenceLibraryItem[];
-  recentlyAccessedItems: IntelligenceLibraryItem[];
   options: IntelligenceLibraryFilterOptions;
 };
 
@@ -64,7 +62,6 @@ function IntelligenceItemCard({ item }: { item: IntelligenceLibraryItem }) {
 export default function IntelligenceLibrary({
   filters,
   items,
-  recentlyAccessedItems,
   options,
 }: IntelligenceLibraryProps) {
   const taxonomyFilters: FilterDefinition[] = [
@@ -121,21 +118,6 @@ export default function IntelligenceLibrary({
   return (
     <main style={{ margin: "0 auto", maxWidth: "1200px", padding: "2rem" }}>
       <h1>Intelligence Library</h1>
-      <RefreshOnFocus />
-
-      <section aria-labelledby="recently-accessed-heading">
-        <h2 id="recently-accessed-heading">Recently accessed</h2>
-        {recentlyAccessedItems.length === 0 ? (
-          <p>Items you open will appear here.</p>
-        ) : (
-          <div style={{ display: "grid", gap: "1rem" }}>
-            {recentlyAccessedItems.map(item => (
-              <IntelligenceItemCard key={item.itemId} item={item} />
-            ))}
-          </div>
-        )}
-      </section>
-
       <form action="/intelligence" method="get" style={{ margin: "1.5rem 0" }}>
         <div
           style={{

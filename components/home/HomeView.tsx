@@ -1,3 +1,4 @@
+import type { IntelligenceLibraryItem } from "@/db/queries/intelligence-library";
 import type { LatestTrend } from "@/db/queries/trends";
 import Image from "next/image";
 import styled from "styled-components";
@@ -18,6 +19,7 @@ type HomeViewProps = {
   today: string;
   trends: LatestTrend[];
   totalTrends: number;
+  recentlyAccessedItems: IntelligenceLibraryItem[];
 };
 
 export default function HomeView({
@@ -27,6 +29,7 @@ export default function HomeView({
   today,
   trends,
   totalTrends,
+  recentlyAccessedItems,
 }: HomeViewProps) {
   return (
     <Canvas className={dmSans.className}>
@@ -46,7 +49,7 @@ export default function HomeView({
         <SearchHero />
         <MetricTiles />
         <Lists>
-          <RecentlyAccessed />
+          <RecentlyAccessed items={recentlyAccessedItems} />
           <Divider />
           <NeedsAttention trends={trends} total={totalTrends} />
         </Lists>

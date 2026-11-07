@@ -1,3 +1,4 @@
+import type { IntelligenceLibraryItem } from "@/db/queries/intelligence-library";
 import styled from "styled-components";
 import {
   RowMeta,
@@ -8,45 +9,48 @@ import {
 } from "@/components/home/styles";
 import COLORS from "@/styles/colors";
 
-// Placeholder rows until recently accessed items are tracked.
-const RECENT_ITEMS = [
-  {
-    title: "Financial sextortion: recent developments",
-    kind: "Emerging pattern",
-    when: "Today",
-  },
-  {
-    title: "Teen messaging and account protections",
-    kind: "Intelligence item",
-    when: "Yesterday",
-  },
-  {
-    title: "Research on adolescent online coercion",
-    kind: "Intelligence item",
-    when: "16 Oct",
-  },
-];
-
-export default function RecentlyAccessed() {
+export default function RecentlyAccessed({
+  items,
+}: {
+  items: IntelligenceLibraryItem[];
+}) {
   return (
     <Section>
       <SectionHeading>
         <SectionTitle>Recently accessed</SectionTitle>
       </SectionHeading>
-      <List>
-        {RECENT_ITEMS.map(item => (
-          <Item key={item.title}>
-            <RowText>
-              <RowTitle>{item.title}</RowTitle>
-              <Meta>
-                <span>{item.kind}</span>
-                <span>·</span>
-                <span>{item.when}</span>
-              </Meta>
-            </RowText>
-          </Item>
-        ))}
-      </List>
+      {items.length === 0 ? (
+        <RowMeta>Items you open will appear here.</RowMeta>
+      ) : (
+        <List>
+          {items.map(item => (
+            <Item key={item.itemId}>
+              <form
+                action="/intelligence/items/open"
+                method="POST"
+                target="_blank"
+                rel="noopener"
+              >
+                <input name="itemId" type="hidden" value={item.itemId} />
+                <RowText>
+                  <ItemTitle
+                    as="button"
+                    type="submit"
+                    title={item.title ?? "Untitled intelligence item"}
+                  >
+                    {item.title ?? "Untitled intelligence item"}
+                  </ItemTitle>
+                  <Meta>
+                    <span>Intelligence item</span>
+                    <span>·</span>
+                    <span>{item.sourceName}</span>
+                  </Meta>
+                </RowText>
+              </form>
+            </Item>
+          ))}
+        </List>
+      )}
     </Section>
   );
 }
@@ -80,5 +84,19 @@ const Item = styled.li`
 
   &:not(:last-child) {
     border-bottom: 1px solid ${COLORS.divider};
+  }
+`;
+
+const ItemTitle = styled(RowTitle)`
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
   }
 `;
