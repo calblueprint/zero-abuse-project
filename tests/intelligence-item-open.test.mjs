@@ -196,6 +196,26 @@ test("library source forms preserve Origin", () => {
   runInNewContext(component, {
     exports,
     require(name) {
+      if (name === "./ViewSourceButton") {
+        const sourceExports = {};
+        const source = ts.transpileModule(
+          readFileSync(
+            new URL(
+              "../components/intelligence-library/ViewSourceButton.tsx",
+              import.meta.url,
+            ),
+            "utf8",
+          ),
+          {
+            compilerOptions: {
+              module: ts.ModuleKind.CommonJS,
+              jsx: ts.JsxEmit.ReactJSX,
+            },
+          },
+        ).outputText;
+        runInNewContext(source, { exports: sourceExports, require });
+        return sourceExports;
+      }
       return require(name);
     },
   });

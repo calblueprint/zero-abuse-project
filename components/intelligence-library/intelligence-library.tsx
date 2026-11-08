@@ -9,6 +9,8 @@ import type { PatternFilters } from "@/lib/intelligence-library/pattern-filters"
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
+import ViewSourceButton from "@/components/intelligence-library/ViewSourceButton";
+import TopBar from "@/components/TopBar";
 import {
   dateOptions,
   emptyPatternFilters,
@@ -19,6 +21,8 @@ import {
   priorityOptions,
   reviewOptions,
 } from "@/lib/intelligence-library/pattern-filters";
+import COLORS from "@/styles/colors";
+import { dmSans } from "@/styles/fonts";
 
 type Status =
   "All patterns" | "Needs your review" | "Saved" | "Confirmed" | "Archived";
@@ -36,11 +40,13 @@ export default function IntelligenceLibraryPage({
   initialPatterns,
   intelligenceItems,
   avatarInitials,
+  isAdmin,
   referenceDate = new Date(),
 }: {
   initialPatterns: EmergingPattern[];
   intelligenceItems: IntelligenceLibraryItem[];
   avatarInitials: string | null;
+  isAdmin: boolean;
   referenceDate?: Date;
 }) {
   const [view, setView] = useState<"patterns" | "items">("patterns");
@@ -182,27 +188,8 @@ export default function IntelligenceLibraryPage({
   }, [filtersOpen, closeFilters]);
 
   return (
-    <Canvas>
-      <TopBar>
-        <TopLeft>
-          <ZapLogo>zap</ZapLogo>
-          <IconButton aria-label="Toggle sidebar" type="button">
-            <SidebarIcon />
-          </IconButton>
-        </TopLeft>
-        <TopRight>
-          <HelpButton type="button">Help</HelpButton>
-          <Avatar
-            aria-label={
-              avatarInitials
-                ? `User profile: ${avatarInitials}`
-                : "User profile"
-            }
-          >
-            {avatarInitials ?? <AvatarPlaceholder aria-hidden="true" />}
-          </Avatar>
-        </TopRight>
-      </TopBar>
+    <Canvas className={dmSans.className}>
+      <TopBar initials={avatarInitials ?? ""} isAdmin={isAdmin} />
       <Panel aria-labelledby="intelligence-library-title">
         <PageHeader>
           <Title id="intelligence-library-title">Intelligence library</Title>
@@ -442,14 +429,16 @@ export default function IntelligenceLibraryPage({
               </PaginationText>
               <SecondaryButton
                 disabled={activePage === 0}
-                onClick={() => setPage(p => Math.max(0, p - 1))}
+                onClick={() => setPage(Math.max(0, activePage - 1))}
                 type="button"
               >
                 Previous
               </SecondaryButton>
               <SecondaryButton
                 disabled={activePage >= totalPages - 1}
-                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                onClick={() =>
+                  setPage(Math.min(totalPages - 1, activePage + 1))
+                }
                 type="button"
               >
                 Next
@@ -484,6 +473,7 @@ function IntelligenceItemsList({
             {item.publishedAt &&
               ` · ${new Date(item.publishedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}`}
           </ItemMeta>
+          <ViewSourceButton itemId={item.itemId} />
         </IntelligenceItemCard>
       ))}
     </ItemsResults>
@@ -648,14 +638,6 @@ function ChevronIcon() {
     </SmallIcon>
   );
 }
-function SidebarIcon() {
-  return (
-    <SmallIcon viewBox="0 0 16 16">
-      <rect height="11" rx="1.5" width="12" x="2" y="2.5" />
-      <path d="M6 3v10" />
-    </SmallIcon>
-  );
-}
 function BookmarkIcon({ filled }: { filled: boolean }) {
   return (
     <SmallIcon $filled={filled} viewBox="0 0 16 16">
@@ -664,26 +646,15 @@ function BookmarkIcon({ filled }: { filled: boolean }) {
   );
 }
 
-const c = {
-  ink: "#20252b",
-  secondary: "#5f6875",
-  muted: "#8791a0",
-  navy: "#182c46",
-  border: "#e1e5eb",
-  control: "#d3d9e2",
-  surface: "#fff",
-  canvas: "#f3f5f8",
-  card: "#f0f3f7",
-};
+const CONTROL_BORDER = "#d3d9e2";
 const Canvas = styled.div`
   min-height: 100vh;
-  background: ${c.canvas};
+  background: ${COLORS.canvas};
   padding: 0 12px 12px;
-  color: ${c.ink};
-  font-family: "DM Sans", Arial, sans-serif;
+  color: ${COLORS.inkText};
   button:focus-visible,
   input:focus-visible {
-    outline: 2px solid ${c.navy};
+    outline: 2px solid ${COLORS.actionNavy};
     outline-offset: 2px;
   }
   *,
@@ -692,77 +663,15 @@ const Canvas = styled.div`
     box-sizing: border-box;
   }
 `;
-const TopBar = styled.header`
-  height: 60px;
-  display: flex;
-  align-items: center;
-  padding: 0 28px;
-  justify-content: space-between;
-`;
-const TopLeft = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
-const TopRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 14px;
-`;
-const ZapLogo = styled.span`
-  padding: 0 6px;
-  color: ${c.navy};
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: -0.8px;
-  line-height: 28px;
-`;
-const IconButton = styled.button`
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  cursor: pointer;
-`;
-const HelpButton = styled.button`
-  border: 0;
-  background: transparent;
-  padding: 0;
-  color: ${c.secondary};
-  font: 400 14px/20px inherit;
-  cursor: pointer;
-`;
-const Avatar = styled.span`
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid ${c.border};
-  border-radius: 999px;
-  background: ${c.surface};
-  color: ${c.secondary};
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 18px;
-`;
-const AvatarPlaceholder = styled.span`
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: ${c.muted};
-`;
 const Panel = styled.main`
   display: flex;
   min-height: calc(100vh - 72px);
   width: 100%;
   flex-direction: column;
   gap: 24px;
-  border: 1px solid ${c.border};
+  border: 1px solid ${COLORS.borderDefault};
   border-radius: 24px;
-  background: ${c.surface};
+  background: ${COLORS.surface};
   box-shadow:
     0 8px 120px rgba(77, 117, 204, 0.07),
     0 4px 40px -2px rgba(77, 117, 204, 0.07);
@@ -783,7 +692,7 @@ const PageHeader = styled.header`
 `;
 const Title = styled.h1`
   margin: 0;
-  color: ${c.ink};
+  color: ${COLORS.inkText};
   font-size: 34px;
   font-weight: 400;
   letter-spacing: -0.4px;
@@ -803,17 +712,20 @@ const SwitchOption = styled.button<{ $active: boolean }>`
   display: flex;
   align-items: center;
   gap: 6px;
-  border: ${p => (p.$active ? `1px solid ${c.border}` : "1px solid transparent")};
+  border: ${p => (p.$active ? `1px solid ${COLORS.borderDefault}` : "1px solid transparent")};
   border-radius: 999px;
-  background: ${p => (p.$active ? c.surface : "transparent")};
+  background: ${p => (p.$active ? COLORS.surface : "transparent")};
   box-shadow: ${p => (p.$active ? "0 1px 3px rgba(15,27,45,.06)" : "none")};
   padding: 7px 14px;
-  color: ${p => (p.$active ? c.ink : c.secondary)};
-  font: 400 14px/20px inherit;
+  color: ${p => (p.$active ? COLORS.inkText : COLORS.secondaryText)};
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
   cursor: pointer;
 `;
 const MutedCount = styled.span`
-  color: ${c.muted};
+  color: ${COLORS.mutedText};
   font-size: 13px;
   line-height: 18px;
 `;
@@ -830,7 +742,10 @@ const BaseButton = styled.button`
   justify-content: center;
   border-radius: 13px;
   padding: 10px 18px;
-  font: 500 14px/20px inherit;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
   white-space: nowrap;
   cursor: pointer;
   &:disabled {
@@ -839,8 +754,8 @@ const BaseButton = styled.button`
   }
 `;
 const PrimaryButton = styled(BaseButton)`
-  border: 1px solid ${c.navy};
-  background: ${c.navy};
+  border: 1px solid ${COLORS.actionNavy};
+  background: ${COLORS.actionNavy};
   color: #fff;
   @media (max-width: 800px) {
     margin-left: auto;
@@ -850,9 +765,9 @@ const ItemsPlaceholder = styled.div`
   display: grid;
   min-height: 320px;
   place-items: center;
-  border: 1px dashed ${c.control};
+  border: 1px dashed ${CONTROL_BORDER};
   border-radius: 14px;
-  color: ${c.secondary};
+  color: ${COLORS.secondaryText};
   font-size: 14px;
 `;
 const ItemsResults = styled.section`
@@ -863,12 +778,12 @@ const IntelligenceItemCard = styled.article`
   display: grid;
   gap: 6px;
   border-radius: 14px;
-  background: ${c.card};
+  background: #f0f3f7;
   padding: 24px 20px;
 `;
 const ItemTitle = styled.h2`
   margin: 0;
-  color: ${c.ink};
+  color: ${COLORS.inkText};
   font-size: 16px;
   font-weight: 500;
   letter-spacing: -0.15px;
@@ -876,7 +791,7 @@ const ItemTitle = styled.h2`
 `;
 const ItemMeta = styled.p`
   margin: 2px 0 0;
-  color: ${c.muted};
+  color: ${COLORS.mutedText};
   font-size: 13px;
   line-height: 18px;
 `;
@@ -896,9 +811,9 @@ const SearchField = styled.label`
   height: 40px;
   align-items: center;
   gap: 10px;
-  border: 1px solid ${c.control};
+  border: 1px solid ${CONTROL_BORDER};
   border-radius: 999px;
-  background: ${c.surface};
+  background: ${COLORS.surface};
   padding: 0 16px;
   input {
     width: 100%;
@@ -906,11 +821,14 @@ const SearchField = styled.label`
     border: 0;
     outline: 0;
     background: transparent;
-    color: ${c.ink};
-    font: 400 14px/20px inherit;
+    color: ${COLORS.inkText};
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
   }
   input::placeholder {
-    color: ${c.muted};
+    color: ${COLORS.mutedText};
     opacity: 1;
   }
 `;
@@ -919,7 +837,7 @@ const IconBox = styled.svg`
   height: 20px;
   flex: none;
   fill: none;
-  stroke: ${c.secondary};
+  stroke: ${COLORS.secondaryText};
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -927,8 +845,8 @@ const IconBox = styled.svg`
 const SmallIcon = styled.svg<{ $filled?: boolean }>`
   width: 16px;
   height: 16px;
-  fill: ${p => (p.$filled ? c.navy : "none")};
-  stroke: ${c.secondary};
+  fill: ${p => (p.$filled ? COLORS.actionNavy : "none")};
+  stroke: ${COLORS.secondaryText};
   stroke-width: 1.35;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -938,17 +856,20 @@ const PillButton = styled.button`
   height: 40px;
   align-items: center;
   gap: 8px;
-  border: 1px solid ${c.control};
+  border: 1px solid ${CONTROL_BORDER};
   border-radius: 999px;
-  background: ${c.surface};
+  background: ${COLORS.surface};
   padding: 0 16px 0 14px;
-  color: ${c.ink};
-  font: 500 14px/20px inherit;
+  color: ${COLORS.inkText};
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
   cursor: pointer;
 `;
 const FilterBadge = styled.span`
   border-radius: 999px;
-  background: ${c.navy};
+  background: ${COLORS.actionNavy};
   padding: 1px 6px;
   color: #fff;
   font-size: 12px;
@@ -965,9 +886,9 @@ const FiltersPopover = styled.div`
   width: 390px;
   max-height: calc(100vh - 130px);
   overflow: auto;
-  border: 1px solid ${c.border};
+  border: 1px solid ${COLORS.borderDefault};
   border-radius: 16px;
-  background: ${c.surface};
+  background: ${COLORS.surface};
   box-shadow:
     0 1px 4px rgba(15, 27, 45, 0.06),
     0 12px 32px -8px rgba(15, 27, 45, 0.16);
@@ -982,7 +903,7 @@ const FilterHeader = styled.div`
   display: flex;
   align-items: center;
   padding: 16px 18px 6px;
-  color: ${c.ink};
+  color: ${COLORS.inkText};
   font-size: 14px;
   line-height: 20px;
 `;
@@ -990,8 +911,11 @@ const ClearButton = styled.button`
   margin-left: auto;
   border: 0;
   background: transparent;
-  color: ${c.muted};
-  font: 400 13px/18px inherit;
+  color: ${COLORS.mutedText};
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
   cursor: pointer;
 `;
 const FilterBody = styled.div`
@@ -1004,7 +928,7 @@ const FilterGroupWrap = styled.div`
   gap: 8px;
 `;
 const FilterLabel = styled.span`
-  color: ${c.muted};
+  color: ${COLORS.mutedText};
   font-size: 13px;
   font-weight: 500;
   line-height: 18px;
@@ -1016,12 +940,15 @@ const ChipGroup = styled.div`
 `;
 const FilterChip = styled.button<{ $active: boolean }>`
   height: 30px;
-  border: ${p => (p.$active ? `1px solid ${c.navy}` : `1px solid ${c.control}`)};
+  border: ${p => (p.$active ? `1px solid ${COLORS.actionNavy}` : `1px solid ${CONTROL_BORDER}`)};
   border-radius: 999px;
-  background: ${p => (p.$active ? c.navy : c.surface)};
+  background: ${p => (p.$active ? COLORS.actionNavy : COLORS.surface)};
   padding: 0 12px;
-  color: ${p => (p.$active ? "#fff" : c.ink)};
-  font: 500 13px/18px inherit;
+  color: ${p => (p.$active ? "#fff" : COLORS.inkText)};
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
   cursor: pointer;
 `;
 const DateInputs = styled.div`
@@ -1031,11 +958,14 @@ const DateInputs = styled.div`
     min-width: 0;
     width: 50%;
     height: 32px;
-    border: 1px solid ${c.control};
+    border: 1px solid ${CONTROL_BORDER};
     border-radius: 8px;
     padding: 0 8px;
-    color: ${c.ink};
-    font: 400 12px/16px inherit;
+    color: ${COLORS.inkText};
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
   }
 `;
 const MoreFilters = styled.div`
@@ -1057,14 +987,17 @@ const MoreFilterRow = styled.div`
     border: 0;
     background: transparent;
     padding: 0 14px;
-    color: ${c.ink};
-    font: 400 14px/20px inherit;
+    color: ${COLORS.inkText};
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
     text-align: left;
     cursor: pointer;
   }
   > button span:nth-child(2) {
     margin-left: auto;
-    color: ${c.muted};
+    color: ${COLORS.mutedText};
     font-size: 13px;
   }
   ${ChipGroup} {
@@ -1095,7 +1028,7 @@ const SortButton = styled(PillButton)`
   padding: 0 12px 0 16px;
   font-weight: 400;
   span {
-    color: ${c.secondary};
+    color: ${COLORS.secondaryText};
   }
   strong {
     font-weight: 500;
@@ -1109,27 +1042,30 @@ const SortMenu = styled.div`
   display: grid;
   min-width: 190px;
   overflow: hidden;
-  border: 1px solid ${c.border};
+  border: 1px solid ${COLORS.borderDefault};
   border-radius: 12px;
-  background: ${c.surface};
+  background: ${COLORS.surface};
   box-shadow: 0 8px 24px rgba(15, 27, 45, 0.12);
   padding: 4px;
 `;
 const SortMenuItem = styled.button<{ $selected: boolean }>`
   border: 0;
   border-radius: 8px;
-  background: ${p => (p.$selected ? c.canvas : "transparent")};
+  background: ${p => (p.$selected ? COLORS.canvas : "transparent")};
   padding: 9px 12px;
   text-align: left;
-  color: ${c.ink};
-  font: 400 14px/20px inherit;
+  color: ${COLORS.inkText};
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
   cursor: pointer;
 `;
 const StatusTabs = styled.nav`
   display: flex;
   gap: 28px;
   overflow-x: auto;
-  border-bottom: 1px solid ${c.border};
+  border-bottom: 1px solid ${COLORS.borderDefault};
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
@@ -1142,11 +1078,14 @@ const StatusTab = styled.button<{ $active: boolean }>`
   align-items: center;
   gap: 8px;
   border: 0;
-  border-bottom: ${p => (p.$active ? `2px solid ${c.navy}` : "2px solid transparent")};
+  border-bottom: ${p => (p.$active ? `2px solid ${COLORS.actionNavy}` : "2px solid transparent")};
   background: transparent;
   padding: 0;
-  color: ${p => (p.$active ? c.navy : c.secondary)};
-  font: 500 14px/20px inherit;
+  color: ${p => (p.$active ? COLORS.actionNavy : COLORS.secondaryText)};
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
   white-space: nowrap;
   cursor: pointer;
 `;
@@ -1156,7 +1095,7 @@ const StatusCount = styled.span<{ $tone: Status }>`
   font-size: 13px;
   font-weight: 400;
   line-height: 18px;
-  ${p => (p.$tone === "Needs your review" ? "background:#fbeda3;color:#5c4800;" : p.$tone === "Saved" ? "background:#f8d9cf;color:#8c3523;" : p.$tone === "Confirmed" ? "background:#d5ecdc;color:#1b6140;" : `background:#f3f6fa;color:${c.muted};`)}
+  ${p => (p.$tone === "Needs your review" ? "background:#fbeda3;color:#5c4800;" : p.$tone === "Saved" ? "background:#f8d9cf;color:#8c3523;" : p.$tone === "Confirmed" ? "background:#d5ecdc;color:#1b6140;" : `background:#f3f6fa;color:${COLORS.mutedText};`)}
 `;
 const Results = styled.section`
   display: grid;
@@ -1170,7 +1109,7 @@ const TableHeader = styled.div`
   height: 40px;
   align-items: center;
   padding: 0 20px;
-  color: ${c.muted};
+  color: ${COLORS.mutedText};
   font-size: 12px;
   font-weight: 500;
   line-height: 16px;
@@ -1185,7 +1124,7 @@ const PatternArticle = styled.article`
   gap: 24px;
   align-items: start;
   border-radius: 14px;
-  background: ${c.card};
+  background: #f0f3f7;
   padding: 24px 20px;
   @media (max-width: 920px) {
     grid-template-columns: minmax(0, 1fr) 180px;
@@ -1204,7 +1143,7 @@ const PatternSummary = styled.div`
 const PatternTitle = styled.h2`
   overflow: hidden;
   margin: 0;
-  color: ${c.ink};
+  color: ${COLORS.inkText};
   font-size: 16px;
   font-weight: 500;
   letter-spacing: -0.15px;
@@ -1214,13 +1153,13 @@ const PatternTitle = styled.h2`
 `;
 const Description = styled.p`
   margin: 0;
-  color: ${c.secondary};
+  color: ${COLORS.secondaryText};
   font-size: 14px;
   line-height: 20px;
 `;
 const Meta = styled.p`
   margin: 0;
-  color: ${c.muted};
+  color: ${COLORS.mutedText};
   font-size: 13px;
   line-height: 18px;
 `;
@@ -1232,7 +1171,7 @@ const Evidence = styled.div`
 const EvidenceTitle = styled.p`
   overflow: hidden;
   margin: 0;
-  color: ${c.ink};
+  color: ${COLORS.inkText};
   font-size: 14px;
   line-height: 20px;
   text-overflow: ellipsis;
@@ -1254,10 +1193,10 @@ const PriorityBar = styled.span<{ $active: boolean; $height: number }>`
   width: 4px;
   height: ${p => p.$height}px;
   border-radius: 1.5px;
-  background: ${p => (p.$active ? c.ink : c.control)};
+  background: ${p => (p.$active ? COLORS.inkText : CONTROL_BORDER)};
 `;
 const PriorityText = styled.span<{ $muted: boolean }>`
-  color: ${p => (p.$muted ? c.secondary : c.ink)};
+  color: ${p => (p.$muted ? COLORS.secondaryText : COLORS.inkText)};
   font-size: 13px;
   font-weight: 500;
   line-height: 18px;
@@ -1271,7 +1210,7 @@ const ReviewLine = styled.div`
   display: flex;
   align-items: center;
   gap: 7px;
-  color: ${c.ink};
+  color: ${COLORS.inkText};
   font-size: 13px;
   line-height: 18px;
 `;
@@ -1297,9 +1236,9 @@ const Bookmark = styled.button`
 const EmptyState = styled.p`
   margin: 0;
   border-radius: 14px;
-  background: ${c.card};
+  background: #f0f3f7;
   padding: 32px 20px;
-  color: ${c.secondary};
+  color: ${COLORS.secondaryText};
   font-size: 14px;
   text-align: center;
 `;
@@ -1311,12 +1250,12 @@ const Pagination = styled.footer`
 const PaginationText = styled.p`
   flex: 1;
   margin: 0;
-  color: ${c.secondary};
+  color: ${COLORS.secondaryText};
   font-size: 13px;
   line-height: 18px;
 `;
 const SecondaryButton = styled(BaseButton)`
-  border: 1px solid ${c.control};
-  background: ${c.surface};
-  color: ${c.ink};
+  border: 1px solid ${CONTROL_BORDER};
+  background: ${COLORS.surface};
+  color: ${COLORS.inkText};
 `;

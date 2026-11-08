@@ -14,7 +14,7 @@ type TopBarProps = {
 
 const TABS = [
   { href: "/", label: "Home" },
-  { href: "/intelligence", label: "Intelligence library" },
+  { href: "/intelligence-library", label: "Intelligence library" },
 ];
 
 const ADMIN_TABS = [

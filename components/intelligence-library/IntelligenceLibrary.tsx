@@ -4,6 +4,7 @@ import type {
 } from "@/db/queries/intelligence-library";
 import type { IntelligenceFilters } from "@/lib/intelligence-library/filters";
 import Link from "next/link";
+import ViewSourceButton from "./ViewSourceButton";
 
 type FilterDefinition = {
   label: string;
@@ -32,29 +33,7 @@ function IntelligenceItemCard({ item }: { item: IntelligenceLibraryItem }) {
         {item.sourceName} · {formatPublishedAt(item.publishedAt)}
       </p>
       {item.tldr && <p style={{ marginTop: "0.5rem" }}>{item.tldr}</p>}
-      <form
-        action="/intelligence/items/open"
-        method="POST"
-        rel="noopener"
-        style={{ display: "inline" }}
-        target="_blank"
-      >
-        <input name="itemId" type="hidden" value={item.itemId} />
-        <button
-          style={{
-            background: "none",
-            border: 0,
-            color: "LinkText",
-            cursor: "pointer",
-            font: "inherit",
-            padding: 0,
-            textDecoration: "underline",
-          }}
-          type="submit"
-        >
-          View source
-        </button>
-      </form>
+      <ViewSourceButton itemId={item.itemId} />
     </article>
   );
 }

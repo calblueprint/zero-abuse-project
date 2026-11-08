@@ -39,8 +39,6 @@ export const requireAccessUser = cache(async (): Promise<AccessUser> => {
       firstName: users.firstName,
       lastName: users.lastName,
       onboardingComplete: users.onboardingComplete,
-      firstName: users.firstName,
-      lastName: users.lastName,
       isAdmin: users.isAdmin,
       approvalStatus: users.approvalStatus,
     })

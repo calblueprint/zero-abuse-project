@@ -17,6 +17,7 @@ export default async function IntelligenceLibraryPreviewPage() {
       initialPatterns={patterns}
       intelligenceItems={intelligenceItems}
       avatarInitials={getAvatarInitials(user)}
+      isAdmin={user.isAdmin}
     />
   );
 }
