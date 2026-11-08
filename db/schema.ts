@@ -7,10 +7,12 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 import { authUsers } from "drizzle-orm/supabase/rls";
+import { sourceUrlKey } from "./source-url";
 
 export const approvalStatuses = ["pending", "approved", "rejected"] as const;
 
@@ -76,12 +78,13 @@ export const trends = pgTable(
   "trends",
   {
     trendId: uuid("trend_id").defaultRandom().primaryKey().notNull(),
+    title: varchar().notNull(),
     emergedAt: timestamp("emerged_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
     signalStatus: varchar("signal_status"),
     evidenceStatus: varchar("evidence_status"),
-    itemIds: uuid("item_ids"),
+    itemIds: uuid("item_ids").array(),
     triggeredBy: uuid("triggered_by"),
     reviewedBy: uuid("reviewed_by"),
     description: text(),
@@ -153,16 +156,28 @@ export const itelItems = pgTable(
   ],
 ).enableRLS();
 
-export const sources = pgTable("sources", {
-  sourceId: uuid("source_id").defaultRandom().primaryKey().notNull(),
-  name: varchar().notNull(),
-  tier: varchar(),
-  type: varchar(),
-  baseUrl: varchar("base_url"),
-  isActive: boolean("is_active"),
-  lastCrawledAt: timestamp("last_crawled_at", {
-    withTimezone: true,
-    mode: "string",
-  }),
-  addedAt: timestamp("added_at", { withTimezone: true, mode: "string" }),
-}).enableRLS();
+export const sources = pgTable(
+  "sources",
+  {
+    sourceId: uuid("source_id").defaultRandom().primaryKey().notNull(),
+    name: varchar().notNull(),
+    tier: varchar(),
+    type: varchar(),
+    baseUrl: varchar("base_url"),
+    isActive: boolean("is_active").default(true).notNull(),
+    lastCrawledAt: timestamp("last_crawled_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
+    addedAt: timestamp("added_at", { withTimezone: true, mode: "string" }),
+    addedBy: uuid("added_by"),
+  },
+  table => [
+    foreignKey({
+      columns: [table.addedBy],
+      foreignColumns: [users.userId],
+      name: "sources_added_by_fkey",
+    }).onDelete("set null"),
+    uniqueIndex("sources_url_key_unique").on(sourceUrlKey(table.baseUrl)),
+  ],
+).enableRLS();

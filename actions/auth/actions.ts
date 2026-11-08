@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
 import { validateEmail } from "@/lib/validation/email";
+import { passwordIsValid } from "@/lib/validation/password";
 
 function formValue(formData: FormData, name: string) {
   return String(formData.get(name) ?? "");
@@ -76,8 +77,8 @@ export async function signUp(formData: FormData) {
     redirectWithCode("/sign-up", "error", "invalid-email");
   }
 
-  if (password.length < 8) {
-    redirectWithCode("/sign-up", "error", "short-password");
+  if (!passwordIsValid(password)) {
+    redirectWithCode("/sign-up", "error", "invalid-password");
   }
 
   if (password !== confirmPassword) {
@@ -172,8 +173,8 @@ export async function updatePassword(formData: FormData) {
   const password = formValue(formData, "password");
   const confirmPassword = formValue(formData, "confirmPassword");
 
-  if (password.length < 8) {
-    redirectWithCode("/update-password", "error", "short-password");
+  if (!passwordIsValid(password)) {
+    redirectWithCode("/update-password", "error", "invalid-password");
   }
 
   if (password !== confirmPassword) {

@@ -24,6 +24,41 @@ const formatDateInput = (date: Date | undefined) =>
 const formatPublishedAt = (publishedAt: string | null) =>
   publishedAt ? new Date(publishedAt).toLocaleString() : "Unknown date";
 
+function IntelligenceItemCard({ item }: { item: IntelligenceLibraryItem }) {
+  return (
+    <article style={{ border: "1px solid #ccc", padding: "1rem" }}>
+      <h3>{item.title ?? "Untitled intelligence item"}</h3>
+      <p>
+        {item.sourceName} · {formatPublishedAt(item.publishedAt)}
+      </p>
+      {item.tldr && <p style={{ marginTop: "0.5rem" }}>{item.tldr}</p>}
+      <form
+        action="/intelligence/items/open"
+        method="POST"
+        rel="noopener"
+        style={{ display: "inline" }}
+        target="_blank"
+      >
+        <input name="itemId" type="hidden" value={item.itemId} />
+        <button
+          style={{
+            background: "none",
+            border: 0,
+            color: "LinkText",
+            cursor: "pointer",
+            font: "inherit",
+            padding: 0,
+            textDecoration: "underline",
+          }}
+          type="submit"
+        >
+          View source
+        </button>
+      </form>
+    </article>
+  );
+}
+
 export default function IntelligenceLibrary({
   filters,
   items,
@@ -83,8 +118,7 @@ export default function IntelligenceLibrary({
   return (
     <main style={{ margin: "0 auto", maxWidth: "1200px", padding: "2rem" }}>
       <h1>Intelligence Library</h1>
-
-      <form action="/" method="get" style={{ margin: "1.5rem 0" }}>
+      <form action="/intelligence" method="get" style={{ margin: "1.5rem 0" }}>
         <div
           style={{
             display: "grid",
@@ -150,27 +184,16 @@ export default function IntelligenceLibrary({
 
         <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
           <button type="submit">Apply filters</button>
-          <Link href="/">Reset filters</Link>
+          <Link href="/intelligence">Reset filters</Link>
         </div>
       </form>
 
+      <h2>All intelligence</h2>
       <p>{items.length} item(s) found</p>
 
       <section style={{ display: "grid", gap: "1rem", marginTop: "1rem" }}>
         {items.map(item => (
-          <article
-            key={item.itemId}
-            style={{ border: "1px solid #ccc", padding: "1rem" }}
-          >
-            <h2>{item.title ?? "Untitled intelligence item"}</h2>
-            <p>
-              {item.sourceName} · {formatPublishedAt(item.publishedAt)}
-            </p>
-            {item.tldr && <p style={{ marginTop: "0.5rem" }}>{item.tldr}</p>}
-            <a href={item.sourceUrl} rel="noreferrer" target="_blank">
-              View source
-            </a>
-          </article>
+          <IntelligenceItemCard key={item.itemId} item={item} />
         ))}
       </section>
     </main>
