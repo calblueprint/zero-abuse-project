@@ -16,7 +16,7 @@ import {
 } from "@/lib/intelligence-library/pattern-filters";
 import COLORS from "@/styles/colors";
 import { dmSans } from "@/styles/fonts";
-import IntelligenceLibrary from "./IntelligenceLibrary";
+import IntelligenceItemsView from "./IntelligenceItemsView";
 import LibraryStatusTabs from "./LibraryStatusTabs";
 import PatternCard from "./PatternCard";
 import PatternToolbar from "./PatternToolbar";
@@ -38,7 +38,7 @@ const statusLabels: Status[] = [
   "Archived",
 ];
 
-export default function IntelligenceLibraryPage({
+export default function IntelligenceLibraryView({
   initialPatterns,
   intelligenceItems,
   itemFilters,
@@ -183,7 +183,7 @@ export default function IntelligenceLibraryPage({
         </PageHeader>
         <div hidden={view !== "items"}>
           {hasViewedItems && (
-            <IntelligenceLibrary
+            <IntelligenceItemsView
               items={intelligenceItems}
               filters={itemFilters}
               options={itemFilterOptions}

@@ -210,7 +210,7 @@ test("library source forms preserve Origin", () => {
     return exports;
   }
   const exports = loadComponent(
-    "../components/intelligence-library/IntelligenceLibrary.tsx",
+    "../components/intelligence-library/IntelligenceItemsView.tsx",
   );
   const filterNames = [
     "exploitationTypes",

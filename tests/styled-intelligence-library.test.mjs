@@ -89,8 +89,13 @@ const itemOptions = {
   zapRelevances: [],
   sources: [],
 };
-const IntelligenceLibrary = load(
-  "../components/intelligence-library/IntelligenceLibrary.tsx",
+const ItemToolbar = load("../components/intelligence-library/ItemToolbar.tsx", {
+  ...libraryModules,
+  "@/lib/intelligence-library/filters": itemFiltersParser,
+});
+Object.assign(libraryModules, { "./ItemToolbar": ItemToolbar });
+const IntelligenceItemsView = load(
+  "../components/intelligence-library/IntelligenceItemsView.tsx",
   {
     ...libraryModules,
     "./ViewSourceButton": sourceButton,
@@ -146,11 +151,11 @@ function statefulComponent(path, modules) {
 }
 function pageHarness(isAdmin = true) {
   const component = statefulComponent(
-    "../components/intelligence-library/intelligence-library.tsx",
+    "../components/intelligence-library/IntelligenceLibraryView.tsx",
     {
       ...libraryModules,
       "./PatternCard": PatternCard,
-      "./IntelligenceLibrary": IntelligenceLibrary,
+      "./IntelligenceItemsView": IntelligenceItemsView,
       "./PatternToolbar": PatternToolbar,
       "@/components/intelligence-library/ViewSourceButton": sourceButton,
       "@/components/TopBar": TopBar,
@@ -352,7 +357,7 @@ test("styled route applies item search and filters and stays on the items tab", 
   const page = load(
     "../app/(authenticated)/(approved)/intelligence-library/page.tsx",
     {
-      "@/components/intelligence-library/intelligence-library": () => null,
+      "@/components/intelligence-library/IntelligenceLibraryView": () => null,
       "@/db/queries/intelligence-library": {
         getIntelligenceLibraryItems: async filters => {
           requestedFilters = filters;
@@ -493,7 +498,7 @@ test("shared toolbar selects sorting and discards filters when toggled closed", 
 
 test("item bookmarks populate Saved and do not populate Confirmed or Archived", () => {
   const component = statefulComponent(
-    "../components/intelligence-library/IntelligenceLibrary.tsx",
+    "../components/intelligence-library/IntelligenceItemsView.tsx",
     {
       ...libraryModules,
       "./ViewSourceButton": sourceButton,
@@ -553,4 +558,48 @@ test("pattern search updates the results and filter preview together", () => {
   toolbar().props.searchInput.onChange({ target: { value: "Pattern 8" } });
   assert.equal(pagination(render), "Showing 1 to 1 of 1");
   assert.equal(toolbar().props.patterns.length, 1);
+});
+
+test("item toolbar owns filter drafts and restores applied values on dismissal", () => {
+  const component = statefulComponent(
+    "../components/intelligence-library/ItemToolbar.tsx",
+    {
+      ...libraryModules,
+      "@/lib/intelligence-library/filters": itemFiltersParser,
+    },
+  );
+  const applied = itemFiltersParser.parseIntelligenceFilters({
+    publishedTo: "2026-10-16",
+  });
+  const render = () =>
+    component({
+      filters: applied,
+      options: itemOptions,
+      action: "/intelligence-library",
+    });
+  const toolbar = () =>
+    nodes(render()).find(node => node.type === LibraryToolbar.default).props;
+  const dateInput = () =>
+    nodes(toolbar().filterContent).find(
+      node => node.props.name === "publishedTo",
+    );
+  dateInput().props.onChange({ target: { value: "2026-10-15" } });
+  const platform = nodes(toolbar().filterContent).find(
+    node => node.props.label === "Platform",
+  );
+  platform.props.onToggle("Discord");
+  assert.equal(dateInput().props.value, "2026-10-15");
+  assert.ok(
+    nodes(toolbar().filterContent).some(
+      node => node.props.name === "platform" && node.props.value === "Discord",
+    ),
+  );
+  assert.equal(applied.publishedTo.toISOString(), "2026-10-16T00:00:00.000Z");
+  toolbar().onFilterDismiss();
+  assert.equal(dateInput().props.value, "2026-10-16");
+  assert.equal(
+    nodes(toolbar().filterContent).some(node => node.props.name === "platform"),
+    false,
+  );
+  assert.equal(render().props.action, "/intelligence-library");
 });
