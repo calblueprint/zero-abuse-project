@@ -8,7 +8,8 @@ import SidebarToggleIcon from "@/assets/icons/sidebar-toggle.svg";
 import COLORS from "@/styles/colors";
 
 type TopBarProps = {
-  initials: string;
+  firstName: string;
+  lastName: string;
   isAdmin: boolean;
 };
 
@@ -27,9 +28,14 @@ const isActive = (pathname: string, href: string) =>
     ? pathname === "/"
     : pathname === href || pathname.startsWith(`${href}/`);
 
-export default function TopBar({ initials, isAdmin }: TopBarProps) {
+export default function TopBar({ firstName, lastName, isAdmin }: TopBarProps) {
   const pathname = usePathname();
   const tabs = isAdmin ? [...TABS, ...ADMIN_TABS] : TABS;
+  // Array.from keeps characters outside the BMP whole.
+  const initials = [firstName, lastName]
+    .map(name => Array.from(name.trim())[0] ?? "")
+    .join("")
+    .toUpperCase();
 
   return (
     <Bar>

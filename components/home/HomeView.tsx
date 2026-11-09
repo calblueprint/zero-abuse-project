@@ -14,7 +14,7 @@ import { dmSans } from "@/styles/fonts";
 
 type HomeViewProps = {
   firstName: string;
-  initials: string;
+  lastName: string;
   isAdmin: boolean;
   today: string;
   trends: LatestTrend[];
@@ -24,7 +24,7 @@ type HomeViewProps = {
 
 export default function HomeView({
   firstName,
-  initials,
+  lastName,
   isAdmin,
   today,
   trends,
@@ -33,7 +33,7 @@ export default function HomeView({
 }: HomeViewProps) {
   return (
     <Canvas className={dmSans.className}>
-      <TopBar initials={initials} isAdmin={isAdmin} />
+      <TopBar firstName={firstName} lastName={lastName} isAdmin={isAdmin} />
       <Card>
         <Glow src={HomeGlow} alt="" width={1040} height={290} />
         <Header>

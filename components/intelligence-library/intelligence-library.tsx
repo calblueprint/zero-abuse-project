@@ -39,13 +39,15 @@ const statusLabels: Status[] = [
 export default function IntelligenceLibraryPage({
   initialPatterns,
   intelligenceItems,
-  avatarInitials,
+  firstName,
+  lastName,
   isAdmin,
   referenceDate = new Date(),
 }: {
   initialPatterns: EmergingPattern[];
   intelligenceItems: IntelligenceLibraryItem[];
-  avatarInitials: string | null;
+  firstName: string;
+  lastName: string;
   isAdmin: boolean;
   referenceDate?: Date;
 }) {
@@ -189,7 +191,7 @@ export default function IntelligenceLibraryPage({
 
   return (
     <Canvas className={dmSans.className}>
-      <TopBar initials={avatarInitials ?? ""} isAdmin={isAdmin} />
+      <TopBar firstName={firstName} lastName={lastName} isAdmin={isAdmin} />
       <Panel aria-labelledby="intelligence-library-title">
         <PageHeader>
           <Title id="intelligence-library-title">Intelligence library</Title>

@@ -98,7 +98,8 @@ function pageHarness(isAdmin = true) {
           publishedAt: null,
         },
       ],
-      avatarInitials: "NK",
+      firstName: "Nataliia",
+      lastName: "Kulieshova",
       isAdmin,
     });
   };
@@ -173,5 +174,25 @@ test("shared navigation exposes admin tabs only to admins and loads the shared f
     assert.ok(libraryLink);
     assert.match(libraryLink, /aria-current="page"/);
     assert.match(html, /class="[^"]*dm-sans-test/);
+  }
+});
+
+test("shared top bar derives initials from names, trimming spaces and preserving Unicode", () => {
+  for (const [firstName, lastName, expected] of [
+    ["Nataliia", "Kulieshova", "NK"],
+    ["  nataliia ", " kulieshova  ", "NK"],
+    ["Nataliia", "", "N"],
+    ["😀Alex", "Ng", "😀N"],
+  ]) {
+    const html = renderToStaticMarkup(
+      React.createElement(TopBar.default, {
+        firstName,
+        lastName,
+        isAdmin: false,
+      }),
+    );
+    const avatar = html.match(/<a\b[^>]*aria-label="Profile"[^>]*>(.*?)<\/a>/);
+    assert.ok(avatar);
+    assert.equal(avatar[1], expected);
   }
 });

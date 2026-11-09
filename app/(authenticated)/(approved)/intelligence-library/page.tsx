@@ -1,7 +1,6 @@
 import IntelligenceLibraryPage from "@/components/intelligence-library/intelligence-library";
 import { getIntelligenceLibraryItems } from "@/db/queries/intelligence-library";
 import { requireApprovedUser } from "@/lib/auth/access";
-import { getAvatarInitials } from "@/lib/avatar";
 import { getEmergingPatterns } from "@/lib/intelligence-library/emerging-patterns";
 import { parseIntelligenceFilters } from "@/lib/intelligence-library/filters";
 
@@ -16,7 +15,8 @@ export default async function IntelligenceLibraryPreviewPage() {
     <IntelligenceLibraryPage
       initialPatterns={patterns}
       intelligenceItems={intelligenceItems}
-      avatarInitials={getAvatarInitials(user)}
+      firstName={user.firstName}
+      lastName={user.lastName}
       isAdmin={user.isAdmin}
     />
   );
