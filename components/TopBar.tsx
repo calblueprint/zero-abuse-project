@@ -8,13 +8,14 @@ import SidebarToggleIcon from "@/assets/icons/sidebar-toggle.svg";
 import COLORS from "@/styles/colors";
 
 type TopBarProps = {
-  initials: string;
+  firstName: string;
+  lastName: string;
   isAdmin: boolean;
 };
 
 const TABS = [
   { href: "/", label: "Home" },
-  { href: "/intelligence", label: "Intelligence library" },
+  { href: "/intelligence-library", label: "Intelligence library" },
 ];
 
 const ADMIN_TABS = [
@@ -27,14 +28,19 @@ const isActive = (pathname: string, href: string) =>
     ? pathname === "/"
     : pathname === href || pathname.startsWith(`${href}/`);
 
-export default function TopBar({ initials, isAdmin }: TopBarProps) {
+export default function TopBar({ firstName, lastName, isAdmin }: TopBarProps) {
   const pathname = usePathname();
   const tabs = isAdmin ? [...TABS, ...ADMIN_TABS] : TABS;
+  // Array.from keeps characters outside the BMP whole.
+  const initials = [firstName, lastName]
+    .map(name => Array.from(name.trim())[0] ?? "")
+    .join("")
+    .toUpperCase();
 
   return (
     <Bar>
       <Side>
-        {/* Disabled until the sidebar is built. */}
+        {/* TODO: Enable this toggle when the sidebar is implemented. */}
         <SidebarToggle type="button" aria-label="Toggle sidebar" disabled>
           <Image src={SidebarToggleIcon} alt="" width={18} height={18} />
         </SidebarToggle>
@@ -55,6 +61,7 @@ export default function TopBar({ initials, isAdmin }: TopBarProps) {
         })}
       </Tabs>
       <Side $end>
+        {/* TODO: Connect Help to the support flow when it is implemented. */}
         <Help>Help</Help>
         <Avatar href="/profile" aria-label="Profile">
           {initials}

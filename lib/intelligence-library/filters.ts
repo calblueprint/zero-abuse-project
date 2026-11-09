@@ -1,7 +1,15 @@
 import INTELLIGENCE_TAXONOMY from "@/lib/intelligence-library/taxonomy";
 import { isUuid } from "@/lib/validation/uuid";
 
+export const intelligenceSortOptions = [
+  "Most recent",
+  "Oldest",
+  "Title",
+] as const;
+
 export type IntelligenceFilters = {
+  sort: (typeof intelligenceSortOptions)[number];
+  search: string;
   exploitationTypes: string[];
   platforms: string[];
   technologies: string[];
@@ -66,6 +74,10 @@ export const parseIntelligenceFilters = (
   const sourceIds = requestedSourceIds.filter(isUuid);
 
   return {
+    search: getValues(params, "q")[0] ?? "",
+    sort:
+      (getAllowedValues(params, "sort", intelligenceSortOptions)[0] as
+        IntelligenceFilters["sort"] | undefined) ?? "Most recent",
     exploitationTypes: getAllowedValues(
       params,
       "exploitationType",

@@ -4,7 +4,7 @@ import ClockIcon from "@/assets/icons/clock.svg";
 import SearchIcon from "@/assets/icons/search.svg";
 import COLORS from "@/styles/colors";
 
-// Placeholder until search is built.
+// TODO: Load the current user's recent searches instead of these sample values.
 const RECENT_SEARCHES = [
   "Financial sextortion",
   "Cryptocurrency payments",
@@ -14,7 +14,7 @@ const RECENT_SEARCHES = [
 export default function SearchHero() {
   return (
     <Composer>
-      {/* Search isn't wired up yet, so there's no form to submit. */}
+      {/* TODO: Wire search submission; the input currently has no search behavior. */}
       <SearchBox>
         <Image src={SearchIcon} alt="" width={20} height={20} />
         <SearchInput

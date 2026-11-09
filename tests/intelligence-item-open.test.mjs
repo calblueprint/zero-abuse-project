@@ -177,28 +177,41 @@ test("preserves authentication redirects during a history write", async t => {
 });
 
 test("library source forms preserve Origin", () => {
-  const component = ts.transpileModule(
-    readFileSync(
-      new URL(
-        "../components/intelligence-library/IntelligenceLibrary.tsx",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
-    {
-      compilerOptions: {
-        module: ts.ModuleKind.CommonJS,
-        jsx: ts.JsxEmit.ReactJSX,
+  function loadComponent(path) {
+    const exports = {};
+    const code = ts.transpileModule(
+      readFileSync(new URL(path, import.meta.url), "utf8"),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          jsx: ts.JsxEmit.ReactJSX,
+          esModuleInterop: true,
+        },
       },
-    },
-  ).outputText;
-  const exports = {};
-  runInNewContext(component, {
-    exports,
-    require(name) {
-      return require(name);
-    },
-  });
+    ).outputText;
+    runInNewContext(code, {
+      exports,
+      require(name) {
+        if (name.startsWith("./"))
+          return loadComponent(
+            `../components/intelligence-library/${name.slice(2)}.tsx`,
+          );
+        if (name === "@/lib/intelligence-library/filters")
+          return loadComponent("../lib/intelligence-library/filters.ts");
+        if (name === "@/lib/intelligence-library/taxonomy")
+          return loadComponent("../lib/intelligence-library/taxonomy.ts");
+        if (name === "@/lib/validation/uuid")
+          return loadComponent("../lib/validation/uuid.ts");
+        if (name === "@/styles/colors")
+          return loadComponent("../styles/colors.ts");
+        return require(name);
+      },
+    });
+    return exports;
+  }
+  const exports = loadComponent(
+    "../components/intelligence-library/IntelligenceItemsView.tsx",
+  );
   const filterNames = [
     "exploitationTypes",
     "platforms",

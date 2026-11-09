@@ -1,5 +1,5 @@
 import type { IntelligenceFilterParams } from "@/lib/intelligence-library/filters";
-import IntelligenceLibrary from "@/components/intelligence-library/IntelligenceLibrary";
+import IntelligenceItemsView from "@/components/intelligence-library/IntelligenceItemsView";
 import {
   getIntelligenceLibraryFilterOptions,
   getIntelligenceLibraryItems,
@@ -22,6 +22,6 @@ export default async function IntelligenceLibraryPage({
   ]);
 
   return (
-    <IntelligenceLibrary filters={filters} items={items} options={options} />
+    <IntelligenceItemsView filters={filters} items={items} options={options} />
   );
 }

@@ -9,16 +9,11 @@ export default async function Home() {
     getLatestTrends(3),
     getRecentlyAccessedItems(),
   ]);
-  // Array.from keeps characters outside the BMP whole.
-  const initials = [user.firstName, user.lastName]
-    .map(name => Array.from(name)[0] ?? "")
-    .join("")
-    .toUpperCase();
 
   return (
     <HomeView
       firstName={user.firstName}
-      initials={initials}
+      lastName={user.lastName}
       isAdmin={user.isAdmin}
       today={new Date().toISOString()}
       trends={trends}
