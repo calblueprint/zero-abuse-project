@@ -200,6 +200,8 @@ test("library source forms preserve Origin", () => {
           return loadComponent("../lib/intelligence-library/filters.ts");
         if (name === "@/lib/intelligence-library/taxonomy")
           return loadComponent("../lib/intelligence-library/taxonomy.ts");
+        if (name === "@/lib/validation/search-params")
+          return loadComponent("../lib/validation/search-params.ts");
         if (name === "@/lib/validation/uuid")
           return loadComponent("../lib/validation/uuid.ts");
         if (name === "@/styles/colors")

@@ -92,6 +92,7 @@ export type CrawlHealth = {
   label: string;
 };
 
+// TODO: Use crawl outcomes for health; last_crawled_at includes failed attempts.
 // Derived from last_crawled_at until the scraper reports crawl errors.
 // Sources are checked daily, so a crawl older than a day is overdue.
 export function getCrawlHealth(source: SourceRecord, now: number): CrawlHealth {

@@ -10,17 +10,6 @@ export function random(min: number, max: number): number {
 }
 
 /**
- * Avatar initials from a first and last name, e.g. "Ada Lovelace" → "AL".
- * Array.from keeps characters outside the BMP whole.
- */
-export function getInitials(firstName: string, lastName: string): string {
-  return [firstName, lastName]
-    .map(name => Array.from(name.trim())[0] ?? "")
-    .join("")
-    .toUpperCase();
-}
-
-/**
  * Drizzle returns timestamptz columns as raw Postgres text, which Safari
  * can't parse. Normalizes to ISO for the client; null when missing or
  * unparseable (e.g. Postgres 'infinity').

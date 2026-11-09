@@ -71,6 +71,13 @@ export default function useAnchoredPopover<
     // Flip above the trigger when it doesn't fit below.
     const rect = anchor.getBoundingClientRect();
     const height = popover.offsetHeight;
+    const width = popover.offsetWidth;
+    const viewportWidth = document.documentElement.clientWidth;
+    const left = align === "end" ? rect.right - width : rect.left;
+
+    // Keep wide panels on screen when their trigger is near either edge.
+    popover.style.right = "auto";
+    popover.style.left = `${Math.max(0, Math.min(left, viewportWidth - width))}px`;
 
     if (
       rect.bottom + offset + height > window.innerHeight &&

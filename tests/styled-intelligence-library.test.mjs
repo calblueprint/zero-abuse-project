@@ -74,6 +74,7 @@ const PatternToolbar = load(
 );
 const taxonomy = load("../lib/intelligence-library/taxonomy.ts");
 const itemFiltersParser = load("../lib/intelligence-library/filters.ts", {
+  "@/lib/validation/search-params": load("../lib/validation/search-params.ts"),
   "@/lib/intelligence-library/taxonomy": taxonomy,
   "@/lib/validation/uuid": load("../lib/validation/uuid.ts"),
 });
