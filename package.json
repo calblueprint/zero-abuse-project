@@ -18,7 +18,8 @@
     "db:studio": "drizzle-kit studio",
     "db:check": "drizzle-kit check",
     "prepare": "husky",
-    "pre-commit": "concurrently \"pnpm run tsc\" \"pnpm run lint\" \"pnpm run prettier\""
+    "pre-commit": "concurrently \"pnpm run tsc\" \"pnpm run lint\" \"pnpm run prettier\"",
+    "test:documents": "node --test tests/documents/upload-route.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

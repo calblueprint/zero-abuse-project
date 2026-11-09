@@ -24,7 +24,8 @@ export type IntelligenceLibraryItem = {
   itemId: string;
   sourceId: string;
   sourceName: string;
-  sourceUrl: string;
+  sourceUrl: string | null;
+  uploadFilename: string | null;
   publishedAt: string | null;
   updatedAt: string | null;
   title: string | null;
@@ -44,6 +45,7 @@ export const intelligenceLibraryItemSelection = {
   sourceId: itelItems.sourceId,
   sourceName: sources.name,
   sourceUrl: itelItems.sourceUrl,
+  uploadFilename: itelItems.uploadFilename,
   publishedAt: itelItems.publishedAt,
   updatedAt: sql<
     string | null

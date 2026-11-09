@@ -90,6 +90,8 @@ class PostgresRepository:
     def save_intelligence(self, source_id: str, result: ExtractionResult) -> str | None:
         if result.relevance != "relevant" or result.intelligence is None:
             raise ValueError("Only relevant, validated intelligence can be saved.")
+        if result.article.url is None:
+            raise ValueError("Web ingestion requires a source URL.")
         url = normalize_url(str(result.article.url))
         intelligence = result.intelligence.model_dump(mode="json")
         fields = (

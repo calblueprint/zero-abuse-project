@@ -10,6 +10,7 @@ import Link from "next/link";
 import styled from "styled-components";
 import { formatIntelType } from "@/lib/intelligence-library/format-intel-type";
 import COLORS from "@/styles/colors";
+import DocumentUpload from "./DocumentUpload";
 import ItemToolbar from "./ItemToolbar";
 import LibraryStatusTabs from "./LibraryStatusTabs";
 import { BookmarkIcon, Description } from "./styles";
@@ -61,6 +62,7 @@ export default function IntelligenceItemsView({
       aria-label="Intelligence items"
     >
       {showTitle && <h1>Intelligence Library</h1>}
+      <DocumentUpload />
       <ItemToolbar filters={filters} options={options} action={action} />
       <LibraryStatusTabs
         label="Intelligence item status"
@@ -93,9 +95,13 @@ export default function IntelligenceItemsView({
                 </td>
                 <td>
                   <EvidenceLabel>Single source</EvidenceLabel>
+                  {item.uploadFilename && (
+                    <Description>{item.uploadFilename}</Description>
+                  )}
                   <OpenSourceForm itemId={item.itemId}>
                     <SourceBadge
                       type="submit"
+                      disabled={!item.sourceUrl}
                       aria-label={`View source: ${item.sourceName}`}
                     >
                       {item.sourceName}
