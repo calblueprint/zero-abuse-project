@@ -5,10 +5,10 @@ import type {
 import styled from "styled-components";
 import COLORS from "@/styles/colors";
 import {
+  BookmarkIcon,
   CONTROL_BORDER,
   Description,
   PATTERN_COLUMNS,
-  SmallIcon,
 } from "./styles";
 
 export default function PatternCard({
@@ -66,14 +66,6 @@ function Priority({ priority }: { priority: PatternPriority }) {
       </PriorityBars>
       <PriorityText $muted={priority === "Unassessed"}>{priority}</PriorityText>
     </PriorityCell>
-  );
-}
-
-function BookmarkIcon({ filled }: { filled: boolean }) {
-  return (
-    <SmallIcon $filled={filled} viewBox="0 0 16 16">
-      <path d="M4 2.5h8v11l-4-2.5-4 2.5v-11Z" />
-    </SmallIcon>
   );
 }
 

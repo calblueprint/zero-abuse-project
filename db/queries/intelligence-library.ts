@@ -6,10 +6,12 @@ import {
   desc,
   eq,
   gte,
+  ilike,
   inArray,
   isNotNull,
   lt,
   ne,
+  or,
   sql,
 } from "drizzle-orm";
 import { db } from "@/db";
@@ -87,7 +89,25 @@ const getDynamicFilterValues = async (
 export const getIntelligenceLibraryItems = async (
   filters: IntelligenceFilters,
 ): Promise<IntelligenceLibraryItem[]> => {
+  const searchPattern = `%${filters.search.replace(/[\\%_]/g, "\\$&")}%`;
   const conditions = [
+    filters.search
+      ? or(
+          ...[
+            itelItems.title,
+            itelItems.tldr,
+            sources.name,
+            itelItems.exploitationType,
+            itelItems.platform,
+            itelItems.technology,
+            itelItems.affectedPopulation,
+            itelItems.offenderTactic,
+            itelItems.geography,
+            itelItems.intelType,
+            itelItems.zapRelevance,
+          ].map(column => ilike(column, searchPattern)),
+        )
+      : undefined,
     filters.hasInvalidSourceIds ? sql`false` : undefined,
     filters.exploitationTypes.length
       ? inArray(itelItems.exploitationType, filters.exploitationTypes)
@@ -132,7 +152,14 @@ export const getIntelligenceLibraryItems = async (
     .from(itelItems)
     .innerJoin(sources, eq(itelItems.sourceId, sources.sourceId))
     .where(and(...conditions))
-    .orderBy(desc(itelItems.publishedAt), desc(itelItems.itemId));
+    .orderBy(
+      filters.sort === "Oldest"
+        ? asc(itelItems.publishedAt)
+        : filters.sort === "Title"
+          ? asc(itelItems.title)
+          : sql`${itelItems.publishedAt} desc nulls last`,
+      desc(itelItems.itemId),
+    );
 };
 
 export async function getIntelligenceItemSourceUrl(

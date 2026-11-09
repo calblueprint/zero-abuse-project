@@ -1,11 +1,14 @@
 "use client";
 
-import type { IntelligenceLibraryItem } from "@/db/queries/intelligence-library";
+import type {
+  IntelligenceLibraryFilterOptions,
+  IntelligenceLibraryItem,
+} from "@/db/queries/intelligence-library";
 import type { EmergingPattern } from "@/lib/intelligence-library/emerging-patterns";
+import type { IntelligenceFilters } from "@/lib/intelligence-library/filters";
 import type { PatternFilters } from "@/lib/intelligence-library/pattern-filters";
 import { useMemo, useState } from "react";
 import styled from "styled-components";
-import ViewSourceButton from "@/components/intelligence-library/ViewSourceButton";
 import TopBar from "@/components/TopBar";
 import {
   emptyPatternFilters,
@@ -13,22 +16,19 @@ import {
 } from "@/lib/intelligence-library/pattern-filters";
 import COLORS from "@/styles/colors";
 import { dmSans } from "@/styles/fonts";
+import IntelligenceLibrary from "./IntelligenceLibrary";
+import LibraryStatusTabs from "./LibraryStatusTabs";
 import PatternCard from "./PatternCard";
-import PatternFiltersPopover from "./PatternFiltersPopover";
+import PatternToolbar from "./PatternToolbar";
 import {
   BaseButton,
-  ChevronIcon,
   CONTROL_BORDER,
-  Description,
-  IconBox,
   PATTERN_COLUMNS,
-  PillButton,
   PrimaryButton,
 } from "./styles";
 
 type Status =
   "All patterns" | "Needs your review" | "Saved" | "Confirmed" | "Archived";
-type SortOption = "Most recent" | "Oldest" | "Most supporting items";
 const PAGE_SIZE = 4;
 const statusLabels: Status[] = [
   "All patterns",
@@ -41,6 +41,9 @@ const statusLabels: Status[] = [
 export default function IntelligenceLibraryPage({
   initialPatterns,
   intelligenceItems,
+  itemFilters,
+  itemFilterOptions,
+  initialView = "patterns",
   firstName,
   lastName,
   isAdmin,
@@ -48,15 +51,19 @@ export default function IntelligenceLibraryPage({
 }: {
   initialPatterns: EmergingPattern[];
   intelligenceItems: IntelligenceLibraryItem[];
+  itemFilters: IntelligenceFilters;
+  itemFilterOptions: IntelligenceLibraryFilterOptions;
+  initialView?: "patterns" | "items";
   firstName: string;
   lastName: string;
   isAdmin: boolean;
   referenceDate?: Date;
 }) {
-  const [view, setView] = useState<"patterns" | "items">("patterns");
+  const [view, setView] = useState<"patterns" | "items">(initialView);
+  const [hasViewedItems, setHasViewedItems] = useState(initialView === "items");
   const [status, setStatus] = useState<Status>("All patterns");
-  const [sort, setSort] = useState<SortOption>("Most recent");
-  const [sortOpen, setSortOpen] = useState(false);
+  const [sort, setSort] = useState<string>("Most recent");
+  const [search, setSearch] = useState("");
   const [patterns, setPatterns] = useState(initialPatterns);
   const [page, setPage] = useState(0);
   const [appliedFilters, setAppliedFilters] =
@@ -75,12 +82,21 @@ export default function IntelligenceLibraryPage({
     }),
     [patterns],
   );
-  const globallyFiltered = useMemo(
+  const searchedPatterns = useMemo(
     () =>
       patterns.filter(p =>
+        [p.title, p.description, p.topic, p.platform, p.population].some(
+          value => value.toLowerCase().includes(search.trim().toLowerCase()),
+        ),
+      ),
+    [patterns, search],
+  );
+  const globallyFiltered = useMemo(
+    () =>
+      searchedPatterns.filter(p =>
         matchesPatternFilters(p, appliedFilters, referenceDate),
       ),
-    [patterns, appliedFilters, referenceDate],
+    [searchedPatterns, appliedFilters, referenceDate],
   );
   const filtered = useMemo(
     () =>
@@ -120,9 +136,8 @@ export default function IntelligenceLibraryPage({
     setStatus(next);
     setPage(0);
   };
-  const selectSort = (next: SortOption) => {
+  const selectSort = (next: string) => {
     setSort(next);
-    setSortOpen(false);
     setPage(0);
   };
   // TODO: Persist saved patterns per user; local changes currently reset on reload.
@@ -152,7 +167,10 @@ export default function IntelligenceLibraryPage({
             </SwitchOption>
             <SwitchOption
               $active={view === "items"}
-              onClick={() => setView("items")}
+              onClick={() => {
+                setView("items");
+                setHasViewedItems(true);
+              }}
               type="button"
             >
               Intelligence items{" "}
@@ -163,73 +181,43 @@ export default function IntelligenceLibraryPage({
           {/* TODO: Open the pattern creation flow when it is implemented. */}
           <PrimaryButton type="button">New pattern</PrimaryButton>
         </PageHeader>
-        {view === "items" ? (
-          <IntelligenceItemsList items={intelligenceItems} />
-        ) : (
+        <div hidden={view !== "items"}>
+          {hasViewedItems && (
+            <IntelligenceLibrary
+              items={intelligenceItems}
+              filters={itemFilters}
+              options={itemFilterOptions}
+              action="/intelligence-library"
+              showTitle={false}
+            />
+          )}
+        </div>
+        {view === "patterns" && (
           <>
-            <Toolbar>
-              <SearchField>
-                <SearchIcon />
-                {/* TODO: Connect the search input to pattern search. */}
-                <input
-                  aria-label="Search emerging patterns"
-                  placeholder="Search emerging patterns"
-                />
-              </SearchField>
-              <PatternFiltersPopover
-                patterns={patterns}
-                appliedFilters={appliedFilters}
-                onApply={applyFilters}
-                referenceDate={referenceDate}
-              />
-              <ToolbarSpacer />
-              <SortWrap>
-                <SortButton
-                  aria-expanded={sortOpen}
-                  onClick={() => setSortOpen(open => !open)}
-                  type="button"
-                >
-                  <span>Sort</span>
-                  <strong>{sort}</strong>
-                  <ChevronIcon />
-                </SortButton>
-                {sortOpen && (
-                  <SortMenu aria-label="Sort patterns">
-                    {(
-                      [
-                        "Most recent",
-                        "Oldest",
-                        "Most supporting items",
-                      ] as SortOption[]
-                    ).map(option => (
-                      <SortMenuItem
-                        $selected={sort === option}
-                        key={option}
-                        onClick={() => selectSort(option)}
-                        type="button"
-                      >
-                        {option}
-                      </SortMenuItem>
-                    ))}
-                  </SortMenu>
-                )}
-              </SortWrap>
-            </Toolbar>
-            <StatusTabs aria-label="Pattern status">
-              {statusLabels.map(label => (
-                <StatusTab
-                  $active={status === label}
-                  key={label}
-                  onClick={() => setActiveStatus(label)}
-                  type="button"
-                >
-                  {label}
-                  {label !== "Archived" && (
-                    <StatusCount $tone={label}>{counts[label]}</StatusCount>
-                  )}
-                </StatusTab>
-              ))}
-            </StatusTabs>
+            <PatternToolbar
+              patterns={searchedPatterns}
+              appliedFilters={appliedFilters}
+              onApply={applyFilters}
+              referenceDate={referenceDate}
+              searchInput={{
+                "aria-label": "Search emerging patterns",
+                placeholder: "Search emerging patterns",
+                value: search,
+                onChange: event => {
+                  setSearch(event.target.value);
+                  setPage(0);
+                },
+              }}
+              sort={sort}
+              onSortChange={selectSort}
+            />
+            <LibraryStatusTabs
+              label="Pattern status"
+              statuses={statusLabels}
+              status={status}
+              counts={counts}
+              onChange={setActiveStatus}
+            />
             <Results aria-label="Emerging patterns">
               <TableHeader>
                 <span>Emerging pattern</span>
@@ -276,43 +264,6 @@ export default function IntelligenceLibraryPage({
   );
 }
 
-function IntelligenceItemsList({
-  items,
-}: {
-  items: IntelligenceLibraryItem[];
-}) {
-  if (!items.length) {
-    return (
-      <ItemsPlaceholder>No intelligence items are available.</ItemsPlaceholder>
-    );
-  }
-
-  return (
-    <ItemsResults aria-label="Intelligence items">
-      {items.map(item => (
-        <IntelligenceItemCard key={item.itemId}>
-          <ItemTitle>{item.title ?? "Untitled intelligence item"}</ItemTitle>
-          {item.tldr && <Description>{item.tldr}</Description>}
-          <ItemMeta>
-            {item.sourceName}
-            {item.publishedAt &&
-              ` · ${new Date(item.publishedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}`}
-          </ItemMeta>
-          <ViewSourceButton itemId={item.itemId} />
-        </IntelligenceItemCard>
-      ))}
-    </ItemsResults>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <IconBox viewBox="0 0 24 24">
-      <circle cx="10.8" cy="10.8" r="5.8" />
-      <path d="m15.2 15.2 4.2 4.2" />
-    </IconBox>
-  );
-}
 const Canvas = styled.div`
   min-height: 100vh;
   background: ${COLORS.canvas};
@@ -401,163 +352,6 @@ const HeaderSpacer = styled.div`
   @media (max-width: 800px) {
     display: none;
   }
-`;
-const ItemsPlaceholder = styled.div`
-  display: grid;
-  min-height: 320px;
-  place-items: center;
-  border: 1px dashed ${CONTROL_BORDER};
-  border-radius: 14px;
-  color: ${COLORS.secondaryText};
-  font-size: 14px;
-`;
-const ItemsResults = styled.section`
-  display: grid;
-  gap: 14px;
-`;
-const IntelligenceItemCard = styled.article`
-  display: grid;
-  gap: 6px;
-  border-radius: 14px;
-  background: #f0f3f7;
-  padding: 24px 20px;
-`;
-const ItemTitle = styled.h2`
-  margin: 0;
-  color: ${COLORS.inkText};
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: -0.15px;
-  line-height: 24px;
-`;
-const ItemMeta = styled.p`
-  margin: 2px 0 0;
-  color: ${COLORS.mutedText};
-  font-size: 13px;
-  line-height: 18px;
-`;
-const Toolbar = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  @media (max-width: 640px) {
-    flex-wrap: wrap;
-  }
-`;
-const SearchField = styled.label`
-  display: flex;
-  width: min(480px, 100%);
-  min-width: 220px;
-  height: 40px;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid ${CONTROL_BORDER};
-  border-radius: 999px;
-  background: ${COLORS.surface};
-  padding: 0 16px;
-  input {
-    width: 100%;
-    min-width: 0;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: ${COLORS.inkText};
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 20px;
-  }
-  input::placeholder {
-    color: ${COLORS.mutedText};
-    opacity: 1;
-  }
-`;
-const ToolbarSpacer = styled.div`
-  flex: 1 1 0;
-  min-width: 12px;
-  @media (max-width: 640px) {
-    display: none;
-  }
-`;
-const SortWrap = styled.div`
-  position: relative;
-  margin-left: auto;
-`;
-const SortButton = styled(PillButton)`
-  height: 36px;
-  gap: 6px;
-  padding: 0 12px 0 16px;
-  font-weight: 400;
-  span {
-    color: ${COLORS.secondaryText};
-  }
-  strong {
-    font-weight: 500;
-  }
-`;
-const SortMenu = styled.div`
-  position: absolute;
-  z-index: 2;
-  right: 0;
-  top: 42px;
-  display: grid;
-  min-width: 190px;
-  overflow: hidden;
-  border: 1px solid ${COLORS.borderDefault};
-  border-radius: 12px;
-  background: ${COLORS.surface};
-  box-shadow: 0 8px 24px rgba(15, 27, 45, 0.12);
-  padding: 4px;
-`;
-const SortMenuItem = styled.button<{ $selected: boolean }>`
-  border: 0;
-  border-radius: 8px;
-  background: ${p => (p.$selected ? COLORS.canvas : "transparent")};
-  padding: 9px 12px;
-  text-align: left;
-  color: ${COLORS.inkText};
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 20px;
-  cursor: pointer;
-`;
-const StatusTabs = styled.nav`
-  display: flex;
-  gap: 28px;
-  overflow-x: auto;
-  border-bottom: 1px solid ${COLORS.borderDefault};
-  scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-`;
-const StatusTab = styled.button<{ $active: boolean }>`
-  display: inline-flex;
-  height: 44px;
-  flex: none;
-  align-items: center;
-  gap: 8px;
-  border: 0;
-  border-bottom: ${p => (p.$active ? `2px solid ${COLORS.actionNavy}` : "2px solid transparent")};
-  background: transparent;
-  padding: 0;
-  color: ${p => (p.$active ? COLORS.actionNavy : COLORS.secondaryText)};
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-  white-space: nowrap;
-  cursor: pointer;
-`;
-const StatusCount = styled.span<{ $tone: Status }>`
-  border-radius: 999px;
-  padding: 1px 8px;
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 18px;
-  ${p => (p.$tone === "Needs your review" ? "background:#fbeda3;color:#5c4800;" : p.$tone === "Saved" ? "background:#f8d9cf;color:#8c3523;" : p.$tone === "Confirmed" ? "background:#d5ecdc;color:#1b6140;" : `background:#f3f6fa;color:${COLORS.mutedText};`)}
 `;
 const Results = styled.section`
   display: grid;

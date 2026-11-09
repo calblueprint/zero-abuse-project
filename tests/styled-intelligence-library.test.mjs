@@ -15,6 +15,7 @@ function load(path, modules = {}) {
     {
       compilerOptions: {
         module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ESNext,
         jsx: ts.JsxEmit.ReactJSX,
         esModuleInterop: true,
       },
@@ -50,9 +51,51 @@ const PatternCard = load(
   "../components/intelligence-library/PatternCard.tsx",
   libraryModules,
 );
-const PatternFiltersPopover = load(
-  "../components/intelligence-library/PatternFiltersPopover.tsx",
+const FilterControls = load(
+  "../components/intelligence-library/FilterControls.tsx",
   libraryModules,
+);
+const LibraryToolbar = load(
+  "../components/intelligence-library/LibraryToolbar.tsx",
+  libraryModules,
+);
+const LibraryStatusTabs = load(
+  "../components/intelligence-library/LibraryStatusTabs.tsx",
+  libraryModules,
+);
+Object.assign(libraryModules, {
+  "./FilterControls": FilterControls,
+  "./LibraryToolbar": LibraryToolbar,
+  "./LibraryStatusTabs": LibraryStatusTabs,
+});
+const PatternToolbar = load(
+  "../components/intelligence-library/PatternToolbar.tsx",
+  libraryModules,
+);
+const taxonomy = load("../lib/intelligence-library/taxonomy.ts");
+const itemFiltersParser = load("../lib/intelligence-library/filters.ts", {
+  "@/lib/intelligence-library/taxonomy": taxonomy,
+  "@/lib/validation/uuid": load("../lib/validation/uuid.ts"),
+});
+const emptyItemFilters = itemFiltersParser.parseIntelligenceFilters({});
+const itemOptions = {
+  exploitationTypes: [],
+  platforms: [],
+  technologies: [],
+  affectedPopulations: [],
+  offenderTactics: [],
+  geographies: [],
+  intelTypes: [],
+  zapRelevances: [],
+  sources: [],
+};
+const IntelligenceLibrary = load(
+  "../components/intelligence-library/IntelligenceLibrary.tsx",
+  {
+    ...libraryModules,
+    "./ViewSourceButton": sourceButton,
+    "@/lib/intelligence-library/filters": itemFiltersParser,
+  },
 );
 const patterns = Array.from({ length: 9 }, (_, i) => ({
   id: `pattern-${i}`,
@@ -92,6 +135,7 @@ function statefulComponent(path, modules) {
       useCallback: fn => fn,
       useEffect() {},
       useRef: () => ({ current: null }),
+      useId: () => "test-filters",
     },
     ...modules,
   }).default;
@@ -106,7 +150,8 @@ function pageHarness(isAdmin = true) {
     {
       ...libraryModules,
       "./PatternCard": PatternCard,
-      "./PatternFiltersPopover": PatternFiltersPopover,
+      "./IntelligenceLibrary": IntelligenceLibrary,
+      "./PatternToolbar": PatternToolbar,
       "@/components/intelligence-library/ViewSourceButton": sourceButton,
       "@/components/TopBar": TopBar,
       "@/styles/fonts": { dmSans: { className: "dm-sans-test" } },
@@ -115,6 +160,8 @@ function pageHarness(isAdmin = true) {
   return () => {
     return component({
       initialPatterns: patterns,
+      itemFilters: emptyItemFilters,
+      itemFilterOptions: itemOptions,
       intelligenceItems: [
         {
           itemId: "aa000061-2001-4000-8000-000000000001",
@@ -130,7 +177,10 @@ function pageHarness(isAdmin = true) {
   };
 }
 function nodes(element) {
-  if (!element || typeof element !== "object") return [];
+  if (!element || typeof element !== "object" || element.props?.hidden)
+    return [];
+  if (element.type === LibraryStatusTabs.default)
+    return nodes(element.type(element.props));
   return [
     element,
     ...React.Children.toArray(element.props?.children).flatMap(nodes),
@@ -222,41 +272,285 @@ test("shared top bar derives initials from names, trimming spaces and preserving
   }
 });
 
-test("filter drafts apply only on confirmation and closing discards edits", () => {
+test("filter drafts apply only on confirmation and dismissal discards edits", () => {
   const component = statefulComponent(
-    "../components/intelligence-library/PatternFiltersPopover.tsx",
+    "../components/intelligence-library/PatternToolbar.tsx",
     libraryModules,
   );
   let appliedFilters = filters.emptyPatternFilters;
-  const render = () =>
+  const toolbar = () =>
     component({
       patterns,
       appliedFilters,
       referenceDate: new Date("2026-11-09T00:00:00Z"),
+      searchInput: {},
+      sort: "Most recent",
+      onSortChange() {},
       onApply: value => {
         appliedFilters = value;
       },
     });
-  click(render, "Filters");
+  const render = () => toolbar().props.filterContent;
   click(render, "30 days");
   assert.equal(appliedFilters.date, "");
-  click(render, "Filters");
-  click(render, "Filters");
+  toolbar().props.onFilterDismiss();
   assert.equal(
     nodes(render()).find(node => text(node) === "30 days").props.$active,
     false,
   );
   click(render, "30 days");
-  click(render, "Show 9 results");
+  toolbar().props.onApplyFilters();
   assert.equal(appliedFilters.date, "30 days");
-  assert.equal(
-    nodes(render()).find(node => node.props["aria-haspopup"] === "dialog")
-      .props["aria-expanded"],
-    false,
-  );
-  click(render, "Filters");
   click(render, "Clear all");
   assert.equal(appliedFilters.date, "30 days");
-  click(render, "Show 9 results");
+  toolbar().props.onApplyFilters();
   assert.equal(appliedFilters.date, "");
+});
+
+test("item view includes search, taxonomy filters and item-specific column headings", () => {
+  const render = pageHarness();
+  click(render, "Intelligence items");
+  const html = renderToStaticMarkup(render());
+  assert.match(html, /action="\/intelligence-library"/);
+  assert.match(html, /aria-label="Search intelligence items"/);
+  assert.match(html, /name="q"/);
+  assert.match(html, /name="view"[^>]*value="items"/);
+  for (const field of [
+    "sourceId",
+    "platform",
+    "exploitationType",
+    "publishedFrom",
+    "publishedTo",
+  ]) {
+    assert.ok(
+      html.includes(
+        field.startsWith("published")
+          ? `name="${field}"`
+          : field === "sourceId"
+            ? ">Source<"
+            : field === "platform"
+              ? ">Platform<"
+              : ">Exploitation type<",
+      ),
+    );
+  }
+  for (const title of [
+    "Intelligence item",
+    "Source",
+    "Published (UTC)",
+    "Actions",
+  ]) {
+    assert.ok(html.includes(`<th scope="col">${title}</th>`));
+  }
+  assert.doesNotMatch(html, /Supporting items|Review status/);
+  for (const label of ["Saved", "Confirmed", "Archived"])
+    assert.ok(html.includes(label));
+});
+
+test("styled route applies item search and filters and stays on the items tab", async () => {
+  let requestedFilters;
+  const page = load(
+    "../app/(authenticated)/(approved)/intelligence-library/page.tsx",
+    {
+      "@/components/intelligence-library/intelligence-library": () => null,
+      "@/db/queries/intelligence-library": {
+        getIntelligenceLibraryItems: async filters => {
+          requestedFilters = filters;
+          return [];
+        },
+        getIntelligenceLibraryFilterOptions: async () => itemOptions,
+      },
+      "@/lib/auth/access": {
+        requireApprovedUser: async () => ({
+          firstName: "Test",
+          lastName: "User",
+          isAdmin: false,
+        }),
+      },
+      "@/lib/intelligence-library/emerging-patterns": {
+        getEmergingPatterns: async () => [],
+      },
+      "@/lib/intelligence-library/filters": itemFiltersParser,
+    },
+  ).default;
+  const result = await page({
+    searchParams: Promise.resolve({
+      view: "items",
+      q: "  teen safety  ",
+      sourceId: "aa000061-2001-4000-8000-000000000001",
+      publishedTo: "2026-10-31",
+    }),
+  });
+  assert.equal(result.props.initialView, "items");
+  assert.equal(requestedFilters.search, "teen safety");
+  assert.equal(
+    requestedFilters.sourceIds[0],
+    "aa000061-2001-4000-8000-000000000001",
+  );
+  assert.equal(
+    requestedFilters.publishedTo.toISOString(),
+    "2026-10-31T00:00:00.000Z",
+  );
+});
+
+test("item search treats wildcard characters literally and preserves source/date constraints", async () => {
+  const { pgTable, text, PgDialect } = require("drizzle-orm/pg-core");
+  const fields = [
+    "itemId",
+    "sourceId",
+    "sourceUrl",
+    "publishedAt",
+    "title",
+    "tldr",
+    "exploitationType",
+    "platform",
+    "technology",
+    "affectedPopulation",
+    "offenderTactic",
+    "geography",
+    "intelType",
+    "zapRelevance",
+  ];
+  const itelItems = pgTable(
+    "itel_items",
+    Object.fromEntries(fields.map(name => [name, text(name)])),
+  );
+  const sources = pgTable("sources", {
+    sourceId: text("sourceId"),
+    name: text("name"),
+  });
+  let query;
+  let ordering;
+  const builder = {
+    from() {
+      return this;
+    },
+    innerJoin() {
+      return this;
+    },
+    where(condition) {
+      query = new PgDialect().sqlToQuery(condition);
+      return this;
+    },
+    orderBy(...values) {
+      ordering = values.map(value => new PgDialect().sqlToQuery(value).sql);
+      return [];
+    },
+  };
+  const repository = load("../db/queries/intelligence-library.ts", {
+    "server-only": {},
+    "@/db": { db: { select: () => builder } },
+    "@/db/schema": { itelItems, sources },
+    "@/lib/intelligence-library/taxonomy": taxonomy,
+  });
+  const filters = itemFiltersParser.parseIntelligenceFilters({
+    q: "100%_\\off",
+    sourceId: "aa000061-2001-4000-8000-000000000001",
+    publishedTo: "2026-10-31",
+  });
+  await repository.getIntelligenceLibraryItems(filters);
+  assert.match(query.sql, /"itel_items"\."title" ilike/);
+  assert.match(query.sql, /"sources"\."name" ilike/);
+  assert.equal(query.params[0], "%100\\%\\_\\\\off%");
+  assert.ok(query.params.includes(filters.sourceIds[0]));
+  assert.ok(query.params.includes("2026-11-01T00:00:00.000Z"));
+  assert.match(query.sql, / and /);
+  assert.match(ordering[0], /"publishedAt" desc nulls last/);
+  await repository.getIntelligenceLibraryItems({ ...filters, sort: "Oldest" });
+  assert.match(ordering[0], /"publishedAt" asc/);
+  await repository.getIntelligenceLibraryItems({ ...filters, sort: "Title" });
+  assert.match(ordering[0], /"title" asc/);
+});
+
+test("shared toolbar selects sorting and discards filters when toggled closed", () => {
+  const component = statefulComponent(
+    "../components/intelligence-library/LibraryToolbar.tsx",
+    libraryModules,
+  );
+  let sort = "Most recent";
+  let dismissed = 0;
+  const render = () =>
+    component({
+      searchInput: { "aria-label": "Search items" },
+      filterLabel: "Item filters",
+      filterCount: 0,
+      filterContent: null,
+      applyLabel: "Apply filters",
+      onFilterDismiss: () => dismissed++,
+      sort,
+      sortOptions: ["Most recent", "Oldest"],
+      onSortChange: value => {
+        sort = value;
+      },
+    });
+  click(render, "Sort");
+  click(render, "Oldest");
+  assert.equal(sort, "Oldest");
+  click(render, "Filters");
+  click(render, "Filters");
+  assert.equal(dismissed, 1);
+});
+
+test("item bookmarks populate Saved and do not populate Confirmed or Archived", () => {
+  const component = statefulComponent(
+    "../components/intelligence-library/IntelligenceLibrary.tsx",
+    {
+      ...libraryModules,
+      "./ViewSourceButton": sourceButton,
+      "@/lib/intelligence-library/filters": itemFiltersParser,
+    },
+  );
+  const render = () =>
+    component({
+      filters: emptyItemFilters,
+      items: [
+        {
+          itemId: "item-1",
+          title: "Test item",
+          sourceName: "Test source",
+          publishedAt: null,
+        },
+      ],
+      options: itemOptions,
+    });
+  const save = nodes(render()).find(
+    node => node.props["aria-label"] === "Save intelligence item",
+  );
+  save.props.onClick();
+  click(render, "Saved");
+  assert.match(renderToStaticMarkup(render()), /Test item/);
+  nodes(render())
+    .find(node => node.props["aria-label"] === "Remove saved intelligence item")
+    .props.onClick();
+  assert.match(renderToStaticMarkup(render()), /No saved intelligence items/);
+  click(render, "Confirmed");
+  assert.match(
+    renderToStaticMarkup(render()),
+    /No confirmed intelligence items/,
+  );
+  click(render, "Archived");
+  assert.match(
+    renderToStaticMarkup(render()),
+    /No archived intelligence items/,
+  );
+});
+
+test("invalid item sorting falls back to most recent", () => {
+  assert.equal(
+    itemFiltersParser.parseIntelligenceFilters({ sort: "DROP TABLE" }).sort,
+    "Most recent",
+  );
+  assert.equal(
+    itemFiltersParser.parseIntelligenceFilters({ sort: "Oldest" }).sort,
+    "Oldest",
+  );
+});
+
+test("pattern search updates the results and filter preview together", () => {
+  const render = pageHarness();
+  const toolbar = () =>
+    nodes(render()).find(node => node.type === PatternToolbar.default);
+  toolbar().props.searchInput.onChange({ target: { value: "Pattern 8" } });
+  assert.equal(pagination(render), "Showing 1 to 1 of 1");
+  assert.equal(toolbar().props.patterns.length, 1);
 });

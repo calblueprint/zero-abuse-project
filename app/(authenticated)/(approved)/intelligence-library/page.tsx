@@ -1,20 +1,34 @@
+import type { IntelligenceFilterParams } from "@/lib/intelligence-library/filters";
 import IntelligenceLibraryPage from "@/components/intelligence-library/intelligence-library";
-import { getIntelligenceLibraryItems } from "@/db/queries/intelligence-library";
+import {
+  getIntelligenceLibraryFilterOptions,
+  getIntelligenceLibraryItems,
+} from "@/db/queries/intelligence-library";
 import { requireApprovedUser } from "@/lib/auth/access";
 import { getEmergingPatterns } from "@/lib/intelligence-library/emerging-patterns";
 import { parseIntelligenceFilters } from "@/lib/intelligence-library/filters";
 
-export default async function IntelligenceLibraryPreviewPage() {
+export default async function IntelligenceLibraryPreviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<IntelligenceFilterParams>;
+}) {
   const user = await requireApprovedUser();
-  const [patterns, intelligenceItems] = await Promise.all([
+  const params = await searchParams;
+  const filters = parseIntelligenceFilters(params);
+  const [patterns, intelligenceItems, options] = await Promise.all([
     getEmergingPatterns(),
-    getIntelligenceLibraryItems(parseIntelligenceFilters({})),
+    getIntelligenceLibraryItems(filters),
+    getIntelligenceLibraryFilterOptions(),
   ]);
 
   return (
     <IntelligenceLibraryPage
       initialPatterns={patterns}
       intelligenceItems={intelligenceItems}
+      itemFilters={filters}
+      itemFilterOptions={options}
+      initialView={params.view === "items" ? "items" : "patterns"}
       firstName={user.firstName}
       lastName={user.lastName}
       isAdmin={user.isAdmin}
