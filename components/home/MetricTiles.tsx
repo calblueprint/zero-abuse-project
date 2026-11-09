@@ -6,7 +6,7 @@ import ReviewIcon from "@/assets/icons/metric-review.svg";
 import SavedIcon from "@/assets/icons/metric-saved.svg";
 import COLORS from "@/styles/colors";
 
-// Placeholder values until these metrics exist.
+// TODO: Replace placeholder metric values with live counts for the current user.
 const METRICS = [
   {
     label: "Needs your review",

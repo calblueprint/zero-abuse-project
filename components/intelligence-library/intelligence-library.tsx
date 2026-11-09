@@ -135,6 +135,7 @@ export default function IntelligenceLibraryPage({
     setSortOpen(false);
     setPage(0);
   };
+  // TODO: Persist saved patterns per user; local changes currently reset on reload.
   const toggleSaved = (id: string) =>
     setPatterns(current =>
       current.map(p => (p.id === id ? { ...p, saved: !p.saved } : p)),
@@ -213,6 +214,7 @@ export default function IntelligenceLibraryPage({
             </SwitchOption>
           </LibrarySwitch>
           <HeaderSpacer />
+          {/* TODO: Open the pattern creation flow when it is implemented. */}
           <PrimaryButton type="button">New pattern</PrimaryButton>
         </PageHeader>
         {view === "items" ? (
@@ -222,6 +224,7 @@ export default function IntelligenceLibraryPage({
             <Toolbar>
               <SearchField>
                 <SearchIcon />
+                {/* TODO: Connect the search input to pattern search. */}
                 <input
                   aria-label="Search emerging patterns"
                   placeholder="Search emerging patterns"

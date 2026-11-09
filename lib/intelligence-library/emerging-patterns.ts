@@ -65,7 +65,7 @@ function isEmergingPattern(value: unknown): value is EmergingPattern {
   );
 }
 
-/** Mock-provider seam: replace this JSON import with the real data provider in a future sprint. */
+/** TODO: Replace mock JSON patterns, including dates, counts, and review details, with real provider data. */
 export async function getEmergingPatterns(): Promise<EmergingPattern[]> {
   if (!Array.isArray(rawPatterns) || !rawPatterns.every(isEmergingPattern)) {
     throw new Error("Invalid emerging patterns mock data");

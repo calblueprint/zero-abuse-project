@@ -40,7 +40,7 @@ export default function TopBar({ firstName, lastName, isAdmin }: TopBarProps) {
   return (
     <Bar>
       <Side>
-        {/* Disabled until the sidebar is built. */}
+        {/* TODO: Enable this toggle when the sidebar is implemented. */}
         <SidebarToggle type="button" aria-label="Toggle sidebar" disabled>
           <Image src={SidebarToggleIcon} alt="" width={18} height={18} />
         </SidebarToggle>
@@ -61,6 +61,7 @@ export default function TopBar({ firstName, lastName, isAdmin }: TopBarProps) {
         })}
       </Tabs>
       <Side $end>
+        {/* TODO: Connect Help to the support flow when it is implemented. */}
         <Help>Help</Help>
         <Avatar href="/profile" aria-label="Profile">
           {initials}
