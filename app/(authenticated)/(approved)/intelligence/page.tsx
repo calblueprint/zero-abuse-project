@@ -1,4 +1,4 @@
-import type { IntelligenceFilterParams } from "@/lib/intelligence-library/filters";
+import type { SearchParams } from "@/lib/validation/search-params";
 import IntelligenceItemsView from "@/components/intelligence-library/IntelligenceItemsView";
 import {
   getIntelligenceLibraryFilterOptions,
@@ -8,7 +8,7 @@ import { requireApprovedUser } from "@/lib/auth/access";
 import { parseIntelligenceFilters } from "@/lib/intelligence-library/filters";
 
 type IntelligenceLibraryPageProps = {
-  searchParams: Promise<IntelligenceFilterParams>;
+  searchParams: Promise<SearchParams>;
 };
 
 export default async function IntelligenceLibraryPage({

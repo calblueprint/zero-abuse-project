@@ -3,14 +3,13 @@ import type { LatestTrend } from "@/db/queries/trends";
 import Image from "next/image";
 import styled from "styled-components";
 import HomeGlow from "@/assets/images/home-glow.svg";
+import AppShell, { Card } from "@/components/AppShell";
 import MetricTiles from "@/components/home/MetricTiles";
 import NeedsAttention from "@/components/home/NeedsAttention";
 import RecentlyAccessed from "@/components/home/RecentlyAccessed";
 import SearchHero from "@/components/home/SearchHero";
 import LocalDate from "@/components/LocalDate";
-import TopBar from "@/components/TopBar";
 import COLORS from "@/styles/colors";
-import { dmSans } from "@/styles/fonts";
 
 type HomeViewProps = {
   firstName: string;
@@ -32,9 +31,8 @@ export default function HomeView({
   recentlyAccessedItems,
 }: HomeViewProps) {
   return (
-    <Canvas className={dmSans.className}>
-      <TopBar firstName={firstName} lastName={lastName} isAdmin={isAdmin} />
-      <Card>
+    <AppShell firstName={firstName} lastName={lastName} isAdmin={isAdmin}>
+      <HomeCard>
         <Glow src={HomeGlow} alt="" width={1040} height={290} />
         <Header>
           <DateLine>
@@ -53,34 +51,16 @@ export default function HomeView({
           <Divider />
           <NeedsAttention trends={trends} total={totalTrends} />
         </Lists>
-      </Card>
-    </Canvas>
+      </HomeCard>
+    </AppShell>
   );
 }
 
-const Canvas = styled.div`
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  padding: 0 12px 12px;
-  background: ${COLORS.canvas};
-`;
-
-const Card = styled.main`
-  position: relative;
+const HomeCard = styled(Card)`
   isolation: isolate;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
   gap: 46px;
   padding: 56px 48px 24px;
   overflow: hidden;
-  border: 1px solid ${COLORS.borderDefault};
-  border-radius: 24px;
-  background: ${COLORS.surface};
-  box-shadow:
-    0 8px 120px rgba(77, 117, 204, 0.07),
-    0 4px 40px -2px rgba(77, 117, 204, 0.07);
 
   @media (max-width: 600px) {
     padding: 32px 20px 24px;

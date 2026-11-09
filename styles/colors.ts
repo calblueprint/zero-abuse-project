@@ -33,6 +33,21 @@ const COLORS = {
   flagText: "#8C3523",
   verifiedTint: "#D5ECDC",
   verifiedText: "#1B6140",
+  borderControl: "#D3D9E2",
+  surfaceChip: "#EEF2F6",
+  tintNeutral: "#F3F6FA",
+  flagCoral: "#C2412D",
+  scrim: "rgba(23, 31, 38, 0.32)",
+
+  // Source type tags (Figma "tag/*")
+  agencyTint: "#E2F0F0",
+  agencyText: "#245A5C",
+  newsTint: "#F3EDE2",
+  newsText: "#6B5A38",
+  researchTint: "#ECE8F7",
+  researchText: "#4A3F85",
+  platformTint: "#EBEFF4",
+  platformText: "#46505E",
 };
 
 export default COLORS;
