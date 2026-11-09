@@ -27,9 +27,6 @@ export default function SourceTabs({
     <Tabs aria-label="Source status">
       {SOURCE_TABS.map(tab => {
         const isSelected = tab === selected;
-        // Waiting work stays yellow even when another tab is open.
-        const highlight =
-          isSelected || (tab === "needs-attention" && counts[tab] > 0);
 
         return (
           <Tab
@@ -40,7 +37,7 @@ export default function SourceTabs({
             onClick={() => onSelect(tab)}
           >
             {TAB_LABELS[tab]}
-            <Count $highlight={highlight}>{counts[tab]}</Count>
+            <Count $tab={tab}>{counts[tab]}</Count>
           </Tab>
         );
       })}
@@ -81,13 +78,25 @@ const Tab = styled.button<{ $selected: boolean }>`
   }
 `;
 
-const Count = styled.span<{ $highlight: boolean }>`
+const Count = styled.span<{ $tab: SourceTab }>`
   padding: 1px 8px;
   border-radius: 999px;
-  background: ${({ $highlight }) =>
-    $highlight ? COLORS.reviewTint : COLORS.surfaceChip};
-  color: ${({ $highlight }) =>
-    $highlight ? COLORS.reviewText : COLORS.mutedText};
+  background: ${({ $tab }) =>
+    $tab === "needs-attention"
+      ? COLORS.reviewTint
+      : $tab === "active"
+        ? COLORS.verifiedTint
+        : $tab === "inactive"
+          ? COLORS.flagTint
+          : COLORS.tintNeutral};
+  color: ${({ $tab }) =>
+    $tab === "needs-attention"
+      ? COLORS.reviewText
+      : $tab === "active"
+        ? COLORS.verifiedText
+        : $tab === "inactive"
+          ? COLORS.flagText
+          : COLORS.mutedText};
   font-size: 13px;
   font-weight: 400;
   line-height: 18px;
