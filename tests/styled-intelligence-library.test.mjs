@@ -38,6 +38,22 @@ const sourceButton = load(
   "../components/intelligence-library/ViewSourceButton.tsx",
 );
 const filters = load("../lib/intelligence-library/pattern-filters.ts");
+const libraryStyles = load("../components/intelligence-library/styles.tsx", {
+  "@/styles/colors": colors,
+});
+const libraryModules = {
+  "@/styles/colors": colors,
+  "@/lib/intelligence-library/pattern-filters": filters,
+  "./styles": libraryStyles,
+};
+const PatternCard = load(
+  "../components/intelligence-library/PatternCard.tsx",
+  libraryModules,
+);
+const PatternFiltersPopover = load(
+  "../components/intelligence-library/PatternFiltersPopover.tsx",
+  libraryModules,
+);
 const patterns = Array.from({ length: 9 }, (_, i) => ({
   id: `pattern-${i}`,
   title: `Pattern ${i}`,
@@ -55,39 +71,48 @@ const patterns = Array.from({ length: 9 }, (_, i) => ({
   saved: true,
   archived: false,
 }));
-function pageHarness(isAdmin = true) {
+function statefulComponent(path, modules) {
   const states = [];
   let cursor = 0;
-  const component = load(
+  const component = load(path, {
+    react: {
+      ...React,
+      useState(initial) {
+        const index = cursor++;
+        if (!(index in states)) states[index] = initial;
+        return [
+          states[index],
+          value => {
+            states[index] =
+              typeof value === "function" ? value(states[index]) : value;
+          },
+        ];
+      },
+      useMemo: fn => fn(),
+      useCallback: fn => fn,
+      useEffect() {},
+      useRef: () => ({ current: null }),
+    },
+    ...modules,
+  }).default;
+  return props => {
+    cursor = 0;
+    return component(props);
+  };
+}
+function pageHarness(isAdmin = true) {
+  const component = statefulComponent(
     "../components/intelligence-library/intelligence-library.tsx",
     {
-      react: {
-        ...React,
-        useState(initial) {
-          const index = cursor++;
-          if (!(index in states)) states[index] = initial;
-          return [
-            states[index],
-            value => {
-              states[index] =
-                typeof value === "function" ? value(states[index]) : value;
-            },
-          ];
-        },
-        useMemo: fn => fn(),
-        useCallback: fn => fn,
-        useEffect() {},
-        useRef: () => ({ current: null }),
-      },
+      ...libraryModules,
+      "./PatternCard": PatternCard,
+      "./PatternFiltersPopover": PatternFiltersPopover,
       "@/components/intelligence-library/ViewSourceButton": sourceButton,
       "@/components/TopBar": TopBar,
-      "@/styles/colors": colors,
       "@/styles/fonts": { dmSans: { className: "dm-sans-test" } },
-      "@/lib/intelligence-library/pattern-filters": filters,
     },
-  ).default;
+  );
   return () => {
-    cursor = 0;
     return component({
       initialPatterns: patterns,
       intelligenceItems: [
@@ -195,4 +220,43 @@ test("shared top bar derives initials from names, trimming spaces and preserving
     assert.ok(avatar);
     assert.equal(avatar[1], expected);
   }
+});
+
+test("filter drafts apply only on confirmation and closing discards edits", () => {
+  const component = statefulComponent(
+    "../components/intelligence-library/PatternFiltersPopover.tsx",
+    libraryModules,
+  );
+  let appliedFilters = filters.emptyPatternFilters;
+  const render = () =>
+    component({
+      patterns,
+      appliedFilters,
+      referenceDate: new Date("2026-11-09T00:00:00Z"),
+      onApply: value => {
+        appliedFilters = value;
+      },
+    });
+  click(render, "Filters");
+  click(render, "30 days");
+  assert.equal(appliedFilters.date, "");
+  click(render, "Filters");
+  click(render, "Filters");
+  assert.equal(
+    nodes(render()).find(node => text(node) === "30 days").props.$active,
+    false,
+  );
+  click(render, "30 days");
+  click(render, "Show 9 results");
+  assert.equal(appliedFilters.date, "30 days");
+  assert.equal(
+    nodes(render()).find(node => node.props["aria-haspopup"] === "dialog")
+      .props["aria-expanded"],
+    false,
+  );
+  click(render, "Filters");
+  click(render, "Clear all");
+  assert.equal(appliedFilters.date, "30 days");
+  click(render, "Show 9 results");
+  assert.equal(appliedFilters.date, "");
 });
