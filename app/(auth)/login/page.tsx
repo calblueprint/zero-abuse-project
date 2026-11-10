@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { StatusBlock } from "@/components/auth/ui";
 import { getVerifiedAuthUser } from "@/lib/auth/user";
+import { VerificationExpired } from "../sign-up/sign-up-form";
 import { LoginForm } from "./login-form";
 
 type LoginPageProps = {
@@ -17,10 +18,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   if (message === "password-updated") {
     return (
       <StatusBlock
-        title="Password reset"
-        description="Your password was updated. Sign in with your new password."
+        eyebrow="Account recovery"
+        title="Password updated"
+        description="Sign in with your new password."
         primaryHref="/login"
-        primaryLabel="Log in"
+        primaryLabel="Back to sign in"
       />
     );
   }
@@ -39,16 +41,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   if (error === "invalid-auth-link") {
-    return (
-      <StatusBlock
-        title="Link expired"
-        description="This authentication link is invalid or has expired."
-        primaryHref="/login"
-        primaryLabel="Back to log in"
-        secondaryHref="/sign-up"
-        secondaryLabel="Create an account"
-      />
-    );
+    return <VerificationExpired />;
   }
 
   return <LoginForm error={error} />;

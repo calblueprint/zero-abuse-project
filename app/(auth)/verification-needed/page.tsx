@@ -4,9 +4,11 @@ import {
   Body,
   CenterLink,
   ErrorText,
+  Eyebrow,
   Heading,
   SubmitButton,
 } from "@/components/auth/ui";
+import { ResendVerificationButton } from "./resend-button";
 
 type VerificationNeededPageProps = {
   searchParams: Promise<{
@@ -27,24 +29,44 @@ export default async function VerificationNeededPage({
 
   return (
     <div>
+      <Eyebrow>Welcome to ZAP</Eyebrow>
       <Heading>Verify your email</Heading>
-      <Body>We sent a verification link to {email}. Check your inbox.</Body>
+      <Body style={{ textAlign: "center", marginTop: "20px" }}>
+        Open the verification link sent to:
+      </Body>
+      <Body
+        style={{
+          textAlign: "center",
+          color: "#20252B",
+          fontWeight: 500,
+          lineHeight: "30px",
+        }}
+      >
+        {email}
+      </Body>
       {error === "resend-failed" ? (
-        <ErrorText role="alert">
+        <ErrorText role="alert" style={{ textAlign: "center" }}>
           Unable to resend the verification email. Please try again.
         </ErrorText>
       ) : null}
       {message === "resent" ? (
-        <Body role="status">The verification email was resent.</Body>
+        <Body
+          role="status"
+          style={{
+            textAlign: "center",
+            color: "#1B6140",
+            fontWeight: 500,
+            lineHeight: "30px",
+          }}
+        >
+          New verification link sent.
+        </Body>
       ) : null}
-      <form action={resendVerification}>
-        <input type="hidden" name="email" value={email} />
-        <SubmitButton pendingLabel="Resending…">
-          Resend verification email
-        </SubmitButton>
-      </form>
-      <CenterLink href="/sign-up">Use a different account</CenterLink>
-      <CenterLink href="/login">Back to log in</CenterLink>
+      <ResendVerificationButton
+        email={email}
+        coolingDown={message === "resent"}
+      />
+      <CenterLink href="/login">Back to sign in</CenterLink>
     </div>
   );
 }
