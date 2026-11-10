@@ -12,6 +12,8 @@ STATES_BY_NAME = {state.name.casefold(): state for state in STATES_BY_CODE.value
 # Qualified Census names for independent cities and their same-named counties.
 # These only qualify jurisdictions already present in the city CSV.
 # Source: https://www2.census.gov/geo/docs/reference/codes2020/national_county2020.txt
+# TODO: Replace this partial mapping with a complete Census county reference,
+# preserving qualified names to distinguish counties from independent cities.
 COUNTY_QUALIFIED_NAMES = {
     "24005": "Baltimore County",
     "24510": "Baltimore city",
