@@ -27,17 +27,11 @@ import {
 } from "@/components/auth/ui";
 import COLORS from "@/styles/colors";
 
-type OnboardingFormProps = {
-  splitSteps?: boolean;
-};
-
 const stepOneFields = ["firstName", "lastName", "phone"] as const;
 
 const initialState: OnboardingState = {};
 
-export default function OnboardingForm({
-  splitSteps = false,
-}: OnboardingFormProps) {
+export default function OnboardingForm() {
   const [state, formAction, isPending] = useActionState(
     submitOnboarding,
     initialState,
@@ -69,7 +63,7 @@ export default function OnboardingForm({
       errors[field] = stepErrors[field];
     });
   }
-  const onStepOne = splitSteps && step === 1;
+  const onStepOne = step === 1;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     if (!onStepOne) {
@@ -93,21 +87,17 @@ export default function OnboardingForm({
 
   return (
     <form action={formAction} onSubmit={handleSubmit} noValidate>
-      {splitSteps && (
-        <>
-          <Eyebrow>{step === 1 ? "1 of 2" : "2 of 2 · Optional"}</Eyebrow>
-          <StepHeading ref={headingRef} tabIndex={-1}>
-            {step === 1 ? "Welcome to ZAP" : "Your organization"}
-          </StepHeading>
-          <Body>
-            {step === 1
-              ? "Tell us a little about yourself."
-              : "Add a little context for your team."}
-          </Body>
-        </>
-      )}
+      <Eyebrow>{step === 1 ? "1 of 2" : "2 of 2 · Optional"}</Eyebrow>
+      <StepHeading ref={headingRef} tabIndex={-1}>
+        {step === 1 ? "Welcome to ZAP" : "Your organization"}
+      </StepHeading>
+      <Body>
+        {step === 1
+          ? "Tell us a little about yourself."
+          : "Add a little context for your team."}
+      </Body>
 
-      <StepFields hidden={splitSteps && step !== 1}>
+      <StepFields hidden={step !== 1}>
         <TextField
           name="firstName"
           label="First name"
@@ -142,7 +132,7 @@ export default function OnboardingForm({
         />
       </StepFields>
 
-      <StepFields hidden={splitSteps && step !== 2}>
+      <StepFields hidden={step !== 2}>
         <TextField
           name="organization"
           label="Organization (optional)"
@@ -173,7 +163,7 @@ export default function OnboardingForm({
           {isPending ? "Saving..." : "Continue"}
         </PrimaryButton>
       )}
-      {splitSteps && step === 2 && (
+      {step === 2 && (
         <BackButton
           type="button"
           onClick={() => setStep(1)}
