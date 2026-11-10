@@ -89,7 +89,7 @@ errors raise before a completed crawl and do not advance the timestamp.
 
 ## Persistence boundaries
 
-Apply the Drizzle `0009_item_locations` migration before deploying ingestion or
+Apply the Drizzle `0010_item_locations` migration before deploying ingestion or
 library queries. Geography is written to `item_locations` in the same transaction
 as the item. Each row preserves raw JSON and the supported standardized fields;
 uncertain locations keep their resolution status. The original `geography`

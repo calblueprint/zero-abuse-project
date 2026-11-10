@@ -1,5 +1,5 @@
 {
-  "id": "8c28bf41-6341-4188-b57b-2f1385907d80",
+  "id": "c4a7841c-d3fe-4675-b365-abf55ae9f908",
   "prevId": "cb630a46-9801-49b1-83d7-da3cc436384e",
   "version": "7",
   "dialect": "postgresql",
@@ -133,185 +133,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": true
-    },
-    "public.item_locations": {
-      "name": "item_locations",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "item_id": {
-          "name": "item_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "raw_extracted": {
-          "name": "raw_extracted",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "country_code": {
-          "name": "country_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "state_code": {
-          "name": "state_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "county_fips": {
-          "name": "county_fips",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "county_name": {
-          "name": "county_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "city": {
-          "name": "city",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "regions": {
-          "name": "regions",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::text[]"
-        },
-        "resolution_status": {
-          "name": "resolution_status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "item_locations_item_id_idx": {
-          "name": "item_locations_item_id_idx",
-          "columns": [
-            {
-              "expression": "item_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "item_locations_country_state_idx": {
-          "name": "item_locations_country_state_idx",
-          "columns": [
-            {
-              "expression": "country_code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "state_code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "item_locations_county_fips_idx": {
-          "name": "item_locations_county_fips_idx",
-          "columns": [
-            {
-              "expression": "county_fips",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "item_locations_city_idx": {
-          "name": "item_locations_city_idx",
-          "columns": [
-            {
-              "expression": "state_code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "city",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "item_locations_item_id_itel_items_item_id_fk": {
-          "name": "item_locations_item_id_itel_items_item_id_fk",
-          "tableFrom": "item_locations",
-          "tableTo": "itel_items",
-          "columnsFrom": [
-            "item_id"
-          ],
-          "columnsTo": [
-            "item_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "item_locations_status_check": {
-          "name": "item_locations_status_check",
-          "value": "\"item_locations\".\"resolution_status\" IN ('resolved', 'partial', 'ambiguous', 'unmatched', 'conflict')"
-        },
-        "item_locations_country_code_check": {
-          "name": "item_locations_country_code_check",
-          "value": "\"item_locations\".\"country_code\" ~ '^[A-Z]{2}$'"
-        },
-        "item_locations_state_code_check": {
-          "name": "item_locations_state_code_check",
-          "value": "\"item_locations\".\"state_code\" ~ '^[A-Z]{2}$'"
-        },
-        "item_locations_county_fips_check": {
-          "name": "item_locations_county_fips_check",
-          "value": "\"item_locations\".\"county_fips\" ~ '^[0-9]{5}$'"
-        }
-      },
       "isRLSEnabled": true
     },
     "public.saved_groups": {
@@ -541,6 +362,12 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
+        "title": {
+          "name": "title",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
         "emerged_at": {
           "name": "emerged_at",
           "type": "timestamp with time zone",
@@ -562,7 +389,7 @@
         },
         "item_ids": {
           "name": "item_ids",
-          "type": "uuid",
+          "type": "uuid[]",
           "primaryKey": false,
           "notNull": false
         },

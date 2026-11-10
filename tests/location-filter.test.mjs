@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
-import { drizzle } from "drizzle-orm/postgres-js";
+import { drizzle } from "drizzle-orm/node-postgres";
 import ts from "typescript";
 
 const require = createRequire(import.meta.url);
@@ -51,6 +51,8 @@ test("geography uses a correlated EXISTS and keeps user values parameterized", a
   );
   const geography = "Oakland'); DROP TABLE item_locations; --";
   await getIntelligenceLibraryItems({
+    search: "",
+    sort: "Most recent",
     hasInvalidSourceIds: false,
     exploitationTypes: [],
     platforms: [],

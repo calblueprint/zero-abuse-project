@@ -176,31 +176,44 @@ test("preserves authentication redirects during a history write", async t => {
   await assert.rejects(POST(request()), error => error === redirectError);
 });
 
-test("recent items are rendered in history order and source forms preserve Origin", () => {
-  const component = ts.transpileModule(
-    readFileSync(
-      new URL(
-        "../components/intelligence-library/IntelligenceLibrary.tsx",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
-    {
-      compilerOptions: {
-        module: ts.ModuleKind.CommonJS,
-        jsx: ts.JsxEmit.ReactJSX,
+test("library source forms preserve Origin", () => {
+  function loadComponent(path) {
+    const exports = {};
+    const code = ts.transpileModule(
+      readFileSync(new URL(path, import.meta.url), "utf8"),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          jsx: ts.JsxEmit.ReactJSX,
+          esModuleInterop: true,
+        },
       },
-    },
-  ).outputText;
-  const exports = {};
-  runInNewContext(component, {
-    exports,
-    require(name) {
-      return name === "./RefreshOnFocus"
-        ? { default: () => null }
-        : require(name);
-    },
-  });
+    ).outputText;
+    runInNewContext(code, {
+      exports,
+      require(name) {
+        if (name.startsWith("./"))
+          return loadComponent(
+            `../components/intelligence-library/${name.slice(2)}.tsx`,
+          );
+        if (name === "@/lib/intelligence-library/filters")
+          return loadComponent("../lib/intelligence-library/filters.ts");
+        if (name === "@/lib/intelligence-library/taxonomy")
+          return loadComponent("../lib/intelligence-library/taxonomy.ts");
+        if (name === "@/lib/validation/search-params")
+          return loadComponent("../lib/validation/search-params.ts");
+        if (name === "@/lib/validation/uuid")
+          return loadComponent("../lib/validation/uuid.ts");
+        if (name === "@/styles/colors")
+          return loadComponent("../styles/colors.ts");
+        return require(name);
+      },
+    });
+    return exports;
+  }
+  const exports = loadComponent(
+    "../components/intelligence-library/IntelligenceItemsView.tsx",
+  );
   const filterNames = [
     "exploitationTypes",
     "platforms",
@@ -225,21 +238,13 @@ test("recent items are rendered in history order and source forms preserve Origi
       filters,
       options: { ...filters, sources: [] },
       items: [item("Library item")],
-      recentlyAccessedItems: [
-        item("Newest item"),
-        {
-          ...item("Older item"),
-          itemId: "aa000046-2001-4000-8000-000000000002",
-        },
-      ],
     }),
   );
-  assert.ok(html.includes("Recently accessed"));
-  assert.ok(html.indexOf("Newest item") < html.indexOf("Older item"));
+  assert.ok(!html.includes("Recently accessed"));
   const forms = html.match(
     /<form[^>]*action="\/intelligence\/items\/open"[^>]*>/g,
   );
-  assert.equal(forms.length, 3);
+  assert.equal(forms.length, 1);
   for (const form of forms) {
     assert.match(form, /method="POST"/);
     assert.match(form, /rel="noopener"/);

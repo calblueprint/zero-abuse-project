@@ -68,8 +68,15 @@
     {
       "idx": 9,
       "version": "7",
-      "when": 1794275482465,
-      "tag": "0009_item_locations",
+      "when": 1794011616971,
+      "tag": "0009_add_trend_title_item_ids",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794277473416,
+      "tag": "0010_item_locations",
       "breakpoints": true
     }
   ]

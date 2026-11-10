@@ -1,15 +1,16 @@
 export const SOURCE_TIERS = ["1", "2", "3"] as const;
 
-export const SOURCE_TYPES = [
-  "News",
-  "Government",
-  "Law enforcement",
-  "Research/academic",
-  "NGO/nonprofit",
-  "Platform/industry",
-  "Legal/court",
-  "Other",
-] as const;
+export type SourceTier = (typeof SOURCE_TIERS)[number];
+
+export const TIER_DESCRIPTIONS: Record<SourceTier, string> = {
+  "1": "Official agencies and primary records, like NCMEC, FBI and DOJ.",
+  "2": "Major news outlets and established research groups.",
+  "3": "Everything else. ZAP trusts these sources the least.",
+};
+
+export const SOURCE_TYPES = ["Agency", "News", "Research", "Platform"] as const;
+
+export type SourceType = (typeof SOURCE_TYPES)[number];
 
 export type SourceFields = {
   name: string;
@@ -19,6 +20,8 @@ export type SourceFields = {
 };
 
 export type SourceFormState = {
+  // Set once the source is saved; the dialog closes on it.
+  status?: "added" | "reactivated";
   fields?: SourceFields;
   errors?: Partial<Record<keyof SourceFields, string>>;
   message?: string;
