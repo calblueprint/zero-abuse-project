@@ -3,7 +3,9 @@ import {
   boolean,
   check,
   foreignKey,
+  index,
   json,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -179,5 +181,53 @@ export const sources = pgTable(
       name: "sources_added_by_fkey",
     }).onDelete("set null"),
     uniqueIndex("sources_url_key_unique").on(sourceUrlKey(table.baseUrl)),
+  ],
+).enableRLS();
+
+export const itemLocations = pgTable(
+  "item_locations",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    itemId: uuid("item_id")
+      .notNull()
+      .references(() => itelItems.itemId, { onDelete: "cascade" }),
+    rawExtracted: jsonb("raw_extracted")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    countryCode: text("country_code"),
+    stateCode: text("state_code"),
+    countyFips: text("county_fips"),
+    countyName: text("county_name"),
+    city: text(),
+    regions: text()
+      .array()
+      .default(sql`'{}'::text[]`)
+      .notNull(),
+    resolutionStatus: text("resolution_status").notNull(),
+  },
+  table => [
+    index("item_locations_item_id_idx").on(table.itemId),
+    index("item_locations_country_state_idx").on(
+      table.countryCode,
+      table.stateCode,
+    ),
+    index("item_locations_county_fips_idx").on(table.countyFips),
+    index("item_locations_city_idx").on(table.stateCode, table.city),
+    check(
+      "item_locations_status_check",
+      sql`${table.resolutionStatus} IN ('resolved', 'partial', 'ambiguous', 'unmatched', 'conflict')`,
+    ),
+    check(
+      "item_locations_country_code_check",
+      sql`${table.countryCode} ~ '^[A-Z]{2}$'`,
+    ),
+    check(
+      "item_locations_state_code_check",
+      sql`${table.stateCode} ~ '^[A-Z]{2}$'`,
+    ),
+    check(
+      "item_locations_county_fips_check",
+      sql`${table.countyFips} ~ '^[0-9]{5}$'`,
+    ),
   ],
 ).enableRLS();

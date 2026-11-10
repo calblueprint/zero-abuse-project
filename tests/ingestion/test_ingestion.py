@@ -246,6 +246,31 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(set(connection.rows), {str(article("a").url), str(article("c").url)})
         self.assertEqual(connection.events, ["begin", "commit", "begin", "rollback", "begin", "commit"])
 
+    def test_locations_are_saved_with_the_item_and_failure_rolls_everything_back(self):
+        connection = TransactionConnection()
+        repository = PostgresRepository(connection)
+        result = extraction(article("location"))
+        from scripts.intelligence.models import Geography, ExtractedLocation, StandardizedUSLocation
+        result.intelligence.geography = [Geography(
+            raw_extracted=ExtractedLocation(country_code="US", state="CA", city="Oakland", county=None, region=None),
+            standardized=StandardizedUSLocation(country_code="US", state_code="CA", city="Oakland", county="Alameda", county_fips="06001", regions=["West", "West Coast"], status="resolved"),
+        )]
+        original = connection.execute
+        def execute(sql, params):
+            if "INSERT INTO item_locations" in sql:
+                connection.calls.append((sql, params))
+                raise RuntimeError("Location write failed")
+            return original(sql, params)
+        connection.execute = execute
+        with self.assertRaisesRegex(RuntimeError, "Location write failed"):
+            repository.save_intelligence("source-id", result)
+        self.assertEqual(connection.rows, {})
+        self.assertEqual(connection.events, ["begin", "rollback"])
+        values = connection.calls[-1][1]
+        self.assertEqual(values[2:7], ("US", "CA", "06001", "Alameda", "Oakland"))
+        self.assertEqual(values[7], ["West", "West Coast"])
+        self.assertEqual(json.loads(values[1])["city"], "Oakland")
+
     def test_save_preserves_classifications_and_rechecks_duplicate_under_lock(self):
         connection = TransactionConnection()
         repository = PostgresRepository(connection)
