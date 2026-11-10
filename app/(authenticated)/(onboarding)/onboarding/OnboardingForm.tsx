@@ -28,28 +28,20 @@ import {
 import COLORS from "@/styles/colors";
 
 type OnboardingFormProps = {
-  action?: (
-    prevState: OnboardingState,
-    formData: FormData,
-  ) => Promise<OnboardingState>;
-  initialFields?: OnboardingFields & { email?: string };
-  submitLabel?: string;
-  showEmail?: boolean;
   splitSteps?: boolean;
 };
 
 const stepOneFields = ["firstName", "lastName", "phone"] as const;
 
+const initialState: OnboardingState = {};
+
 export default function OnboardingForm({
-  action = submitOnboarding,
-  initialFields,
-  submitLabel = "Continue",
-  showEmail = false,
   splitSteps = false,
 }: OnboardingFormProps) {
-  const initialState: OnboardingState = { fields: initialFields };
-
-  const [state, formAction, isPending] = useActionState(action, initialState);
+  const [state, formAction, isPending] = useActionState(
+    submitOnboarding,
+    initialState,
+  );
   const [step, setStep] = useState<1 | 2>(1);
   const [stepErrors, setStepErrors] = useState<OnboardingErrors | null>(null);
   const [lastState, setLastState] = useState(state);
@@ -169,17 +161,6 @@ export default function OnboardingForm({
           maxLength={onboardingFieldLimits.role}
           error={errors.role}
         />
-        {showEmail && (
-          <TextField
-            name="email"
-            label="Email"
-            type="email"
-            autoComplete="email"
-            defaultValue={state.fields?.email}
-            required
-            error={state.errors?.email}
-          />
-        )}
       </StepFields>
 
       {errors.form && <FormMessage role="alert">{errors.form}</FormMessage>}
@@ -189,7 +170,7 @@ export default function OnboardingForm({
         <PrimaryButton type="submit">Continue</PrimaryButton>
       ) : (
         <PrimaryButton type="submit" disabled={isPending}>
-          {isPending ? "Saving..." : submitLabel}
+          {isPending ? "Saving..." : "Continue"}
         </PrimaryButton>
       )}
       {splitSteps && step === 2 && (
@@ -211,7 +192,7 @@ function TextField({
   error,
   ...inputProps
 }: {
-  name: keyof OnboardingFields | "email";
+  name: keyof OnboardingFields;
   label: string;
   error?: string;
 } & Omit<ComponentProps<typeof Input>, "id" | "name">) {
