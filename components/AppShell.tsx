@@ -7,6 +7,7 @@ import { dmSans } from "@/styles/fonts";
 type AppShellProps = {
   firstName: string;
   lastName: string;
+  email: string;
   isAdmin: boolean;
   children: ReactNode;
 };
@@ -16,12 +17,18 @@ type AppShellProps = {
 export default function AppShell({
   firstName,
   lastName,
+  email,
   isAdmin,
   children,
 }: AppShellProps) {
   return (
     <Canvas className={dmSans.className}>
-      <TopBar firstName={firstName} lastName={lastName} isAdmin={isAdmin} />
+      <TopBar
+        firstName={firstName}
+        lastName={lastName}
+        email={email}
+        isAdmin={isAdmin}
+      />
       {children}
     </Canvas>
   );

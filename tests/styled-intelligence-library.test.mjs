@@ -31,6 +31,12 @@ function load(path, modules = {}) {
 const colors = load("../styles/colors.ts");
 const TopBar = load("../components/TopBar.tsx", {
   "@/styles/colors": colors,
+  "@/styles/popover": load("../styles/popover.ts", {
+    "@/styles/colors": colors,
+  }),
+  "@/lib/utils": load("../lib/utils.ts"),
+  "@/lib/hooks/useAnchoredPopover": load("../lib/hooks/useAnchoredPopover.ts"),
+  "@/actions/auth/actions": { signOut: async () => {} },
   "@/assets/icons/sidebar-toggle.svg": "/sidebar.svg",
   "next/navigation": { usePathname: () => "/intelligence-library" },
   "next/image": props => React.createElement("img", props),
@@ -178,6 +184,7 @@ function pageHarness(isAdmin = true) {
       ],
       firstName: "Nataliia",
       lastName: "Kulieshova",
+      email: "nataliia@example.org",
       isAdmin,
     });
   };
@@ -269,10 +276,13 @@ test("shared top bar derives initials from names, trimming spaces and preserving
       React.createElement(TopBar.default, {
         firstName,
         lastName,
+        email: "person@example.org",
         isAdmin: false,
       }),
     );
-    const avatar = html.match(/<a\b[^>]*aria-label="Profile"[^>]*>(.*?)<\/a>/);
+    const avatar = html.match(
+      /<button\b[^>]*aria-label="Account menu"[^>]*>(.*?)<\/button>/,
+    );
     assert.ok(avatar);
     assert.equal(avatar[1], expected);
   }

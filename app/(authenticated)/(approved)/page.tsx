@@ -14,6 +14,7 @@ export default async function Home() {
     <HomeView
       firstName={user.firstName}
       lastName={user.lastName}
+      email={user.email}
       isAdmin={user.isAdmin}
       today={new Date().toISOString()}
       trends={trends}
