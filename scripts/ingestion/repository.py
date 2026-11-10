@@ -89,7 +89,23 @@ class PostgresRepository:
                  intelligence["title"], intelligence["summary"], *classifications),
             ).fetchone()
             item_id = str(row[0])
+            self.save_locations(item_id, intelligence["geography"])
         return item_id
+
+    def save_locations(self, item_id: str, locations: list[dict]) -> None:
+        for location in locations:
+            standardized = location.get("standardized") or {}
+            self.connection.execute(
+                """INSERT INTO item_locations (
+                    item_id, raw_extracted, country_code, state_code,
+                    county_fips, county_name, city, regions, resolution_status
+                ) VALUES (%s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s)""",
+                (item_id, json.dumps(location["raw_extracted"], ensure_ascii=False),
+                 standardized.get("country_code") or location["raw_extracted"].get("country_code"), standardized.get("state_code"),
+                 standardized.get("county_fips"), standardized.get("county"),
+                 standardized.get("city"), standardized.get("regions", []),
+                 standardized.get("status", "unmatched")),
+            )
 
     def update_last_crawled_at(self, source_id: str, at: datetime) -> None:
         with self.connection.transaction():

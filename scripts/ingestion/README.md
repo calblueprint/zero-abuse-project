@@ -89,12 +89,29 @@ errors raise before a completed crawl and do not advance the timestamp.
 
 ## Persistence boundaries
 
-This change deliberately keeps the existing database schema and library queries.
-Carolyn's classification lists (including geography objects) are stored as JSON
-strings in the current varchar columns. They can be decoded without losing list
-values, but the current library's exact scalar filters do **not** match individual
-labels in those lists, and displays may show JSON text. Supporting that in the
-library is a separate change. There is no database column for the extractor's
+Apply the Drizzle `0009_item_locations` migration before deploying ingestion or
+library queries. Geography is written to `item_locations` in the same transaction
+as the item. Each row preserves raw JSON and the supported standardized fields;
+uncertain locations keep their resolution status. The original `geography`
+column remains intact for compatibility. Other classification lists still use
+JSON strings in varchar columns.
+
+After the migration, run `python -m scripts.ingestion.backfill_locations` from the
+project root. It loads `.env.local`, processes 100 items at a time, and skips items
+that already have location rows. Each item commits independently, so interrupted
+runs can resume. Unsupported legacy values remain unchanged and use the legacy
+filter fallback. Backfill re-resolves stored location mentions; it makes no LLM
+or network requests. It cannot recover locations absent from the stored data.
+
+The existing Geography filter matches country codes, state codes, county names,
+city names, and regions using `EXISTS`, so matching multiple locations never
+duplicates an item. Selections within Geography use OR, as before. Separate
+country/state/city controls and geographic sorting are not implemented here.
+
+The location table has RLS enabled with no public API policies, matching the
+existing server-only data access. Browser clients cannot read or write it directly.
+
+There is no database column for the extractor's
 `description`, article body, or author, so this adapter does not persist those fields.
 
 Duplicate checks normalize URLs using the crawler's existing rules. They do not
