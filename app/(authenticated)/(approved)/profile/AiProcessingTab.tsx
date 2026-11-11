@@ -124,6 +124,9 @@ export default function AiProcessingTab({ isAdmin }: { isAdmin: boolean }) {
           </InfoList>
         )}
         <Footer>
+          <Hint id={fieldId("unavailable")}>
+            Saving AI processing settings is coming soon.
+          </Hint>
           <Actions>
             <TextButton
               type="button"

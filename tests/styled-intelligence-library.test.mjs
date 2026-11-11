@@ -51,6 +51,9 @@ const libraryStyles = load("../components/intelligence-library/styles.tsx", {
 const libraryModules = {
   "@/styles/colors": colors,
   "@/lib/intelligence-library/pattern-filters": filters,
+  "@/components/Tabs": load("../components/Tabs.tsx", {
+    "@/styles/colors": colors,
+  }),
   "./styles": libraryStyles,
 };
 const PatternCard = load(

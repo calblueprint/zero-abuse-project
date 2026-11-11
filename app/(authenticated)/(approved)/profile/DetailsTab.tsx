@@ -30,6 +30,21 @@ type DetailsTabProps = {
 export default function DetailsTab({ profile, onNotice }: DetailsTabProps) {
   const [editing, setEditing] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [isResending, startResend] = useTransition();
+
+  const resend = () =>
+    startResend(async () => {
+      let message: string;
+      try {
+        const { error } = await resendEmailChange();
+        message = error ?? "We sent you new links.";
+      } catch (error) {
+        unstable_rethrow(error);
+        message = "We couldn't resend the link. Try again.";
+      }
+      startResend(() => onNotice(message));
+    });
+
   const editButtonRef = useRef<HTMLButtonElement>(null);
   const wasEditing = useRef(false);
 
@@ -49,6 +64,17 @@ export default function DetailsTab({ profile, onNotice }: DetailsTabProps) {
       onNotice("Profile saved.");
     }
   };
+
+  const closeEmailDialog = () => {
+    setSentTo(null);
+    editButtonRef.current?.focus();
+  };
+
+  const resendButton = (
+    <TextButton type="button" onClick={resend} disabled={isResending}>
+      {isResending ? "Sending…" : "Resend link"}
+    </TextButton>
+  );
 
   return (
     <Section>
@@ -83,10 +109,14 @@ export default function DetailsTab({ profile, onNotice }: DetailsTabProps) {
             <InfoValue>
               {profile.email}
               {profile.pendingEmail && (
-                <PendingNote>
-                  Change to <strong>{profile.pendingEmail}</strong> is waiting
-                  for confirmation. Open the links we emailed you to finish it.
-                </PendingNote>
+                <>
+                  <PendingNote>
+                    Change to <strong>{profile.pendingEmail}</strong> is waiting
+                    for confirmation. Open the links we emailed you to finish
+                    it.
+                  </PendingNote>
+                  {resendButton}
+                </>
               )}
             </InfoValue>
           </InfoRow>
@@ -104,69 +134,26 @@ export default function DetailsTab({ profile, onNotice }: DetailsTabProps) {
           </InfoRow>
         </InfoList>
       )}
-      <EmailSentDialog
-        newEmail={sentTo}
-        currentEmail={profile.email}
-        onClose={() => {
-          setSentTo(null);
-          editButtonRef.current?.focus();
-        }}
-        onNotice={onNotice}
-      />
+      <Modal
+        open={Boolean(sentTo)}
+        onClose={closeEmailDialog}
+        title="Check your emails"
+        description={
+          <>
+            We sent links to <b>{sentTo}</b> and <b>{profile.email}</b>. Your
+            email changes after you open both.
+          </>
+        }
+        width={480}
+      >
+        <Actions>
+          {resendButton}
+          <SoftButton type="button" onClick={closeEmailDialog} data-autofocus>
+            Done
+          </SoftButton>
+        </Actions>
+      </Modal>
     </Section>
-  );
-}
-
-type EmailSentDialogProps = {
-  newEmail: string | null;
-  currentEmail: string;
-  onClose: () => void;
-  onNotice: (message: string) => void;
-};
-
-function EmailSentDialog({
-  newEmail,
-  currentEmail,
-  onClose,
-  onNotice,
-}: EmailSentDialogProps) {
-  const [isResending, startResend] = useTransition();
-
-  const resend = () =>
-    startResend(async () => {
-      let message: string;
-      try {
-        const { error } = await resendEmailChange();
-        message = error ?? "We sent you new links.";
-      } catch (error) {
-        unstable_rethrow(error);
-        message = "We couldn't resend the link. Try again.";
-      }
-      startResend(() => onNotice(message));
-    });
-
-  return (
-    <Modal
-      open={Boolean(newEmail)}
-      onClose={onClose}
-      title="Check your emails"
-      description={
-        <>
-          We sent links to <b>{newEmail}</b> and <b>{currentEmail}</b>. Your
-          email changes after you open both.
-        </>
-      }
-      width={480}
-    >
-      <Actions>
-        <TextButton type="button" onClick={resend} disabled={isResending}>
-          {isResending ? "Sending…" : "Resend link"}
-        </TextButton>
-        <SoftButton type="button" onClick={onClose} data-autofocus>
-          Done
-        </SoftButton>
-      </Actions>
-    </Modal>
   );
 }
 

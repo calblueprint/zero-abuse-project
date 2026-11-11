@@ -1,7 +1,6 @@
 const MEMBER_CAPABILITIES = [
   "Browse and search the intelligence library",
   "View emerging patterns",
-  "Choose where your AI requests run",
 ] as const;
 
 const ADMIN_CAPABILITIES = [
