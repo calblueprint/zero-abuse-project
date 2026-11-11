@@ -101,7 +101,10 @@ function loadProfileActions({
       createSupabaseServerClient: async () => supabase,
     },
     "@/lib/auth/access": {
-      requireApprovedUser: async () => ({ userId: "user-1" }),
+      requireApprovedUser: async () => ({
+        userId: "user-1",
+        email: currentEmail,
+      }),
     },
     "@/lib/auth/user": {
       getAuthEmailState: async () => {
@@ -135,8 +138,10 @@ function profileForm(email) {
   return form;
 }
 
-test("saving without an email change reports saved and sends no email", async () => {
-  const { actions, calls } = loadProfileActions();
+test("saving without an email change skips the extra Auth request", async () => {
+  const { actions, calls } = loadProfileActions({
+    emailStateError: new Error("Unexpected Auth request"),
+  });
   const result = await actions.submitProfileUpdate(
     {},
     profileForm(" Jiwoo@Example.org "),
@@ -177,7 +182,7 @@ test("a failed email change keeps the other edits and has no status", async () =
   assert.equal(result.message, "Your other changes were saved.");
 });
 
-test("a failed auth lookup stops the save before anything is written", async () => {
+test("a failed auth lookup for an email change stops the save", async () => {
   const { actions, calls } = loadProfileActions({
     emailStateError: new Error("network"),
   });
@@ -186,7 +191,7 @@ test("a failed auth lookup stops the save before anything is written", async () 
   try {
     const result = await actions.submitProfileUpdate(
       {},
-      profileForm("jiwoo@example.org"),
+      profileForm("new@example.org"),
     );
     assert.equal(result.status, undefined);
     assert.ok(result.errors.form);

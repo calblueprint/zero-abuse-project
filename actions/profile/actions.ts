@@ -57,10 +57,12 @@ export async function submitProfileUpdate(
     };
   }
 
-  let currentEmail: string;
+  let currentEmail = user.email.trim().toLowerCase();
   try {
-    // Read before saving, so a failure here can't follow a successful save.
-    ({ email: currentEmail } = await getAuthEmailState());
+    // Fetch the latest Auth state only when the submitted email differs from the verified session.
+    if (email !== currentEmail) {
+      ({ email: currentEmail } = await getAuthEmailState());
+    }
     await updateUserProfile(user.userId, result.data);
   } catch (error) {
     console.error("Profile update failed:", error);
