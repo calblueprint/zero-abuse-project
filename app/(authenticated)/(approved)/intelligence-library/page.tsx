@@ -31,6 +31,7 @@ export default async function IntelligenceLibraryPreviewPage({
       initialView={params.view === "items" ? "items" : "patterns"}
       firstName={user.firstName}
       lastName={user.lastName}
+      email={user.email}
       isAdmin={user.isAdmin}
     />
   );

@@ -48,6 +48,12 @@ const COLORS = {
   researchText: "#4A3F85",
   platformTint: "#EBEFF4",
   platformText: "#46505E",
+
+  // Profile (Figma "6 · Profile")
+  fieldFill: "#F3F5F9",
+  segmentTrack: "#F3F5FA",
+  softActionTint: "#DCE1FB",
+  softActionText: "#2A3799",
 };
 
 export default COLORS;

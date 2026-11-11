@@ -21,7 +21,6 @@ const buttonBase = css`
   }
 `;
 
-// Figma "HF / Button / Primary"
 export const PrimaryButton = styled.button`
   ${buttonBase}
   padding: 9px 17px;
@@ -35,7 +34,6 @@ export const PrimaryButton = styled.button`
   }
 `;
 
-// Figma "HF / Button / Secondary"
 export const SecondaryButton = styled.button<{ $compact?: boolean }>`
   ${buttonBase}
   height: ${({ $compact }) => ($compact ? "34px" : "auto")};
@@ -49,7 +47,18 @@ export const SecondaryButton = styled.button<{ $compact?: boolean }>`
   }
 `;
 
-// The dialogs' borderless "Cancel".
+export const SoftButton = styled.button`
+  ${buttonBase}
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: ${COLORS.softActionTint};
+  color: ${COLORS.softActionText};
+
+  &:hover:not(:disabled) {
+    filter: brightness(0.97);
+  }
+`;
+
 export const TextButton = styled.button`
   ${buttonBase}
   height: 42px;

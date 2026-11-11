@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { TabButton, TabRow } from "@/components/Tabs";
 import COLORS from "@/styles/colors";
 
 export default function LibraryStatusTabs<Status extends string>({
@@ -15,11 +16,11 @@ export default function LibraryStatusTabs<Status extends string>({
   label: string;
 }) {
   return (
-    <StatusTabs aria-label={label}>
+    <StatusTabs as="nav" aria-label={label}>
       {statuses.map(value => (
         <StatusTab
           key={value}
-          $active={status === value}
+          $selected={status === value}
           aria-pressed={status === value}
           type="button"
           onClick={() => onChange(value)}
@@ -34,34 +35,17 @@ export default function LibraryStatusTabs<Status extends string>({
   );
 }
 
-const StatusTabs = styled.nav`
-  display: flex;
-  gap: 28px;
-  overflow-x: auto;
-  border-bottom: 1px solid ${COLORS.borderDefault};
+const StatusTabs = styled(TabRow)`
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
   }
 `;
 
-const StatusTab = styled.button<{ $active: boolean }>`
-  display: inline-flex;
-  height: 44px;
-  flex: none;
-  align-items: center;
-  gap: 8px;
-  border: 0;
-  border-bottom: ${p => (p.$active ? `2px solid ${COLORS.actionNavy}` : "2px solid transparent")};
-  background: transparent;
-  padding: 0;
-  color: ${p => (p.$active ? COLORS.actionNavy : COLORS.secondaryText)};
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-  white-space: nowrap;
-  cursor: pointer;
+const StatusTab = styled(TabButton)`
+  border-bottom-width: 2px;
+  border-bottom-style: solid;
+  border-bottom-color: ${p => (p.$selected ? COLORS.actionNavy : "transparent")};
 `;
 
 const StatusCount = styled.span<{ $tone: string }>`
