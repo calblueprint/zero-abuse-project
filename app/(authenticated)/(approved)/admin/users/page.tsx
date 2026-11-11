@@ -1,17 +1,25 @@
+import type { AccessCategory } from "./AccessFilters";
+import type { PeopleSort } from "./PeopleSortDropdown";
 import Link from "next/link";
 import { and, eq } from "drizzle-orm";
 import styled from "styled-components";
+import AppShell, { Card } from "@/components/AppShell";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/access";
-import { approveUser, rejectUser, restoreUser } from "./actions";
+import AccessFilters from "./AccessFilters";
+import { approveUser, restoreUser } from "./actions";
+import InvitePerson from "./InvitePerson";
 import MemberActions from "./MemberActions";
+import PeopleSortDropdown from "./PeopleSortDropdown";
+import RejectRequestButton from "./RejectRequest";
+import ReviewAccessRequest from "./ReviewAccessRequest";
 
 type TabKey = "requests" | "all" | "admins" | "revoked";
-type SortKey = "recent" | "name";
+const accessCategoryValues = ["admin", "member", "revoked", "pending"] as const;
 type Props = {
   searchParams: Promise<{
-    filter?: string;
+    access?: string;
     notice?: string;
     q?: string;
     sort?: string;
@@ -23,6 +31,7 @@ type Person = {
   firstName: string;
   lastName: string;
   email: string | null;
+  phone: string | null;
   organization: string | null;
   role: string | null;
   isAdmin: boolean;
@@ -57,13 +66,11 @@ function Actions({ user, adminId }: { user: Person; adminId: string }) {
   if (user.approvalStatus === "pending")
     return (
       <ActionSet>
+        <RejectRequestButton applicant={user} />
         <form action={approveUser.bind(null, user.userId)}>
           <Action $primary type="submit">
             Approve
           </Action>
-        </form>
-        <form action={rejectUser.bind(null, user.userId)}>
-          <Action type="submit">Reject</Action>
         </form>
       </ActionSet>
     );
@@ -95,15 +102,27 @@ function Actions({ user, adminId }: { user: Person; adminId: string }) {
   return null;
 }
 
-function PersonRow({ user, adminId }: { user: Person; adminId: string }) {
+function PersonRow({
+  user,
+  adminId,
+  date,
+}: {
+  user: Person;
+  adminId: string;
+  date: string | null;
+}) {
   return (
     <Row>
       <PersonCell>
         <Avatar aria-hidden="true">{initials(user)}</Avatar>
         <div>
-          <Name>
-            {user.firstName} {user.lastName}
-          </Name>
+          {user.approvalStatus === "pending" ? (
+            <ReviewAccessRequest applicant={user} />
+          ) : (
+            <Name>
+              {user.firstName} {user.lastName}
+            </Name>
+          )}
           <Muted>{user.email ?? "Email unavailable"}</Muted>
         </div>
       </PersonCell>
@@ -120,7 +139,7 @@ function PersonRow({ user, adminId }: { user: Person; adminId: string }) {
             : statusLabel(user.approvalStatus)}
         </Badge>
       </div>
-      <Muted>{displayDate(user.approvalDecidedAt)}</Muted>
+      <Muted>{displayDate(date)}</Muted>
       <ActionCell>
         <Actions adminId={adminId} user={user} />
       </ActionCell>
@@ -130,15 +149,16 @@ function PersonRow({ user, adminId }: { user: Person; adminId: string }) {
 
 export default async function AdminUsersPage({ searchParams }: Props) {
   const admin = await requireAdmin();
-  const { filter, notice, q, sort, tab } = await searchParams;
+  const { access, notice, q, sort, tab } = await searchParams;
   const activeTab: TabKey =
     tab === "all" || tab === "admins" || tab === "revoked" ? tab : "requests";
-  const sortKey: SortKey = sort === "name" ? "name" : "recent";
+  const sortKey: PeopleSort = sort === "admins" ? "admins" : "recent";
   const fields = {
     userId: users.userId,
     firstName: users.firstName,
     lastName: users.lastName,
     email: users.email,
+    phone: users.phone,
     organization: users.organization,
     role: users.role,
     isAdmin: users.isAdmin,
@@ -163,6 +183,19 @@ export default async function AdminUsersPage({ searchParams }: Props) {
   ]);
   const allCount =
     pending.length + admins.length + guests.length + revoked.length;
+  const accessCounts: Record<AccessCategory, number> = {
+    admin: admins.length,
+    member: guests.length,
+    pending: pending.length,
+    revoked: revoked.length,
+  };
+  const accessFilters = Array.from(
+    new Set(
+      (access?.split(",") ?? []).filter((value): value is AccessCategory =>
+        accessCategoryValues.includes(value as AccessCategory),
+      ),
+    ),
+  );
   const tabUsers =
     activeTab === "all"
       ? [...pending, ...admins, ...guests, ...revoked]
@@ -171,6 +204,21 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         : activeTab === "revoked"
           ? revoked
           : pending;
+  const dateColumnLabel =
+    activeTab === "requests"
+      ? "Requested"
+      : activeTab === "revoked"
+        ? "Revoked"
+        : "Joined";
+  const dateForUser = (user: Person) => {
+    if (activeTab === "revoked") return user.approvalDecidedAt;
+    if (
+      (activeTab === "all" || activeTab === "admins") &&
+      user.approvalStatus === "approved"
+    )
+      return user.approvalDecidedAt;
+    return null;
+  };
   const query = q?.trim().toLocaleLowerCase() ?? "";
   const filteredUsers = tabUsers
     .filter(user => {
@@ -185,23 +233,31 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         .toLocaleLowerCase();
       return (
         (!query || searchable.includes(query)) &&
-        (filter !== "admin" || user.isAdmin) &&
-        (filter !== "member" || !user.isAdmin) &&
-        (filter !== "organization" || Boolean(user.organization))
+        (!accessFilters.length ||
+          accessFilters.some(category =>
+            category === "admin"
+              ? user.approvalStatus === "approved" && user.isAdmin
+              : category === "member"
+                ? user.approvalStatus === "approved" && !user.isAdmin
+                : category === "pending"
+                  ? user.approvalStatus === "pending"
+                  : user.approvalStatus === "rejected",
+          ))
       );
     })
     .sort((left, right) => {
-      if (sortKey === "name")
-        return `${left.lastName} ${left.firstName}`.localeCompare(
-          `${right.lastName} ${right.firstName}`,
-        );
-      return (right.approvalDecidedAt ?? "").localeCompare(
+      if (sortKey === "admins" && left.isAdmin !== right.isAdmin)
+        return left.isAdmin ? -1 : 1;
+
+      const dateOrder = (right.approvalDecidedAt ?? "").localeCompare(
         left.approvalDecidedAt ?? "",
       );
+      return dateOrder;
     });
   const currentParams = new URLSearchParams();
   if (q) currentParams.set("q", q);
-  if (filter) currentParams.set("filter", filter);
+  if (accessFilters.length)
+    currentParams.set("access", accessFilters.join(","));
   if (sortKey !== "recent") currentParams.set("sort", sortKey);
   const tabHref = (nextTab: TabKey) => {
     const params = new URLSearchParams(currentParams);
@@ -209,122 +265,110 @@ export default async function AdminUsersPage({ searchParams }: Props) {
     return `/admin/users${params.size ? `?${params}` : ""}`;
   };
   return (
-    <Page>
-      <Content>
-        <Heading>
-          <h1>People</h1>
-          <Invite
-            disabled
-            title="Invitations will be added in Phase 2"
-            type="button"
-          >
-            Invite person
-          </Invite>
-        </Heading>
-        {notice && Object.hasOwn(notices, notice) && (
-          <Notice role="status">
-            {notices[notice as keyof typeof notices]}
-          </Notice>
-        )}
-        <Toolbar as="form" aria-label="People list controls" method="get">
-          <Search>
-            <Icon viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="6.5" />
-              <path d="m16 16 4 4" />
-            </Icon>
-            <SearchInput
-              defaultValue={q}
-              name="q"
-              placeholder="Search by name, email, or organization"
-            />
-          </Search>
-          <Control as="label" aria-label="Filter people">
-            <Icon viewBox="0 0 24 24">
-              <path d="M4 7h16M4 17h16M8 4v6M16 14v6" />
-            </Icon>
-            <FilterSelect defaultValue={filter ?? ""} name="filter">
-              <option value="">Filters</option>
-              <option value="admin">Admins</option>
-              <option value="member">Non-admins</option>
-              <option value="organization">With organization</option>
-            </FilterSelect>
-          </Control>
-          <i />
-          <Sort as="label">
-            Sort
-            <SortSelect defaultValue={sortKey} name="sort">
-              <option value="recent">Most recent</option>
-              <option value="name">Name</option>
-            </SortSelect>
-          </Sort>
-          <input
-            name="tab"
-            type="hidden"
-            value={activeTab === "requests" ? "" : activeTab}
-          />
-          <Apply type="submit">Apply</Apply>
-        </Toolbar>
-        <Tabs aria-label="People categories">
-          <Tab
-            $active={activeTab === "requests"}
-            as={Link}
-            href={tabHref("requests")}
-          >
-            Access requests{" "}
-            <Count $active={activeTab === "requests"}>{pending.length}</Count>
-          </Tab>
-          <Tab $active={activeTab === "all"} as={Link} href={tabHref("all")}>
-            All <Count $active={activeTab === "all"}>{allCount}</Count>
-          </Tab>
-          <Tab
-            $active={activeTab === "admins"}
-            as={Link}
-            href={tabHref("admins")}
-          >
-            Admins{" "}
-            <Count $active={activeTab === "admins"}>{admins.length}</Count>
-          </Tab>
-          <Tab
-            $active={activeTab === "revoked"}
-            as={Link}
-            href={tabHref("revoked")}
-          >
-            Revoked{" "}
-            <Count $active={activeTab === "revoked"}>{revoked.length}</Count>
-          </Tab>
-        </Tabs>
-        <Results aria-label={`${activeTab} people`}>
-          <Header aria-hidden="true">
-            <span>Person</span>
-            <span>Organization and role</span>
-            <span>Access</span>
-            <span>Decision date</span>
-            <span />
-          </Header>
-          {filteredUsers.length ? (
-            filteredUsers.map(user => (
-              <PersonRow adminId={admin.userId} key={user.userId} user={user} />
-            ))
-          ) : (
-            <Empty>No people match the current view.</Empty>
+    <AppShell
+      firstName={admin.firstName}
+      isAdmin={admin.isAdmin}
+      lastName={admin.lastName}
+    >
+      <Page>
+        <Content>
+          <Heading>
+            <h1>People</h1>
+            <InvitePerson />
+          </Heading>
+          {notice && Object.hasOwn(notices, notice) && (
+            <Notice role="status">
+              {notices[notice as keyof typeof notices]}
+            </Notice>
           )}
-        </Results>
-      </Content>
-    </Page>
+          <Toolbar as="form" aria-label="People list controls" method="get">
+            <Search>
+              <Icon viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="6.5" />
+                <path d="m16 16 4 4" />
+              </Icon>
+              <SearchInput
+                defaultValue={q}
+                name="q"
+                placeholder="Search by name, email, or organization"
+              />
+            </Search>
+            <AccessFilters applied={accessFilters} counts={accessCounts} />
+            <i />
+            <PeopleSortDropdown value={sortKey} />
+            <input
+              name="access"
+              type="hidden"
+              value={accessFilters.join(",")}
+            />
+            <input name="sort" type="hidden" value={sortKey} />
+            <input
+              name="tab"
+              type="hidden"
+              value={activeTab === "requests" ? "" : activeTab}
+            />
+          </Toolbar>
+          <Tabs aria-label="People categories">
+            <Tab
+              $active={activeTab === "requests"}
+              as={Link}
+              href={tabHref("requests")}
+            >
+              Access requests <Count $requests>{pending.length}</Count>
+            </Tab>
+            <Tab $active={activeTab === "all"} as={Link} href={tabHref("all")}>
+              All <Count>{allCount}</Count>
+            </Tab>
+            <Tab
+              $active={activeTab === "admins"}
+              as={Link}
+              href={tabHref("admins")}
+            >
+              Admins <Count>{admins.length}</Count>
+            </Tab>
+            <Tab
+              $active={activeTab === "revoked"}
+              as={Link}
+              href={tabHref("revoked")}
+            >
+              Revoked <Count>{revoked.length}</Count>
+            </Tab>
+          </Tabs>
+          <Results aria-label={`${activeTab} people`}>
+            <Header aria-hidden="true">
+              <span>Person</span>
+              <span>Organization and role</span>
+              <span>Access</span>
+              <span>{dateColumnLabel}</span>
+              <span />
+            </Header>
+            {filteredUsers.length ? (
+              filteredUsers.map(user => (
+                <PersonRow
+                  adminId={admin.userId}
+                  date={dateForUser(user)}
+                  key={user.userId}
+                  user={user}
+                />
+              ))
+            ) : (
+              <Empty>No people match the current view.</Empty>
+            )}
+          </Results>
+        </Content>
+      </Page>
+    </AppShell>
   );
 }
 
-const Page = styled.main`
-  min-height: 100vh;
-  background: #fff;
+const Page = styled(Card)`
   color: #20252b;
-  font-family: var(--font-sans), sans-serif;
 `;
 const Content = styled.div`
   width: 100%;
-  padding: 96px 60px 48px;
+  padding: 36px 48px 24px;
   @media (max-width: 760px) {
-    padding: 40px 20px;
+    padding: 28px 20px 24px;
   }
 `;
 const Heading = styled.div`
@@ -337,18 +381,6 @@ const Heading = styled.div`
     font-weight: 400;
     letter-spacing: -0.4px;
     line-height: 42px;
-  }
-`;
-const Invite = styled.button`
-  margin-left: auto;
-  padding: 10px 18px;
-  color: #2a3799;
-  background: #dce1fb;
-  border: 0;
-  border-radius: 10px;
-  font: 500 14px/20px inherit;
-  &:disabled {
-    cursor: not-allowed;
   }
 `;
 const Notice = styled.p`
@@ -402,58 +434,6 @@ const Icon = styled.svg`
   stroke-linecap: round;
   stroke-width: 1.8px;
 `;
-const Control = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 16px 0 14px;
-  background: #f3f5f9;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-`;
-const FilterSelect = styled.select`
-  appearance: none;
-  color: #20252b;
-  background: transparent;
-  border: 0;
-  font: inherit;
-  outline: 0;
-`;
-const Sort = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 12px 0 16px;
-  color: #5f6875;
-  background: #f3f5f9;
-  border-radius: 10px;
-  font-size: 14px;
-  white-space: nowrap;
-  b {
-    color: #20252b;
-    font-weight: 500;
-  }
-`;
-const SortSelect = styled.select`
-  color: #20252b;
-  background: transparent;
-  border: 0;
-  font: 500 14px inherit;
-  outline: 0;
-`;
-const Apply = styled.button`
-  height: 36px;
-  padding: 0 12px;
-  color: #2a3799;
-  background: #dce1fb;
-  border: 0;
-  border-radius: 10px;
-  cursor: pointer;
-  font: 500 14px inherit;
-`;
 const Tabs = styled.div`
   display: flex;
   gap: 28px;
@@ -472,11 +452,11 @@ const Tab = styled.div<{ $active?: boolean }>`
   text-decoration: none;
   white-space: nowrap;
 `;
-const Count = styled.span<{ $active?: boolean }>`
+const Count = styled.span<{ $requests?: boolean }>`
   min-width: 24px;
   padding: 1px 8px;
-  color: ${p => (p.$active ? "#5c4800" : "#8791a0")};
-  background: ${p => (p.$active ? "#fbeda3" : "#eef2f6")};
+  color: ${p => (p.$requests ? "#5c4800" : "#8791a0")};
+  background: ${p => (p.$requests ? "#fbeda3" : "#eef2f6")};
   border-radius: 999px;
   font-size: 13px;
   font-weight: 400;
@@ -484,6 +464,7 @@ const Count = styled.span<{ $active?: boolean }>`
   text-align: center;
 `;
 const Results = styled.section`
+  margin-top: 24px;
   overflow-x: auto;
 `;
 const Grid = styled.div`
@@ -503,9 +484,10 @@ const Header = styled(Grid)`
   line-height: 18px;
 `;
 const Row = styled(Grid)`
+  box-sizing: border-box;
   align-items: center;
-  min-height: 80px;
-  padding: 12px 20px;
+  min-height: 69px;
+  padding: 14px 20px;
   border-top: 1px solid #e1e5eb;
 `;
 const PersonCell = styled.div`
