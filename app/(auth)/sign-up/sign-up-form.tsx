@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import { resendVerification, signUp } from "@/actions/auth/actions";
 import {
   Body,
@@ -24,11 +24,11 @@ import { setSessionValue, useSessionValue } from "../session-value";
 const EMAIL_KEY = "zap-signup-email";
 
 export function VerificationExpired() {
-  const [email, setEmail] = useState("");
-
-  useEffect(() => {
-    setEmail(localStorage.getItem(EMAIL_KEY) ?? "");
-  }, []);
+  const email = useSyncExternalStore(
+    () => () => {},
+    () => localStorage.getItem(EMAIL_KEY) ?? "",
+    () => "",
+  );
   return (
     <div>
       <Eyebrow>Welcome to ZAP</Eyebrow>

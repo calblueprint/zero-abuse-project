@@ -1,17 +1,34 @@
-import { Body, Eyebrow, Heading, PrimaryLink } from "@/components/auth/ui";
+import { signOut } from "@/actions/auth/actions";
+import {
+  Body,
+  CenterButton,
+  Eyebrow,
+  Heading,
+  PrimaryLink,
+} from "@/components/auth/ui";
 import { requireApprovedUser } from "@/lib/auth/access";
-import Confetti from "./Confetti";
 
 export default async function WelcomePage() {
-  await requireApprovedUser();
+  const user = await requireApprovedUser();
 
   return (
     <div>
-      <Confetti />
-      <Eyebrow>Setup complete</Eyebrow>
-      <Heading>You&rsquo;re ready</Heading>
-      <Body>Explore recent intelligence and sources.</Body>
+      <Eyebrow>Access request</Eyebrow>
+      <Heading>Access approved</Heading>
+      <Body
+        style={{
+          textAlign: "center",
+          color: "#20252B",
+          fontWeight: 500,
+          lineHeight: "20px",
+        }}
+      >
+        {user.email}
+      </Body>
       <PrimaryLink href="/">Open workspace</PrimaryLink>
+      <form action={signOut}>
+        <CenterButton type="submit">Sign out</CenterButton>
+      </form>
     </div>
   );
 }

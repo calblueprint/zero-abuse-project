@@ -1,11 +1,6 @@
 import { redirect } from "next/navigation";
 import { signOut } from "@/actions/auth/actions";
-import {
-  Body,
-  CenterButton,
-  Heading,
-  PrimaryButton,
-} from "@/components/auth/ui";
+import { Body, CenterButton, Eyebrow, Heading } from "@/components/auth/ui";
 import { requireAccessUser } from "@/lib/auth/access";
 
 export default async function WaitingForApprovalPage() {
@@ -21,14 +16,21 @@ export default async function WaitingForApprovalPage() {
 
   return (
     <div>
-      <Heading>Your request is in review</Heading>
-      <Body>
-        A ZAP admin will review your account. You&apos;ll be able to use ZAP
-        once you&apos;re approved.
+      <Eyebrow>Access request</Eyebrow>
+      <Heading>Access pending</Heading>
+      <Body style={{ textAlign: "center" }}>
+        The ZAP team will review your access request.
       </Body>
-      <form action="/waiting-for-approval" method="get">
-        <PrimaryButton type="submit">Check again</PrimaryButton>
-      </form>
+      <Body
+        style={{
+          textAlign: "center",
+          color: "#20252B",
+          fontWeight: 500,
+          lineHeight: "20px",
+        }}
+      >
+        {user.email}
+      </Body>
       <form action={signOut}>
         <CenterButton type="submit">Sign out</CenterButton>
       </form>

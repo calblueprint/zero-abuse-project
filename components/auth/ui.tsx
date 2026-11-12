@@ -53,7 +53,7 @@ const primaryStyles = css`
   }
 `;
 
-const Shell = styled.div`
+const Shell = styled.div<{ $appearance?: AuthAppearance }>`
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -172,10 +172,10 @@ const BottomWash = styled(Wash)`
 const AuraBlue = styled(Wash)`
   width: 1587px;
   height: 948px;
-  left: -80px;
-  top: -520px;
+  left: -600px;
+  top: 150px;
   border-radius: 1587px;
-  opacity: 0.65;
+  opacity: 0.95;
   background: radial-gradient(
     50% 50% at 50% 50%,
     rgba(178, 199, 235, 0.85) 0%,

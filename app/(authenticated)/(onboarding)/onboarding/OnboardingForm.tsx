@@ -36,6 +36,7 @@ type OnboardingFormProps = {
   submitLabel?: string;
   showEmail?: boolean;
   splitSteps?: boolean;
+  email?: string;
 };
 
 const stepOneFields = ["firstName", "lastName", "phone"] as const;
@@ -46,6 +47,7 @@ export default function OnboardingForm({
   submitLabel = "Continue",
   showEmail = false,
   splitSteps = false,
+  email,
 }: OnboardingFormProps) {
   const initialState: OnboardingState = { fields: initialFields };
 
@@ -103,15 +105,22 @@ export default function OnboardingForm({
     <form action={formAction} onSubmit={handleSubmit} noValidate>
       {splitSteps && (
         <>
-          <Eyebrow>{step === 1 ? "1 of 2" : "2 of 2 · Optional"}</Eyebrow>
+          <Eyebrow>{step === 1 ? "1 of 2" : "2 of 2"}</Eyebrow>
           <StepHeading ref={headingRef} tabIndex={-1}>
-            {step === 1 ? "Welcome to ZAP" : "Your organization"}
+            {step === 1 ? "Your details" : "Your organization"}
           </StepHeading>
-          <Body>
-            {step === 1
-              ? "Tell us a little about yourself."
-              : "Add a little context for your team."}
-          </Body>
+          {email ? (
+            <Body
+              style={{
+                textAlign: "center",
+                color: "#20252B",
+                fontWeight: 500,
+                lineHeight: "20px",
+              }}
+            >
+              {email}
+            </Body>
+          ) : null}
         </>
       )}
 
@@ -162,7 +171,7 @@ export default function OnboardingForm({
         />
         <TextField
           name="role"
-          label="Role (optional)"
+          label={splitSteps ? "Job title (optional)" : "Role (optional)"}
           placeholder="Your role"
           autoComplete="organization-title"
           defaultValue={state.fields?.role}
@@ -189,7 +198,7 @@ export default function OnboardingForm({
         <PrimaryButton type="submit">Continue</PrimaryButton>
       ) : (
         <PrimaryButton type="submit" disabled={isPending}>
-          {isPending ? "Saving..." : submitLabel}
+          {isPending ? "Saving..." : splitSteps ? "Finish setup" : submitLabel}
         </PrimaryButton>
       )}
       {splitSteps && step === 2 && (
@@ -255,6 +264,8 @@ const FormMessage = styled(ErrorText)`
 
 const BackButton = styled(TextButton)`
   display: block;
+  width: 100%;
   margin-top: 16px;
   color: ${COLORS.muted};
+  text-align: center;
 `;
