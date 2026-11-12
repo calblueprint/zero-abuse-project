@@ -11,7 +11,11 @@ type TopBarProps = {
   firstName: string;
   lastName: string;
   isAdmin: boolean;
+  open?: boolean;
+  onToggle?: () => void;
 };
+
+
 
 const TABS = [
   { href: "/", label: "Home" },
@@ -28,7 +32,7 @@ const isActive = (pathname: string, href: string) =>
     ? pathname === "/"
     : pathname === href || pathname.startsWith(`${href}/`);
 
-export default function TopBar({ firstName, lastName, isAdmin }: TopBarProps) {
+export default function TopBar({ firstName, lastName, isAdmin, open = false, onToggle, }: TopBarProps) {
   const pathname = usePathname();
   const tabs = isAdmin ? [...TABS, ...ADMIN_TABS] : TABS;
   // Array.from keeps characters outside the BMP whole.
@@ -41,25 +45,33 @@ export default function TopBar({ firstName, lastName, isAdmin }: TopBarProps) {
     <Bar>
       <Side>
         {/* TODO: Enable this toggle when the sidebar is implemented. */}
-        <SidebarToggle type="button" aria-label="Toggle sidebar" disabled>
+        <SidebarToggle
+          type="button"
+          aria-label="Toggle sidebar"
+          aria-expanded={open}
+          disabled={!onToggle}
+          onClick={onToggle}
+        >
           <Image src={SidebarToggleIcon} alt="" width={18} height={18} />
         </SidebarToggle>
       </Side>
-      <Tabs aria-label="Main">
-        {tabs.map(tab => {
-          const active = isActive(pathname, tab.href);
-          return (
-            <Tab
-              key={tab.href}
-              href={tab.href}
-              $active={active}
-              aria-current={active ? "page" : undefined}
-            >
-              {tab.label}
-            </Tab>
-          );
-        })}
-      </Tabs>
+      {open ? null : (
+        <Tabs aria-label="Main">
+          {tabs.map(tab => {
+            const active = isActive(pathname, tab.href);
+            return (
+              <Tab
+                key={tab.href}
+                href={tab.href}
+                $active={active}
+                aria-current={active ? "page" : undefined}
+              >
+                {tab.label}
+              </Tab>
+            );
+          })}
+        </Tabs>
+      )}
       <Side $end>
         {/* TODO: Connect Help to the support flow when it is implemented. */}
         <Help>Help</Help>
@@ -98,6 +110,11 @@ const SidebarToggle = styled.button`
   border: none;
   border-radius: 10px;
   background: none;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: rgba(32, 37, 43, 0.12);
+  }
 `;
 
 const Tabs = styled.nav`
@@ -125,6 +142,23 @@ const Tab = styled(Link)<{ $active: boolean }>`
   white-space: nowrap;
 `;
 
+const TabButton = styled.button`
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: ${COLORS.secondaryText};
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+`;
+
 const Help = styled.span`
   color: ${COLORS.secondaryText};
   font-size: 14px;
@@ -146,3 +180,6 @@ const Avatar = styled(Link)`
   line-height: 18px;
   text-decoration: none;
 `;
+
+
+
