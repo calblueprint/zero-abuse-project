@@ -10,54 +10,114 @@ import ZapLogo from "@/assets/images/zap-logo.jpg";
 import { PASSWORD_RULES } from "@/lib/validation/password";
 import COLORS from "@/styles/colors";
 
+type AuthAppearance = "classic" | "gradient";
+
 const headingStyles = css`
   margin: 0;
-  color: ${COLORS.navy};
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 36px;
+  color: var(--auth-heading, ${COLORS.navy});
+  font-size: var(--auth-heading-size, 28px);
+  font-weight: var(--auth-heading-weight, 600);
+  line-height: var(--auth-heading-line, 36px);
+  letter-spacing: var(--auth-heading-letter-spacing, 0);
+  text-align: var(--auth-heading-align, left);
 `;
 
 const primaryStyles = css`
   display: flex;
   width: 100%;
-  height: 48px;
-  margin-top: 20px;
+  height: var(--auth-control-height, 48px);
+  margin-top: var(--auth-button-margin-top, 20px);
   padding: 0 16px;
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 6px;
-  background: ${COLORS.navy};
-  color: ${COLORS.surface};
+  border-radius: var(--auth-button-radius, 6px);
+  background: var(--auth-button, ${COLORS.navy});
+  color: var(--auth-button-text, ${COLORS.surface});
   font-family: inherit;
   font-size: 15px;
   font-weight: 500;
   line-height: 1.45;
   text-decoration: none;
   cursor: pointer;
-
   &:hover {
-    background: ${COLORS.navyHover};
+    background: var(--auth-button-hover, ${COLORS.navyHover});
   }
-
   &:focus-visible {
-    outline: 2px solid ${COLORS.navy};
+    outline: 2px solid var(--auth-focus, ${COLORS.navy});
     outline-offset: 2px;
   }
-
   &:disabled {
     cursor: wait;
     opacity: 0.7;
   }
 `;
 
-const Shell = styled.div`
+const Shell = styled.div<{ $appearance?: AuthAppearance }>`
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
   background: ${COLORS.surface};
-  color: ${COLORS.ink};
+  color: var(--auth-ink, ${COLORS.ink});
+  ${({ $appearance }) =>
+    $appearance === "gradient" &&
+    css`
+      --auth-heading: #20252b;
+      --auth-heading-size: 30px;
+      --auth-heading-line: 38px;
+      --auth-heading-weight: 400;
+      --auth-heading-letter-spacing: -0.4px;
+      --auth-heading-align: center;
+      --auth-body: #5f6875;
+      --auth-label: #5f6875;
+      --auth-label-size: 14px;
+      --auth-ink: #20252b;
+      --auth-muted: #5f6875;
+      --auth-link: #20252b;
+      --auth-link-size: 13px;
+      --auth-link-line: 18px;
+      --auth-inline-link: #20252b;
+      --auth-inline-link-size: 13px;
+      --auth-inline-link-width: 150px;
+      --auth-placeholder: #8791a0;
+      --auth-button: #182c46;
+      --auth-button-hover: #121f33;
+      --auth-button-text: #ffffff;
+      --auth-button-radius: 22px;
+      --auth-button-margin-top: 24px;
+      --auth-control-height: 44px;
+      --auth-focus: #182c46;
+      --auth-input-border: #e1e5eb;
+      --auth-input-bg: #ffffff;
+      --auth-input-radius: 22px;
+      --auth-input-padding: 0 8px 0 20px;
+      --auth-input-shadow: 0 4px 16px 0 rgba(23, 43, 69, 0.06);
+      --auth-column-width: 328px;
+      --auth-error: #c2412d;
+      --auth-error-size: 13px;
+      --auth-success: #1b6140;
+      --auth-rule-idle: #8791a0;
+      --auth-rule-error: #c2412d;
+      --auth-rule-error-icon: #c2412d;
+      --auth-surface: #ffffff;
+      --auth-overlay: rgba(24, 44, 70, 0.2);
+      --auth-overlay-align: center;
+      --auth-overlay-padding: 24px;
+      --auth-dialog-radius: 16px;
+      --auth-dialog-shadow: 0 18px 50px rgba(24, 44, 70, 0.14);
+      --auth-stage-padding: 80px 24px 48px;
+      --auth-fields-gap: 20px;
+      --auth-fields-margin-top: 28px;
+      --auth-field-gap: 8px;
+      --auth-eyebrow: #8791a0;
+      --auth-eyebrow-size: 13px;
+      --auth-eyebrow-weight: 400;
+      --auth-center-link-margin: 20px;
+      background-color: #f7f8fb;
+      overflow: hidden;
+      background-color: #ffffff;
+    `}
 `;
 
 const Accent = styled.div`
@@ -77,7 +137,86 @@ const Accent = styled.div`
   }
 `;
 
+const HelpMark = styled.span`
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 2;
+  color: #8791a0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  pointer-events: none;
+`;
+
+const Wash = styled.div`
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+`;
+
+const BottomWash = styled(Wash)`
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 420px;
+  opacity: 0.65;
+  background: linear-gradient(
+    180deg,
+    rgba(221, 229, 240, 0) 0%,
+    rgba(221, 229, 240, 0.45) 55%,
+    rgba(204, 215, 231, 0.95) 100%
+  );
+`;
+
+const AuraBlue = styled(Wash)`
+  width: 1587px;
+  height: 948px;
+  left: -600px;
+  top: 150px;
+  border-radius: 1587px;
+  opacity: 0.95;
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    rgba(178, 199, 235, 0.85) 0%,
+    rgba(178, 199, 235, 0.47) 45%,
+    rgba(178, 199, 235, 0.15) 75%,
+    rgba(178, 199, 235, 0) 100%
+  );
+  filter: blur(20px);
+`;
+
+const AuraWarm = styled(Wash)`
+  width: 1541px;
+  height: 889px;
+  right: -600px;
+  bottom: -360px;
+  border-radius: 1541px;
+  opacity: 0.65;
+  background: radial-gradient(
+    50% 50% at 50% 50%,
+    rgba(255, 227, 153, 0.75) 0%,
+    rgba(255, 227, 153, 0.41) 45%,
+    rgba(255, 227, 153, 0.14) 75%,
+    rgba(255, 227, 153, 0) 100%
+  );
+  filter: blur(20px);
+`;
+
+const TopLight = styled(Wash)`
+  width: 1100px;
+  height: 420px;
+  left: 50%;
+  top: 0;
+  border-radius: 1100px;
+  background: rgba(255, 255, 255, 0.8);
+  filter: blur(60px);
+  transform: translateX(-50%);
+`;
+
 const Stage = styled.main`
+  position: relative;
+  z-index: 1;
   flex: 1;
   display: flex;
   align-items: center;
@@ -86,7 +225,7 @@ const Stage = styled.main`
 `;
 
 const Column = styled.div`
-  width: min(360px, 100%);
+  width: min(var(--auth-column-width, 360px), 100%);
 `;
 
 const LogoWrap = styled.div`
@@ -103,7 +242,7 @@ export const DialogTitle = styled.h2`
 
 export const Body = styled.p`
   margin: 8px 0 0;
-  color: ${COLORS.muted};
+  color: var(--auth-body, ${COLORS.muted});
   font-size: 14px;
   font-weight: 400;
   line-height: 21px;
@@ -112,47 +251,55 @@ export const Body = styled.p`
 export const Fields = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 20px;
+  gap: var(--auth-fields-gap, 16px);
+  margin-top: var(--auth-fields-margin-top, 20px);
 `;
 
 export const Field = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--auth-field-gap, 6px);
 `;
 
 export const Label = styled.label`
-  color: ${COLORS.ink};
-  font-size: 13px;
+  color: var(--auth-label, ${COLORS.ink});
+  font-size: var(--auth-label-size, 13px);
   font-weight: 500;
   line-height: 20px;
 `;
 
 export const Input = styled.input<{ $invalid?: boolean }>`
   width: 100%;
-  height: 48px;
-  padding: 0 16px;
-  border-radius: 6px;
-  border: 1px solid
-    ${({ $invalid }) => ($invalid ? COLORS.error : COLORS.inputBorder)};
-  background: ${COLORS.inputBackground};
-  color: ${COLORS.ink};
+  height: var(--auth-control-height, 48px);
+  padding: var(--auth-input-padding, 0 16px);
+  border-radius: var(--auth-input-radius, 6px);
+  border: 1px solid var(--auth-input-border, ${COLORS.inputBorder});
+  background: var(--auth-input-bg, ${COLORS.inputBackground});
+  box-shadow: var(--auth-input-shadow, none);
+  color: var(--auth-ink, ${COLORS.ink});
   font-family: inherit;
   font-size: 15px;
   font-weight: 500;
   line-height: 1.45;
 
   &::placeholder {
-    color: ${COLORS.muted};
+    color: var(--auth-placeholder, ${COLORS.muted});
     opacity: 1;
   }
 
   &:focus {
-    outline: 2px solid
-      ${({ $invalid }) => ($invalid ? COLORS.error : COLORS.navy)};
+    outline: 2px solid var(--auth-focus, ${COLORS.navy});
     outline-offset: 1px;
   }
+
+  ${({ $invalid }) =>
+    $invalid &&
+    css`
+      border-color: var(--auth-error, ${COLORS.error});
+      &:focus {
+        outline-color: var(--auth-error, ${COLORS.error});
+      }
+    `}
 `;
 
 const PasswordFieldWrap = styled.div`
@@ -169,21 +316,21 @@ const PasswordToggle = styled.button`
   right: 4px;
   display: flex;
   width: 40px;
-  height: 48px;
+  height: var(--auth-control-height, 48px);
   align-items: center;
   justify-content: center;
   padding: 0;
   border: 0;
   background: transparent;
-  color: ${COLORS.muted};
+  color: var(--auth-placeholder, ${COLORS.muted});
   cursor: pointer;
 
   &:hover {
-    color: ${COLORS.ink};
+    color: var(--auth-ink, ${COLORS.ink});
   }
 
   &:focus-visible {
-    outline: 2px solid ${COLORS.navy};
+    outline: 2px solid var(--auth-focus, ${COLORS.navy});
     outline-offset: -4px;
     border-radius: 4px;
   }
@@ -291,7 +438,7 @@ export function PasswordInput(
 
 export const Helper = styled.p`
   margin: 0;
-  color: ${COLORS.muted};
+  color: var(--auth-muted, ${COLORS.muted});
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
@@ -299,8 +446,8 @@ export const Helper = styled.p`
 
 export const ErrorText = styled.p`
   margin: 0;
-  color: ${COLORS.error};
-  font-size: 12px;
+  color: var(--auth-error, ${COLORS.error});
+  font-size: var(--auth-error-size, 12px);
   font-weight: 400;
   line-height: 18px;
 `;
@@ -330,10 +477,10 @@ export const Rule = styled.li<{ $tone: "idle" | "error" | "success" }>`
   gap: 8px;
   color: ${({ $tone }) =>
     $tone === "success"
-      ? COLORS.success
+      ? `var(--auth-success, ${COLORS.success})`
       : $tone === "error"
-        ? "#A34B47"
-        : " #596159"};
+        ? "var(--auth-rule-error, #A34B47)"
+        : "var(--auth-rule-idle, #596159)"};
   font-size: 12px;
   font-weight: 400;
   line-height: 18px;
@@ -343,10 +490,10 @@ export const RuleIcon = styled.span<{ $tone: "idle" | "error" | "success" }>`
   display: inline-flex;
   color: ${({ $tone }) =>
     $tone === "success"
-      ? COLORS.success
+      ? `var(--auth-success, ${COLORS.success})`
       : $tone === "error"
-        ? "#A12E2F"
-        : "#596159"};
+        ? "var(--auth-rule-error-icon, #A12E2F)"
+        : "var(--auth-rule-idle, #596159)"};
 `;
 
 export const MetaRow = styled.div`
@@ -384,19 +531,17 @@ export const TextButton = styled.button`
   padding: 0;
   border: 0;
   background: none;
-  color: ${COLORS.navy};
+  color: var(--auth-link, ${COLORS.navy});
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--auth-link-size, 13px);
   font-weight: 500;
   line-height: 20px;
   cursor: pointer;
-
   &:hover {
     text-decoration: underline;
   }
-
   &:focus-visible {
-    outline: 2px solid ${COLORS.navy};
+    outline: 2px solid var(--auth-focus, ${COLORS.navy});
     outline-offset: 2px;
     border-radius: 2px;
   }
@@ -404,97 +549,108 @@ export const TextButton = styled.button`
 
 export const InlineLink = styled(Link)`
   margin-left: auto;
-  color: ${COLORS.navy};
-  font-size: 13px;
+  width: var(--auth-inline-link-width, auto);
+  flex-shrink: 0;
+  color: var(--auth-inline-link, ${COLORS.navy});
+  font-size: var(--auth-inline-link-size, 13px);
   font-weight: 500;
-  line-height: 20px;
+  line-height: var(--auth-link-line, 20px);
+  text-align: center;
   white-space: nowrap;
   text-decoration: none;
-
   &:hover {
     text-decoration: underline;
   }
 `;
-
 export const CenterLink = styled(Link)`
   display: block;
-  margin-top: 16px;
-  color: ${COLORS.navy};
-  font-size: 13px;
+  margin-top: var(--auth-center-link-margin, 16px);
+  color: var(--auth-link, ${COLORS.navy});
+  font-size: var(--auth-link-size, 13px);
   font-weight: 500;
-  line-height: 20px;
+  line-height: var(--auth-link-line, 20px);
   text-align: center;
   text-decoration: none;
-
   &:hover {
     text-decoration: underline;
   }
 `;
-
 export const CenterButton = styled(TextButton)`
   display: block;
   width: 100%;
-  margin-top: 16px;
+  margin-top: var(--auth-center-link-margin, 16px);
   text-align: center;
 `;
-
 export const Eyebrow = styled.p`
   margin: 0 0 8px;
-  color: ${COLORS.muted};
-  font-size: 12px;
-  font-weight: 500;
+  color: var(--auth-eyebrow, ${COLORS.muted});
+  font-size: var(--auth-eyebrow-size, 12px);
+  font-weight: var(--auth-eyebrow-weight, 500);
   line-height: 18px;
+  text-align: var(--auth-heading-align, left);
 `;
-
 export const Overlay = styled.div`
   position: fixed;
   inset: 0;
   z-index: 10;
   display: flex;
-  align-items: flex-end;
+  align-items: var(--auth-overlay-align, flex-end);
   justify-content: center;
-  padding: 24px 24px 48px;
-  background: rgba(21, 35, 62, 0.28);
+  padding: var(--auth-overlay-padding, 24px 24px 48px);
+  background: var(--auth-overlay, rgba(21, 35, 62, 0.28));
 `;
-
 export const Dialog = styled.div`
   width: min(360px, 100%);
   padding: 28px 24px 24px;
-  border-radius: 8px;
-  background: ${COLORS.surface};
-  box-shadow: 0 16px 40px rgba(21, 35, 62, 0.18);
+  border-radius: var(--auth-dialog-radius, 8px);
+  background: var(--auth-surface, ${COLORS.surface});
+  box-shadow: var(--auth-dialog-shadow, 0 16px 40px rgba(21, 35, 62, 0.18));
 `;
 
 export function AuthShell({
+  appearance = "classic",
   className,
   children,
 }: {
+  appearance?: AuthAppearance;
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <Shell className={className}>
-      <Accent />
+    <Shell className={className} $appearance={appearance}>
+      {appearance === "gradient" ? (
+        <>
+          <BottomWash />
+          <AuraBlue />
+          <AuraWarm />
+          <TopLight />
+        </>
+      ) : (
+        <Accent />
+      )}
       <Stage>
         <Column>
-          <LogoWrap>
-            <Image
-              src={ZapLogo}
-              alt="Zero Abuse Project"
-              width={236}
-              height={68}
-              priority
-              style={{
-                width: 236,
-                height: 68,
-                objectFit: "contain",
-                objectPosition: "left center",
-              }}
-            />
-          </LogoWrap>
+          {appearance === "classic" ? (
+            <LogoWrap>
+              <Image
+                src={ZapLogo}
+                alt="Zero Abuse Project"
+                width={236}
+                height={68}
+                priority
+                style={{
+                  width: 236,
+                  height: 68,
+                  objectFit: "contain",
+                  objectPosition: "left center",
+                }}
+              />
+            </LogoWrap>
+          ) : null}
           {children}
         </Column>
       </Stage>
+      {appearance === "gradient" ? <HelpMark>Help</HelpMark> : null}
     </Shell>
   );
 }
@@ -506,6 +662,7 @@ export function StatusBlock({
   primaryLabel,
   secondaryHref,
   secondaryLabel,
+  eyebrow,
 }: {
   title: string;
   description?: string;
@@ -513,11 +670,15 @@ export function StatusBlock({
   primaryLabel: string;
   secondaryHref?: string;
   secondaryLabel?: string;
+  eyebrow?: string;
 }) {
   return (
     <div>
+      {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
       <Heading>{title}</Heading>
-      {description ? <Body>{description}</Body> : null}
+      {description ? (
+        <Body style={{ textAlign: "center" }}>{description}</Body>
+      ) : null}
       <PrimaryLink href={primaryHref}>{primaryLabel}</PrimaryLink>
       {secondaryHref && secondaryLabel ? (
         <CenterLink href={secondaryHref}>{secondaryLabel}</CenterLink>

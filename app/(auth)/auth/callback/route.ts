@@ -118,6 +118,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  if (requestUrl.searchParams.get("flow") === "recovery") {
+    const loginUrl = new URL("/login", requestUrl);
+    loginUrl.searchParams.set("error", "invalid-reset-link");
+    return redirectAfterRecovery(loginUrl);
+  }
+
   const loginUrl = new URL("/login", requestUrl);
   loginUrl.searchParams.set("error", "invalid-auth-link");
   return NextResponse.redirect(loginUrl);

@@ -11,5 +11,5 @@ export default async function OnboardingPage() {
     redirect("/");
   }
 
-  return <OnboardingForm splitSteps />;
+  return <OnboardingForm splitSteps email={user.email} />;
 }
