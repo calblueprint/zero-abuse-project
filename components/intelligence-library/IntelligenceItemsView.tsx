@@ -6,6 +6,7 @@ import type {
 } from "@/db/queries/intelligence-library";
 import type { IntelligenceFilters } from "@/lib/intelligence-library/filters";
 import { useState } from "react";
+import Link from "next/link";
 import styled from "styled-components";
 import COLORS from "@/styles/colors";
 import ItemToolbar from "./ItemToolbar";
@@ -82,7 +83,9 @@ export default function IntelligenceItemsView({
               <tr key={item.itemId}>
                 <td>
                   <ItemTitle>
-                    {item.title ?? "Untitled intelligence item"}
+                    <Link href={`/intelligence/items/${item.itemId}`}>
+                      {item.title ?? "Untitled intelligence item"}
+                    </Link>
                   </ItemTitle>
                   {item.tldr && <Description>{item.tldr}</Description>}
                 </td>
@@ -199,6 +202,13 @@ const ItemTitle = styled.h3`
   font-size: 16px;
   font-weight: 500;
   line-height: 24px;
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
 `;
 const EmptyState = styled.p`
   margin: 0;
