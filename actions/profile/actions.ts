@@ -20,20 +20,39 @@ async function siteUrl() {
   return (await headers()).get("origin") ?? "http://localhost:3000";
 }
 
+export type ProfileState = OnboardingState & {
+  status?: "saved" | "email-change-sent";
+  pendingEmail?: string;
+};
+
+// The auth callback reads this to send the confirmation back to /profile.
+async function rememberEmailChange(email: string) {
+  (await cookies()).set("email-change-requested", email, {
+    httpOnly: true,
+    maxAge: 60 * 60,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+}
+
 export async function submitProfileUpdate(
-  _prevState: OnboardingState,
+  _prevState: ProfileState,
   formData: FormData,
-): Promise<OnboardingState> {
+): Promise<ProfileState> {
   const user = await requireApprovedUser();
   const result = parseOnboardingFormData(formData);
-  const email = String(formData.get("email") ?? "")
+  const submittedEmail = formData.get("email");
+  const email = String(submittedEmail ?? user.email)
     .trim()
     .toLowerCase();
-  const emailError = validateEmail(email);
+  const fields =
+    submittedEmail === null ? result.fields : { ...result.fields, email };
+  const emailError = submittedEmail === null ? undefined : validateEmail(email);
 
   if (!result.success || emailError) {
     return {
-      fields: { ...result.fields, email },
+      fields,
       errors: {
         ...(!result.success && result.errors),
         ...(emailError && { email: emailError }),
@@ -41,24 +60,25 @@ export async function submitProfileUpdate(
     };
   }
 
+  let currentEmail = user.email.trim().toLowerCase();
   try {
+    // An explicit edit can match an outdated email in the session.
+    if (submittedEmail !== null) {
+      ({ email: currentEmail } = await getAuthEmailState());
+    }
     await updateUserProfile(user.userId, result.data);
   } catch (error) {
     console.error("Profile update failed:", error);
     return {
-      fields: { ...result.fields, email },
+      fields,
       errors: { form: "Something went wrong. Please try again." },
     };
   }
 
   revalidatePath("/profile");
 
-  const { email: currentEmail } = await getAuthEmailState();
   if (email === currentEmail) {
-    return {
-      fields: { ...result.fields, email },
-      message: "Profile saved.",
-    };
+    return { fields: { ...result.fields, email }, status: "saved" };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -72,23 +92,47 @@ export async function submitProfileUpdate(
   if (error) {
     console.error("Email change request failed:", error);
     return {
-      fields: { ...result.fields, email },
+      fields,
       errors: { email: "We couldn't start your email change. Try again." },
       message: "Your other changes were saved.",
     };
   }
 
-  (await cookies()).set("email-change-requested", email, {
-    httpOnly: true,
-    maxAge: 60 * 60,
-    path: "/",
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  });
+  await rememberEmailChange(email);
 
   return {
     fields: { ...result.fields, email: currentEmail },
-    message:
-      "Profile saved. To finish changing your email, open the confirmation links we sent to your current and new addresses.",
+    status: "email-change-sent",
+    pendingEmail: email,
   };
+}
+
+export async function resendEmailChange(): Promise<{ error?: string }> {
+  await requireApprovedUser();
+  const { email, pendingEmail } = await getAuthEmailState();
+
+  if (!pendingEmail) {
+    return { error: "There's no email change waiting to be confirmed." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  // GoTrue looks the user up by their current email and sends to the pending one.
+  const { error } = await supabase.auth.resend({
+    type: "email_change",
+    email,
+    options: { emailRedirectTo: `${await siteUrl()}/auth/callback` },
+  });
+
+  if (error) {
+    console.error("Email change resend failed:", error);
+    return {
+      error:
+        error.status === 429
+          ? "Please wait a minute before asking for another link."
+          : "We couldn't resend the link. Try again.",
+    };
+  }
+
+  await rememberEmailChange(pendingEmail);
+  return {};
 }

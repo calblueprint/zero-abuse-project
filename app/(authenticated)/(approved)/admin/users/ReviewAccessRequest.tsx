@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import styled from "styled-components";
+import Modal from "@/components/Modal";
 import { approveUser } from "./actions";
 import { RejectRequestDialog } from "./RejectRequest";
 
@@ -33,16 +34,6 @@ export default function ReviewAccessRequest({
 }) {
   const [open, setOpen] = useState(false);
   const [rejecting, setRejecting] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const handler = (event: KeyboardEvent) =>
-      event.key === "Escape" && !rejecting && setOpen(false);
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [rejecting]);
-  useEffect(() => {
-    if (open) ref.current?.focus();
-  }, [open]);
   const fullName = `${applicant.firstName} ${applicant.lastName}`;
   const rows = [
     ["Name", fullName],
@@ -50,59 +41,42 @@ export default function ReviewAccessRequest({
     ["Phone", value(applicant.phone)],
     ["Organization", value(applicant.organization)],
     ["Role", value(applicant.role)],
-    ["Requested", "Date unavailable"],
   ];
   return (
     <>
       <NameButton onClick={() => setOpen(true)} type="button">
         {fullName}
       </NameButton>
-      {open && (
-        <Overlay
-          aria-modal="true"
-          onMouseDown={e => e.target === e.currentTarget && setOpen(false)}
-          role="dialog"
-        >
-          <Dialog aria-labelledby="review-title" ref={ref} tabIndex={-1}>
-            <DialogHead>
-              <div>
-                <h2 id="review-title">Review access request</h2>
-                <p>Submitted through the sign-up form.</p>
-              </div>
-              <Close
-                aria-label="Close"
-                onClick={() => setOpen(false)}
-                type="button"
-              >
-                ×
-              </Close>
-            </DialogHead>
-            <Details>
-              {rows.map(([label, content]) => (
-                <Detail key={label}>
-                  <span>{label}</span>
-                  <strong>{content}</strong>
-                </Detail>
-              ))}
-            </Details>
-            <Footer>
-              <p>Approving lets them sign in right away.</p>
-              <Button onClick={() => setRejecting(true)} type="button">
-                Reject
-              </Button>
-              <form action={approveUser.bind(null, applicant.userId)}>
-                <Submit approve />
-              </form>
-            </Footer>
-          </Dialog>
-        </Overlay>
-      )}
-      {rejecting && (
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Review access request"
+        description="Submitted through the sign-up form."
+        width={560}
+      >
+        <Details>
+          {rows.map(([label, content]) => (
+            <Detail key={label}>
+              <span>{label}</span>
+              <strong>{content}</strong>
+            </Detail>
+          ))}
+        </Details>
+        <Footer>
+          <p>Approving gives them access to the platform.</p>
+          <Button onClick={() => setRejecting(true)} type="button">
+            Reject
+          </Button>
+          <form action={approveUser.bind(null, applicant.userId)}>
+            <Submit approve />
+          </form>
+        </Footer>
         <RejectRequestDialog
           applicant={applicant}
+          open={rejecting}
           onClose={() => setRejecting(false)}
         />
-      )}
+      </Modal>
     </>
   );
 }
@@ -114,50 +88,6 @@ const NameButton = styled.button`
   cursor: pointer;
   font: 500 14px/20px inherit;
   text-align: left;
-`;
-const Overlay = styled.div`
-  position: fixed;
-  z-index: 10;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(24 44 70 / 36%);
-`;
-const Dialog = styled.div`
-  width: min(100%, 560px);
-  padding: 28px;
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 16px 40px rgb(24 44 70 / 22%);
-  outline: 0;
-`;
-const DialogHead = styled.div`
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  h2 {
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 24px;
-  }
-  p {
-    color: #5f6875;
-    font-size: 14px;
-    line-height: 20px;
-  }
-`;
-const Close = styled.button`
-  width: 36px;
-  height: 36px;
-  flex: 0 0 auto;
-  color: #5f6875;
-  background: transparent;
-  border: 0;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 26px;
-  line-height: 1;
 `;
 const Details = styled.div`
   margin-top: 12px;
@@ -185,6 +115,7 @@ const Footer = styled.div`
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 20px;
   p {

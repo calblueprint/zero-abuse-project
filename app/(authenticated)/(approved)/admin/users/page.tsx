@@ -1,12 +1,14 @@
+import type { SearchParams } from "@/lib/validation/search-params";
 import type { AccessCategory } from "./AccessFilters";
 import type { PeopleSort } from "./PeopleSortDropdown";
 import Link from "next/link";
-import { and, eq } from "drizzle-orm";
 import styled from "styled-components";
 import AppShell, { Card } from "@/components/AppShell";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/access";
+import { getInitials, toIsoTimestamp } from "@/lib/utils";
+import { getValues } from "@/lib/validation/search-params";
 import AccessFilters from "./AccessFilters";
 import { approveUser, restoreUser } from "./actions";
 import InvitePerson from "./InvitePerson";
@@ -15,17 +17,10 @@ import PeopleSortDropdown from "./PeopleSortDropdown";
 import RejectRequestButton from "./RejectRequest";
 import ReviewAccessRequest from "./ReviewAccessRequest";
 
+const accessCategories = ["admin", "member", "revoked", "pending"] as const;
+
 type TabKey = "requests" | "all" | "admins" | "revoked";
-const accessCategoryValues = ["admin", "member", "revoked", "pending"] as const;
-type Props = {
-  searchParams: Promise<{
-    access?: string;
-    notice?: string;
-    q?: string;
-    sort?: string;
-    tab?: string;
-  }>;
-};
+type Props = { searchParams: Promise<SearchParams> };
 type Person = {
   userId: string;
   firstName: string;
@@ -45,8 +40,6 @@ const notices = {
   "self-change": "You cannot change your own access here.",
   "user-changed": "That user's access has changed. Please try again.",
 } as const;
-const initials = (user: Person) =>
-  `${user.firstName[0] ?? ""}${user.lastName[0] ?? ""}`.toUpperCase() || "?";
 const statusLabel = (status: Person["approvalStatus"]) =>
   status === "pending"
     ? "Pending"
@@ -59,6 +52,7 @@ const displayDate = (value: string | null) =>
         day: "numeric",
         month: "short",
         year: "numeric",
+        timeZone: "UTC",
       }).format(new Date(value))
     : "Date unavailable";
 
@@ -114,7 +108,9 @@ function PersonRow({
   return (
     <Row>
       <PersonCell>
-        <Avatar aria-hidden="true">{initials(user)}</Avatar>
+        <Avatar aria-hidden="true">
+          {getInitials(user.firstName, user.lastName) || "?"}
+        </Avatar>
         <div>
           {user.approvalStatus === "pending" ? (
             <ReviewAccessRequest applicant={user} />
@@ -149,7 +145,11 @@ function PersonRow({
 
 export default async function AdminUsersPage({ searchParams }: Props) {
   const admin = await requireAdmin();
-  const { access, notice, q, sort, tab } = await searchParams;
+  const queryParams = await searchParams;
+  const [notice] = getValues(queryParams, "notice");
+  const [q] = getValues(queryParams, "q");
+  const [sort] = getValues(queryParams, "sort");
+  const [tab] = getValues(queryParams, "tab");
   const activeTab: TabKey =
     tab === "all" || tab === "admins" || tab === "revoked" ? tab : "requests";
   const sortKey: PeopleSort = sort === "admins" ? "admins" : "recent";
@@ -165,24 +165,14 @@ export default async function AdminUsersPage({ searchParams }: Props) {
     approvalStatus: users.approvalStatus,
     approvalDecidedAt: users.approvalDecidedAt,
   };
-  const [pending, admins, guests, revoked] = await Promise.all([
-    db.select(fields).from(users).where(eq(users.approvalStatus, "pending")),
-    db
-      .select(fields)
-      .from(users)
-      .where(
-        and(eq(users.approvalStatus, "approved"), eq(users.isAdmin, true)),
-      ),
-    db
-      .select(fields)
-      .from(users)
-      .where(
-        and(eq(users.approvalStatus, "approved"), eq(users.isAdmin, false)),
-      ),
-    db.select(fields).from(users).where(eq(users.approvalStatus, "rejected")),
-  ]);
-  const allCount =
-    pending.length + admins.length + guests.length + revoked.length;
+  const people = await db.select(fields).from(users);
+  const pending = people.filter(person => person.approvalStatus === "pending");
+  const revoked = people.filter(person => person.approvalStatus === "rejected");
+  const approved = people.filter(
+    person => person.approvalStatus === "approved",
+  );
+  const admins = approved.filter(person => person.isAdmin);
+  const guests = approved.filter(person => !person.isAdmin);
   const accessCounts: Record<AccessCategory, number> = {
     admin: admins.length,
     member: guests.length,
@@ -191,14 +181,16 @@ export default async function AdminUsersPage({ searchParams }: Props) {
   };
   const accessFilters = Array.from(
     new Set(
-      (access?.split(",") ?? []).filter((value): value is AccessCategory =>
-        accessCategoryValues.includes(value as AccessCategory),
-      ),
+      getValues(queryParams, "access")
+        .flatMap(value => value.split(","))
+        .filter((value): value is AccessCategory =>
+          accessCategories.includes(value as AccessCategory),
+        ),
     ),
   );
   const tabUsers =
     activeTab === "all"
-      ? [...pending, ...admins, ...guests, ...revoked]
+      ? people
       : activeTab === "admins"
         ? admins
         : activeTab === "revoked"
@@ -209,13 +201,11 @@ export default async function AdminUsersPage({ searchParams }: Props) {
       ? "Requested"
       : activeTab === "revoked"
         ? "Revoked"
-        : "Joined";
+        : "Access decided";
   const dateForUser = (user: Person) => {
-    if (activeTab === "revoked") return user.approvalDecidedAt;
-    if (
-      (activeTab === "all" || activeTab === "admins") &&
-      user.approvalStatus === "approved"
-    )
+    if (activeTab === "revoked" || activeTab === "all")
+      return user.approvalDecidedAt;
+    if (activeTab === "admins" && user.approvalStatus === "approved")
       return user.approvalDecidedAt;
     return null;
   };
@@ -267,6 +257,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
   return (
     <AppShell
       firstName={admin.firstName}
+      email={admin.email}
       isAdmin={admin.isAdmin}
       lastName={admin.lastName}
     >
@@ -288,6 +279,8 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                 <path d="m16 16 4 4" />
               </Icon>
               <SearchInput
+                aria-label="Search people"
+                key={q ?? ""}
                 defaultValue={q}
                 name="q"
                 placeholder="Search by name, email, or organization"
@@ -311,16 +304,23 @@ export default async function AdminUsersPage({ searchParams }: Props) {
           <Tabs aria-label="People categories">
             <Tab
               $active={activeTab === "requests"}
+              aria-current={activeTab === "requests" ? "page" : undefined}
               as={Link}
               href={tabHref("requests")}
             >
               Access requests <Count $requests>{pending.length}</Count>
             </Tab>
-            <Tab $active={activeTab === "all"} as={Link} href={tabHref("all")}>
-              All <Count>{allCount}</Count>
+            <Tab
+              $active={activeTab === "all"}
+              aria-current={activeTab === "all" ? "page" : undefined}
+              as={Link}
+              href={tabHref("all")}
+            >
+              All <Count>{people.length}</Count>
             </Tab>
             <Tab
               $active={activeTab === "admins"}
+              aria-current={activeTab === "admins" ? "page" : undefined}
               as={Link}
               href={tabHref("admins")}
             >
@@ -328,6 +328,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
             </Tab>
             <Tab
               $active={activeTab === "revoked"}
+              aria-current={activeTab === "revoked" ? "page" : undefined}
               as={Link}
               href={tabHref("revoked")}
             >
@@ -346,7 +347,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
               filteredUsers.map(user => (
                 <PersonRow
                   adminId={admin.userId}
-                  date={dateForUser(user)}
+                  date={toIsoTimestamp(dateForUser(user))}
                   key={user.userId}
                   user={user}
                 />
@@ -376,6 +377,7 @@ const Heading = styled.div`
   align-items: center;
   gap: 28px;
   margin-bottom: 24px;
+  flex-wrap: wrap;
   h1 {
     font-size: 34px;
     font-weight: 400;
@@ -396,6 +398,7 @@ const Toolbar = styled.div`
   align-items: center;
   gap: 8px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
   > i {
     flex: 1;
   }
@@ -412,6 +415,9 @@ const Search = styled.div`
   background: #f3f5f9;
   border-radius: 10px;
   font-size: 14px;
+  &:focus-within {
+    outline: 2px solid #2a3799;
+  }
   white-space: nowrap;
 `;
 const SearchInput = styled.input`
@@ -438,10 +444,12 @@ const Tabs = styled.div`
   display: flex;
   gap: 28px;
   height: 45px;
+  overflow-x: auto;
   border-bottom: 1px solid #e1e5eb;
 `;
 const Tab = styled.div<{ $active?: boolean }>`
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 8px;
   height: 45px;

@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import styled from "styled-components";
+import useAnchoredPopover from "@/lib/hooks/useAnchoredPopover";
+import { popoverSurface } from "@/styles/popover";
 
 export const accessCategories = [
   "admin",
@@ -26,28 +28,11 @@ const labels: Record<AccessCategory, string> = {
 };
 
 export default function AccessFilters({ applied, counts }: Props) {
-  const [open, setOpen] = useState(false);
+  const popover = useAnchoredPopover({ offset: 8 });
   const [draft, setDraft] = useState<AccessCategory[]>(applied);
-  const containerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
 
   const navigate = (next: AccessCategory[]) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -62,26 +47,22 @@ export default function AccessFilters({ applied, counts }: Props) {
         ? current.filter(item => item !== category)
         : [...current, category],
     );
-  const openPopover = () => {
-    setDraft(applied);
-    setOpen(true);
-  };
   const clear = () => {
     setDraft([]);
-    setOpen(false);
+    popover.close();
     navigate([]);
   };
   const apply = () => {
-    setOpen(false);
+    popover.close();
     navigate(draft);
   };
 
   return (
-    <Container ref={containerRef}>
+    <>
       <Trigger
-        aria-expanded={open}
+        {...popover.anchorProps}
         aria-haspopup="dialog"
-        onClick={openPopover}
+        onClick={() => setDraft(applied)}
         type="button"
       >
         <Icon aria-hidden="true" viewBox="0 0 24 24">
@@ -89,49 +70,48 @@ export default function AccessFilters({ applied, counts }: Props) {
         </Icon>
         Filters
       </Trigger>
-      {open && (
-        <Popover aria-label="Filter people by access" role="dialog">
-          <h2>Access</h2>
-          <Options>
-            {accessCategories.map(category => {
-              const checked = draft.includes(category);
-              return (
-                <Option $selected={checked} key={category}>
-                  <input
-                    checked={checked}
-                    onChange={() => toggle(category)}
-                    type="checkbox"
-                  />
-                  <Check aria-hidden="true" $checked={checked}>
-                    {checked && (
-                      <Checkmark viewBox="0 0 10 10">
-                        <path d="M2 5.2 4.1 7.2 8 3" />
-                      </Checkmark>
-                    )}
-                  </Check>
-                  <Badge $category={category}>{labels[category]}</Badge>
-                  <Count>{counts[category]}</Count>
-                </Option>
-              );
-            })}
-          </Options>
-          <Footer>
-            <Clear onClick={clear} type="button">
-              Clear
-            </Clear>
-            <Apply onClick={apply} type="button">
-              Apply
-            </Apply>
-          </Footer>
-        </Popover>
-      )}
-    </Container>
+      <Popover
+        {...popover.popoverProps}
+        aria-label="Filter people by access"
+        role="dialog"
+      >
+        <h2>Access</h2>
+        <Options>
+          {accessCategories.map(category => {
+            const checked = draft.includes(category);
+            return (
+              <Option $selected={checked} key={category}>
+                <input
+                  checked={checked}
+                  onChange={() => toggle(category)}
+                  type="checkbox"
+                />
+                <Check aria-hidden="true" $checked={checked}>
+                  {checked && (
+                    <Checkmark viewBox="0 0 10 10">
+                      <path d="M2 5.2 4.1 7.2 8 3" />
+                    </Checkmark>
+                  )}
+                </Check>
+                <Badge $category={category}>{labels[category]}</Badge>
+                <Count>{counts[category]}</Count>
+              </Option>
+            );
+          })}
+        </Options>
+        <Footer>
+          <Clear onClick={clear} type="button">
+            Clear
+          </Clear>
+          <Apply onClick={apply} type="button">
+            Apply
+          </Apply>
+        </Footer>
+      </Popover>
+    </>
   );
 }
 
-const Container = styled.div`
-  position: relative;
-`;
 const Trigger = styled.button`
   display: flex;
   align-items: center;
@@ -154,11 +134,8 @@ const Icon = styled.svg`
   stroke-width: 1.8px;
 `;
 const Popover = styled.div`
-  position: absolute;
-  z-index: 5;
-  top: calc(100% + 8px);
-  left: 0;
-  width: 272px;
+  ${popoverSurface}
+  width: min(272px, calc(100vw - 24px));
   padding: 8px;
   color: #20252b;
   background: #fff;

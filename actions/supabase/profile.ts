@@ -2,17 +2,35 @@ import "server-only";
 import type { OnboardingFields } from "@/actions/onboarding/validation";
 import type { InitialUserAccess } from "@/lib/auth/access";
 import type { VerifiedAuthUser } from "@/lib/auth/user";
-import { eq } from "drizzle-orm";
+import { eq, getTableColumns } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 
+const approver = alias(users, "approver");
+
 export async function getUserProfile(userId: string) {
-  const rows = await db
-    .select()
+  const [row] = await db
+    .select({
+      ...getTableColumns(users),
+      approverFirstName: approver.firstName,
+      approverLastName: approver.lastName,
+    })
     .from(users)
+    .leftJoin(approver, eq(approver.userId, users.approvalDecidedBy))
     .where(eq(users.userId, userId))
     .limit(1);
-  return rows[0] ?? null;
+
+  if (!row) return null;
+
+  const { approverFirstName, approverLastName, ...profile } = row;
+  return {
+    ...profile,
+    approverName:
+      approverFirstName === null
+        ? null
+        : `${approverFirstName} ${approverLastName}`,
+  };
 }
 
 export async function completeOnboarding(

@@ -23,6 +23,8 @@ function load(path, modules = {}) {
   ).outputText;
   runInNewContext(code, {
     exports,
+    URL,
+    window: modules.window,
     require: name =>
       Object.hasOwn(modules, name) ? modules[name] : require(name),
   });
@@ -31,9 +33,21 @@ function load(path, modules = {}) {
 const colors = load("../styles/colors.ts");
 const TopBar = load("../components/TopBar.tsx", {
   "@/styles/colors": colors,
+  "@/styles/popover": load("../styles/popover.ts", {
+    "@/styles/colors": colors,
+  }),
+  "@/lib/utils": load("../lib/utils.ts"),
+  "@/lib/hooks/useAnchoredPopover": load("../lib/hooks/useAnchoredPopover.ts"),
+  "@/actions/auth/actions": { signOut: async () => {} },
   "@/assets/icons/sidebar-toggle.svg": "/sidebar.svg",
   "next/navigation": { usePathname: () => "/intelligence-library" },
   "next/image": props => React.createElement("img", props),
+});
+const AppShell = load("../components/AppShell.tsx", {
+  "@/components/TopBar": TopBar,
+  "@/styles/colors": colors,
+  "@/styles/fonts": { dmSans: { className: "dm-sans-test" } },
+  "next/navigation": { usePathname: () => "/intelligence-library" },
 });
 const sourceButton = load(
   "../components/intelligence-library/ViewSourceButton.tsx",
@@ -43,8 +57,14 @@ const libraryStyles = load("../components/intelligence-library/styles.tsx", {
   "@/styles/colors": colors,
 });
 const libraryModules = {
+  "@/lib/intelligence-library/format-intel-type": load(
+    "../lib/intelligence-library/format-intel-type.ts",
+  ),
   "@/styles/colors": colors,
   "@/lib/intelligence-library/pattern-filters": filters,
+  "@/components/Tabs": load("../components/Tabs.tsx", {
+    "@/styles/colors": colors,
+  }),
   "./styles": libraryStyles,
 };
 const PatternCard = load(
@@ -150,20 +170,31 @@ function statefulComponent(path, modules) {
     return component(props);
   };
 }
-function pageHarness(isAdmin = true) {
+function pageHarness(
+  isAdmin = true,
+  href = "https://example.com/intelligence-library",
+) {
+  const location = { href };
   const component = statefulComponent(
     "../components/intelligence-library/IntelligenceLibraryView.tsx",
     {
       ...libraryModules,
+      window: {
+        location,
+        history: {
+          replaceState: (_state, _title, url) => {
+            location.href = String(url);
+          },
+        },
+      },
       "./PatternCard": PatternCard,
       "./IntelligenceItemsView": IntelligenceItemsView,
       "./PatternToolbar": PatternToolbar,
       "@/components/intelligence-library/ViewSourceButton": sourceButton,
-      "@/components/TopBar": TopBar,
-      "@/styles/fonts": { dmSans: { className: "dm-sans-test" } },
+      "@/components/AppShell": AppShell,
     },
   );
-  return () => {
+  const render = () => {
     return component({
       initialPatterns: patterns,
       itemFilters: emptyItemFilters,
@@ -178,9 +209,11 @@ function pageHarness(isAdmin = true) {
       ],
       firstName: "Nataliia",
       lastName: "Kulieshova",
+      email: "nataliia@example.org",
       isAdmin,
     });
   };
+  return Object.assign(render, { location });
 }
 function nodes(element) {
   if (!element || typeof element !== "object" || element.props?.hidden)
@@ -258,6 +291,51 @@ test("shared navigation exposes admin tabs only to admins and loads the shared f
   }
 });
 
+test("sidebar state survives page navigation and preserves admin links", () => {
+  for (const isAdmin of [true, false]) {
+    let pathname = "/";
+    // Each call mounts a fresh shell with the same loaded module.
+    const { default: shell } = load("../components/AppShell.tsx", {
+      react: { useState: initialize => [initialize(), () => {}] },
+      "@/components/TopBar": TopBar,
+      "@/styles/colors": colors,
+      "@/styles/fonts": { dmSans: { className: "dm-sans-test" } },
+      "next/navigation": { usePathname: () => pathname },
+    });
+    const props = {
+      firstName: "Alex",
+      lastName: "Ng",
+      email: "alex@example.org",
+      isAdmin,
+    };
+    const closed = shell(props);
+    assert.match(
+      renderToStaticMarkup(closed),
+      /id="app-sidebar"[^>]* inert=""/,
+    );
+    closed.props.children[0].props.onToggle();
+    pathname = "/intelligence-library";
+    const opened = shell(props);
+    const html = renderToStaticMarkup(opened);
+    assert.match(html, /aria-expanded="true"/);
+    const sidebar = html.match(
+      /<aside\b[^>]*id="app-sidebar"[^>]*>[\s\S]*?<\/aside>/,
+    )?.[0];
+    assert.ok(sidebar);
+    assert.doesNotMatch(sidebar, /\binert=/);
+    assert.match(
+      sidebar,
+      /<a(?=[^>]*href="\/intelligence-library")(?=[^>]*aria-current="page")/,
+    );
+    assert.equal(sidebar.includes('href="/admin/sources"'), isAdmin);
+    assert.equal(sidebar.includes('href="/admin/users"'), isAdmin);
+    assert.match(html, /href="\/profile"/);
+    opened.props.children[0].props.onToggle();
+    pathname = "/profile";
+    assert.match(renderToStaticMarkup(shell(props)), /aria-expanded="false"/);
+  }
+});
+
 test("shared top bar derives initials from names, trimming spaces and preserving Unicode", () => {
   for (const [firstName, lastName, expected] of [
     ["Nataliia", "Kulieshova", "NK"],
@@ -269,10 +347,13 @@ test("shared top bar derives initials from names, trimming spaces and preserving
       React.createElement(TopBar.default, {
         firstName,
         lastName,
+        email: "person@example.org",
         isAdmin: false,
       }),
     );
-    const avatar = html.match(/<a\b[^>]*aria-label="Profile"[^>]*>(.*?)<\/a>/);
+    const avatar = html.match(
+      /<button\b[^>]*aria-label="Account menu"[^>]*>(.*?)<\/button>/,
+    );
     assert.ok(avatar);
     assert.equal(avatar[1], expected);
   }
@@ -313,6 +394,18 @@ test("filter drafts apply only on confirmation and dismissal discards edits", ()
   assert.equal(appliedFilters.date, "");
 });
 
+test("library tab selection updates the return URL and preserves filters", () => {
+  const render = pageHarness(
+    true,
+    "https://example.com/intelligence-library?q=report",
+  );
+  click(render, "Intelligence items");
+  assert.equal(new URL(render.location.href).searchParams.get("view"), "items");
+  assert.equal(new URL(render.location.href).searchParams.get("q"), "report");
+  click(render, "Emerging patterns");
+  assert.equal(new URL(render.location.href).searchParams.has("view"), false);
+});
+
 test("item view includes search, taxonomy filters and item-specific column headings", () => {
   const render = pageHarness();
   click(render, "Intelligence items");
@@ -342,14 +435,14 @@ test("item view includes search, taxonomy filters and item-specific column headi
   }
   for (const title of [
     "Intelligence item",
-    "Source",
-    "Published (UTC)",
-    "Actions",
+    "Evidence and sources",
+    "Type",
+    "Updated",
   ]) {
     assert.ok(html.includes(`<th scope="col">${title}</th>`));
   }
   assert.doesNotMatch(html, /Supporting items|Review status/);
-  for (const label of ["Saved", "Confirmed", "Archived"])
+  for (const label of ["Saved", "Verified", "Archived"])
     assert.ok(html.includes(label));
 });
 
@@ -497,7 +590,7 @@ test("shared toolbar selects sorting and discards filters when toggled closed", 
   assert.equal(dismissed, 1);
 });
 
-test("item bookmarks populate Saved and do not populate Confirmed or Archived", () => {
+test("item bookmarks populate Saved and do not populate Verified or Archived", () => {
   const component = statefulComponent(
     "../components/intelligence-library/IntelligenceItemsView.tsx",
     {
@@ -529,10 +622,10 @@ test("item bookmarks populate Saved and do not populate Confirmed or Archived", 
     .find(node => node.props["aria-label"] === "Remove saved intelligence item")
     .props.onClick();
   assert.match(renderToStaticMarkup(render()), /No saved intelligence items/);
-  click(render, "Confirmed");
+  click(render, "Verified");
   assert.match(
     renderToStaticMarkup(render()),
-    /No confirmed intelligence items/,
+    /No verified intelligence items/,
   );
   click(render, "Archived");
   assert.match(

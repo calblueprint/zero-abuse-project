@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import styled from "styled-components";
+import Modal from "@/components/Modal";
+import useAnchoredPopover from "@/lib/hooks/useAnchoredPopover";
+import { popoverSurface } from "@/styles/popover";
 import { demoteUser, promoteUser, revokeUser } from "./actions";
 
 type MemberActionsProps = {
@@ -11,7 +14,7 @@ type MemberActionsProps = {
   userId: string;
 };
 
-type ModalKind = "make-admin" | "revoke" | null;
+type ModalKind = "make-admin" | "revoke" | "remove-admin" | null;
 
 function SubmitButton({
   children,
@@ -33,132 +36,89 @@ export default function MemberActions({
   isAdmin = false,
   userId,
 }: MemberActionsProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [modal, setModal] = useState<ModalKind>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const close = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node))
-        setIsOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-        setModal(null);
-      }
-    };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (modal) dialogRef.current?.focus();
-  }, [modal]);
+  const menu = useAnchoredPopover({ align: "end" });
 
   const openModal = (kind: Exclude<ModalKind, null>) => {
-    setIsOpen(false);
+    menu.close();
     setModal(kind);
   };
   const isMakeAdmin = modal === "make-admin";
 
   return (
-    <Root ref={rootRef}>
+    <>
       <MenuButton
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
+        {...menu.anchorProps}
         aria-label={`Actions for ${fullName}`}
-        onClick={() => setIsOpen(open => !open)}
         type="button"
       >
         •••
       </MenuButton>
-      {isOpen && (
-        <Menu role="menu">
-          <MenuItem disabled type="button">
-            View profile
-          </MenuItem>
-          {isAdmin ? (
-            <form action={demoteUser.bind(null, userId)}>
-              <MenuItem $danger role="menuitem" type="submit">
-                Remove admin
-              </MenuItem>
-            </form>
-          ) : (
-            <>
-              <MenuItem
-                onClick={() => openModal("make-admin")}
-                role="menuitem"
-                type="button"
-              >
-                Make admin
-              </MenuItem>
-              <MenuItem
-                $danger
-                onClick={() => openModal("revoke")}
-                role="menuitem"
-                type="button"
-              >
-                Revoke access
-              </MenuItem>
-            </>
-          )}
-        </Menu>
-      )}
-      {modal && (
-        <Overlay
-          aria-modal="true"
-          onMouseDown={event => {
-            if (event.target === event.currentTarget) setModal(null);
-          }}
-          role="dialog"
-        >
-          <Dialog
-            aria-labelledby="member-action-title"
-            ref={dialogRef}
-            tabIndex={-1}
+      <Menu {...menu.popoverProps}>
+        {isAdmin ? (
+          <MenuItem
+            $danger
+            onClick={() => openModal("remove-admin")}
+            type="button"
           >
-            <h2 id="member-action-title">
+            Remove admin
+          </MenuItem>
+        ) : (
+          <>
+            <MenuItem onClick={() => openModal("make-admin")} type="button">
+              Make admin
+            </MenuItem>
+            <MenuItem $danger onClick={() => openModal("revoke")} type="button">
+              Revoke access
+            </MenuItem>
+          </>
+        )}
+      </Menu>
+      <Modal
+        open={modal !== null}
+        onClose={() => setModal(null)}
+        title={
+          isMakeAdmin
+            ? `Make ${fullName} an admin?`
+            : modal === "remove-admin"
+              ? `Remove admin access for ${fullName}?`
+              : `Revoke access for ${fullName}?`
+        }
+        description={
+          isMakeAdmin
+            ? "Admins approve requests and manage access."
+            : modal === "remove-admin"
+              ? "They will still have member access."
+              : "They will lose access to protected areas. You can restore access from the Revoked tab."
+        }
+        width={460}
+      >
+        <DialogActions>
+          <Cancel onClick={() => setModal(null)} data-autofocus type="button">
+            Cancel
+          </Cancel>
+          <form
+            action={(isMakeAdmin
+              ? promoteUser
+              : modal === "remove-admin"
+                ? demoteUser
+                : revokeUser
+            ).bind(null, userId)}
+          >
+            <SubmitButton destructive={!isMakeAdmin}>
               {isMakeAdmin
-                ? `Make ${fullName} an admin?`
-                : `Revoke ${fullName}'s access?`}
-            </h2>
-            <p>
-              {isMakeAdmin
-                ? "Admins approve requests and manage everyone's access."
-                : "They can no longer access protected areas. You can restore access later from the Revoked tab."}
-            </p>
-            <DialogActions>
-              <Cancel onClick={() => setModal(null)} type="button">
-                Cancel
-              </Cancel>
-              <form
-                action={
-                  isMakeAdmin
-                    ? promoteUser.bind(null, userId)
-                    : revokeUser.bind(null, userId)
-                }
-              >
-                <SubmitButton destructive={!isMakeAdmin}>
-                  {isMakeAdmin ? "Make admin" : "Revoke access"}
-                </SubmitButton>
-              </form>
-            </DialogActions>
-          </Dialog>
-        </Overlay>
-      )}
-    </Root>
+                ? "Make admin"
+                : modal === "remove-admin"
+                  ? "Remove admin"
+                  : "Revoke access"}
+            </SubmitButton>
+          </form>
+        </DialogActions>
+      </Modal>
+    </>
   );
 }
 
-const Root = styled.div`
-  position: relative;
-`;
 const MenuButton = styled.button`
   width: 32px;
   height: 32px;
@@ -174,10 +134,7 @@ const MenuButton = styled.button`
   }
 `;
 const Menu = styled.div`
-  position: absolute;
-  z-index: 3;
-  right: 0;
-  top: 40px;
+  ${popoverSurface}
   width: 220px;
   padding: 7px;
   background: #fff;
@@ -203,36 +160,6 @@ const MenuItem = styled.button<{ $danger?: boolean }>`
   &:disabled {
     color: #8791a0;
     cursor: not-allowed;
-  }
-`;
-const Overlay = styled.div`
-  position: fixed;
-  z-index: 10;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgb(24 44 70 / 36%);
-`;
-const Dialog = styled.div`
-  width: min(100%, 460px);
-  min-height: 180px;
-  padding: 29px;
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 16px 40px rgb(24 44 70 / 22%);
-  outline: 0;
-  h2 {
-    color: #20252b;
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 24px;
-  }
-  p {
-    margin-top: 4px;
-    color: #5f6875;
-    font-size: 14px;
-    line-height: 18px;
   }
 `;
 const DialogActions = styled.div`

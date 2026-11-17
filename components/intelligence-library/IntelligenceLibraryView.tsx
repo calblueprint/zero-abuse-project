@@ -9,13 +9,12 @@ import type { IntelligenceFilters } from "@/lib/intelligence-library/filters";
 import type { PatternFilters } from "@/lib/intelligence-library/pattern-filters";
 import { useMemo, useState } from "react";
 import styled from "styled-components";
-import TopBar from "@/components/TopBar";
+import AppShell, { Card } from "@/components/AppShell";
 import {
   emptyPatternFilters,
   matchesPatternFilters,
 } from "@/lib/intelligence-library/pattern-filters";
 import COLORS from "@/styles/colors";
-import { dmSans } from "@/styles/fonts";
 import IntelligenceItemsView from "./IntelligenceItemsView";
 import LibraryStatusTabs from "./LibraryStatusTabs";
 import PatternCard from "./PatternCard";
@@ -46,6 +45,7 @@ export default function IntelligenceLibraryView({
   initialView = "patterns",
   firstName,
   lastName,
+  email,
   isAdmin,
   referenceDate = new Date(),
 }: {
@@ -56,11 +56,24 @@ export default function IntelligenceLibraryView({
   initialView?: "patterns" | "items";
   firstName: string;
   lastName: string;
+  email: string;
   isAdmin: boolean;
   referenceDate?: Date;
 }) {
   const [view, setView] = useState<"patterns" | "items">(initialView);
   const [hasViewedItems, setHasViewedItems] = useState(initialView === "items");
+  function selectView(nextView: typeof view) {
+    const url = new URL(window.location.href);
+    if (nextView === "items") {
+      url.searchParams.set("view", "items");
+      setHasViewedItems(true);
+    } else {
+      url.searchParams.delete("view");
+    }
+    window.history.replaceState(null, "", url);
+    setView(nextView);
+  }
+
   const [status, setStatus] = useState<Status>("All patterns");
   const [sort, setSort] = useState<string>("Most recent");
   const [search, setSearch] = useState("");
@@ -152,25 +165,26 @@ export default function IntelligenceLibraryView({
   };
 
   return (
-    <Canvas className={dmSans.className}>
-      <TopBar firstName={firstName} lastName={lastName} isAdmin={isAdmin} />
+    <AppShell
+      firstName={firstName}
+      lastName={lastName}
+      email={email}
+      isAdmin={isAdmin}
+    >
       <Panel aria-labelledby="intelligence-library-title">
         <PageHeader>
           <Title id="intelligence-library-title">Intelligence library</Title>
           <LibrarySwitch aria-label="Library view">
             <SwitchOption
               $active={view === "patterns"}
-              onClick={() => setView("patterns")}
+              onClick={() => selectView("patterns")}
               type="button"
             >
               Emerging patterns <MutedCount>{patterns.length}</MutedCount>
             </SwitchOption>
             <SwitchOption
               $active={view === "items"}
-              onClick={() => {
-                setView("items");
-                setHasViewedItems(true);
-              }}
+              onClick={() => selectView("items")}
               type="button"
             >
               Intelligence items{" "}
@@ -260,38 +274,19 @@ export default function IntelligenceLibraryView({
           </>
         )}
       </Panel>
-    </Canvas>
+    </AppShell>
   );
 }
 
-const Canvas = styled.div`
-  min-height: 100vh;
-  background: ${COLORS.canvas};
-  padding: 0 12px 12px;
-  color: ${COLORS.inkText};
+const Panel = styled(Card)`
+  gap: 24px;
+
   button:focus-visible,
   input:focus-visible {
     outline: 2px solid ${COLORS.actionNavy};
     outline-offset: 2px;
   }
-  *,
-  *::before,
-  *::after {
-    box-sizing: border-box;
-  }
-`;
-const Panel = styled.main`
-  display: flex;
-  min-height: calc(100vh - 72px);
-  width: 100%;
-  flex-direction: column;
-  gap: 24px;
-  border: 1px solid ${COLORS.borderDefault};
-  border-radius: 24px;
-  background: ${COLORS.surface};
-  box-shadow:
-    0 8px 120px rgba(77, 117, 204, 0.07),
-    0 4px 40px -2px rgba(77, 117, 204, 0.07);
+
   padding: 36px 48px 24px;
   @media (max-width: 720px) {
     padding: 28px 20px 20px;
