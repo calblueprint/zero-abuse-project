@@ -23,6 +23,8 @@ function load(path, modules = {}) {
   ).outputText;
   runInNewContext(code, {
     exports,
+    URL,
+    window: modules.window,
     require: name =>
       Object.hasOwn(modules, name) ? modules[name] : require(name),
   });
@@ -55,6 +57,9 @@ const libraryStyles = load("../components/intelligence-library/styles.tsx", {
   "@/styles/colors": colors,
 });
 const libraryModules = {
+  "@/lib/intelligence-library/format-intel-type": load(
+    "../lib/intelligence-library/format-intel-type.ts",
+  ),
   "@/styles/colors": colors,
   "@/lib/intelligence-library/pattern-filters": filters,
   "@/components/Tabs": load("../components/Tabs.tsx", {
@@ -165,11 +170,23 @@ function statefulComponent(path, modules) {
     return component(props);
   };
 }
-function pageHarness(isAdmin = true) {
+function pageHarness(
+  isAdmin = true,
+  href = "https://example.com/intelligence-library",
+) {
+  const location = { href };
   const component = statefulComponent(
     "../components/intelligence-library/IntelligenceLibraryView.tsx",
     {
       ...libraryModules,
+      window: {
+        location,
+        history: {
+          replaceState: (_state, _title, url) => {
+            location.href = String(url);
+          },
+        },
+      },
       "./PatternCard": PatternCard,
       "./IntelligenceItemsView": IntelligenceItemsView,
       "./PatternToolbar": PatternToolbar,
@@ -177,7 +194,7 @@ function pageHarness(isAdmin = true) {
       "@/components/AppShell": AppShell,
     },
   );
-  return () => {
+  const render = () => {
     return component({
       initialPatterns: patterns,
       itemFilters: emptyItemFilters,
@@ -196,6 +213,7 @@ function pageHarness(isAdmin = true) {
       isAdmin,
     });
   };
+  return Object.assign(render, { location });
 }
 function nodes(element) {
   if (!element || typeof element !== "object" || element.props?.hidden)
@@ -376,6 +394,18 @@ test("filter drafts apply only on confirmation and dismissal discards edits", ()
   assert.equal(appliedFilters.date, "");
 });
 
+test("library tab selection updates the return URL and preserves filters", () => {
+  const render = pageHarness(
+    true,
+    "https://example.com/intelligence-library?q=report",
+  );
+  click(render, "Intelligence items");
+  assert.equal(new URL(render.location.href).searchParams.get("view"), "items");
+  assert.equal(new URL(render.location.href).searchParams.get("q"), "report");
+  click(render, "Emerging patterns");
+  assert.equal(new URL(render.location.href).searchParams.has("view"), false);
+});
+
 test("item view includes search, taxonomy filters and item-specific column headings", () => {
   const render = pageHarness();
   click(render, "Intelligence items");
@@ -405,14 +435,14 @@ test("item view includes search, taxonomy filters and item-specific column headi
   }
   for (const title of [
     "Intelligence item",
-    "Source",
-    "Published (UTC)",
-    "Actions",
+    "Evidence and sources",
+    "Type",
+    "Updated",
   ]) {
     assert.ok(html.includes(`<th scope="col">${title}</th>`));
   }
   assert.doesNotMatch(html, /Supporting items|Review status/);
-  for (const label of ["Saved", "Confirmed", "Archived"])
+  for (const label of ["Saved", "Verified", "Archived"])
     assert.ok(html.includes(label));
 });
 
@@ -560,7 +590,7 @@ test("shared toolbar selects sorting and discards filters when toggled closed", 
   assert.equal(dismissed, 1);
 });
 
-test("item bookmarks populate Saved and do not populate Confirmed or Archived", () => {
+test("item bookmarks populate Saved and do not populate Verified or Archived", () => {
   const component = statefulComponent(
     "../components/intelligence-library/IntelligenceItemsView.tsx",
     {
@@ -592,10 +622,10 @@ test("item bookmarks populate Saved and do not populate Confirmed or Archived", 
     .find(node => node.props["aria-label"] === "Remove saved intelligence item")
     .props.onClick();
   assert.match(renderToStaticMarkup(render()), /No saved intelligence items/);
-  click(render, "Confirmed");
+  click(render, "Verified");
   assert.match(
     renderToStaticMarkup(render()),
-    /No confirmed intelligence items/,
+    /No verified intelligence items/,
   );
   click(render, "Archived");
   assert.match(

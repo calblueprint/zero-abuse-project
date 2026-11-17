@@ -8,17 +8,18 @@ import type { IntelligenceFilters } from "@/lib/intelligence-library/filters";
 import { useState } from "react";
 import Link from "next/link";
 import styled from "styled-components";
+import { formatIntelType } from "@/lib/intelligence-library/format-intel-type";
 import COLORS from "@/styles/colors";
 import ItemToolbar from "./ItemToolbar";
 import LibraryStatusTabs from "./LibraryStatusTabs";
 import { BookmarkIcon, Description } from "./styles";
-import ViewSourceButton from "./ViewSourceButton";
+import { OpenSourceForm } from "./ViewSourceButton";
 
-type ItemStatus = "All intelligence" | "Saved" | "Confirmed" | "Archived";
+type ItemStatus = "All items" | "Saved" | "Verified" | "Archived";
 const itemStatuses: ItemStatus[] = [
-  "All intelligence",
+  "All items",
   "Saved",
-  "Confirmed",
+  "Verified",
   "Archived",
 ];
 type IntelligenceItemsViewProps = {
@@ -36,18 +37,18 @@ export default function IntelligenceItemsView({
   action = "/intelligence",
   showTitle = true,
 }: IntelligenceItemsViewProps) {
-  const [status, setStatus] = useState<ItemStatus>("All intelligence");
+  const [status, setStatus] = useState<ItemStatus>("All items");
   // TODO: Persist item bookmarks per user; local saves reset on page reload.
   const [savedIds, setSavedIds] = useState<string[]>([]);
   // TODO: Load confirmed/archived item states from the real provider when available.
   const counts = {
-    "All intelligence": items.length,
+    "All items": items.length,
     Saved: items.filter(item => savedIds.includes(item.itemId)).length,
-    Confirmed: 0,
+    Verified: 0,
     Archived: 0,
   };
   const visibleItems =
-    status === "All intelligence"
+    status === "All items"
       ? items
       : status === "Saved"
         ? items.filter(item => savedIds.includes(item.itemId))
@@ -73,9 +74,10 @@ export default function IntelligenceItemsView({
           <thead>
             <tr>
               <th scope="col">Intelligence item</th>
-              <th scope="col">Source</th>
-              <th scope="col">Published (UTC)</th>
-              <th scope="col">Actions</th>
+              <th scope="col">Evidence and sources</th>
+              <th scope="col">Type</th>
+              <th scope="col">Updated</th>
+              <th scope="col" aria-label="Bookmark" />
             </tr>
           </thead>
           <tbody>
@@ -89,43 +91,50 @@ export default function IntelligenceItemsView({
                   </ItemTitle>
                   {item.tldr && <Description>{item.tldr}</Description>}
                 </td>
-                <td>{item.sourceName}</td>
                 <td>
-                  {item.publishedAt ? (
-                    <time dateTime={item.publishedAt}>
-                      {new Date(item.publishedAt).toLocaleDateString("en-GB", {
+                  <EvidenceLabel>Single source</EvidenceLabel>
+                  <OpenSourceForm itemId={item.itemId}>
+                    <SourceBadge
+                      type="submit"
+                      aria-label={`View source: ${item.sourceName}`}
+                    >
+                      {item.sourceName}
+                    </SourceBadge>
+                  </OpenSourceForm>
+                </td>
+                <td>{formatIntelType(item.intelType) ?? "—"}</td>
+                <td>
+                  {item.updatedAt ? (
+                    <time dateTime={item.updatedAt}>
+                      {new Date(item.updatedAt).toLocaleDateString("en-GB", {
                         day: "numeric",
                         month: "short",
-                        year: "numeric",
                         timeZone: "UTC",
                       })}
                     </time>
                   ) : (
-                    "Unknown date"
+                    "—"
                   )}
                 </td>
                 <td>
-                  <Actions>
-                    <ViewSourceButton itemId={item.itemId} />
-                    <Bookmark
-                      type="button"
-                      aria-label={
-                        savedIds.includes(item.itemId)
-                          ? "Remove saved intelligence item"
-                          : "Save intelligence item"
-                      }
-                      aria-pressed={savedIds.includes(item.itemId)}
-                      onClick={() =>
-                        setSavedIds(current =>
-                          current.includes(item.itemId)
-                            ? current.filter(id => id !== item.itemId)
-                            : [...current, item.itemId],
-                        )
-                      }
-                    >
-                      <BookmarkIcon filled={savedIds.includes(item.itemId)} />
-                    </Bookmark>
-                  </Actions>
+                  <Bookmark
+                    type="button"
+                    aria-label={
+                      savedIds.includes(item.itemId)
+                        ? "Remove saved intelligence item"
+                        : "Save intelligence item"
+                    }
+                    aria-pressed={savedIds.includes(item.itemId)}
+                    onClick={() =>
+                      setSavedIds(current =>
+                        current.includes(item.itemId)
+                          ? current.filter(id => id !== item.itemId)
+                          : [...current, item.itemId],
+                      )
+                    }
+                  >
+                    <BookmarkIcon filled={savedIds.includes(item.itemId)} />
+                  </Bookmark>
                 </td>
               </tr>
             ))}
@@ -134,7 +143,7 @@ export default function IntelligenceItemsView({
       </TableScroll>
       {!visibleItems.length && (
         <EmptyState>
-          {status === "All intelligence"
+          {status === "All items"
             ? "No intelligence items match your search and filters."
             : `No ${status.toLowerCase()} intelligence items.`}
         </EmptyState>
@@ -149,10 +158,26 @@ const Container = styled.section<{ $standalone: boolean }>`
   gap: 24px;
   ${p => p.$standalone && "margin: 0 auto; max-width: 1200px; padding: 2rem;"}
 `;
-const Actions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
+const EvidenceLabel = styled.div`
+  margin-bottom: 8px;
+  color: ${COLORS.inkText};
+`;
+
+const SourceBadge = styled.button`
+  max-width: 100%;
+  padding: 3px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: ${COLORS.divider};
+  color: ${COLORS.ink};
+  font: inherit;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 const Bookmark = styled.button`
   display: inline-flex;
@@ -168,32 +193,34 @@ const TableScroll = styled.div`
 const ItemsTable = styled.table`
   width: 100%;
   min-width: 680px;
-  border-collapse: separate;
-  border-spacing: 0 14px;
+  border-collapse: collapse;
   text-align: left;
   th {
-    padding: 0 20px;
+    padding: 16px 20px;
     color: ${COLORS.mutedText};
     font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
   }
   td {
-    padding: 24px 20px;
-    background: #f0f3f7;
+    padding: 16px 20px;
+    border-bottom: 1px solid ${COLORS.divider};
     color: ${COLORS.secondaryText};
     font-size: 14px;
     line-height: 20px;
-    vertical-align: top;
+    vertical-align: middle;
   }
   td:first-child {
-    width: 65%;
+    width: 44%;
     min-width: 260px;
-    border-radius: 14px 0 0 14px;
+    overflow-wrap: anywhere;
   }
-  td:last-child {
-    border-radius: 0 14px 14px 0;
-    white-space: nowrap;
+  td:nth-child(2) {
+    width: 22%;
+  }
+  td:nth-child(3),
+  td:nth-child(4) {
+    width: 14%;
   }
 `;
 const ItemTitle = styled.h3`

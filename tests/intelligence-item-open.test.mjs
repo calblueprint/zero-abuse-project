@@ -176,7 +176,7 @@ test("preserves authentication redirects during a history write", async t => {
   await assert.rejects(POST(request()), error => error === redirectError);
 });
 
-test("library source forms preserve Origin", () => {
+test("library links to item details and source forms preserve Origin", () => {
   function loadComponent(path) {
     const exports = {};
     const code = ts.transpileModule(
@@ -195,6 +195,10 @@ test("library source forms preserve Origin", () => {
         if (name.startsWith("./"))
           return loadComponent(
             `../components/intelligence-library/${name.slice(2)}.tsx`,
+          );
+        if (name === "@/lib/intelligence-library/format-intel-type")
+          return loadComponent(
+            "../lib/intelligence-library/format-intel-type.ts",
           );
         if (name === "@/lib/intelligence-library/filters")
           return loadComponent("../lib/intelligence-library/filters.ts");
@@ -232,6 +236,8 @@ test("library source forms preserve Origin", () => {
     itemId,
     title,
     sourceName: "Test source",
+    intelType: '["Report"]',
+    updatedAt: "2026-10-18T00:00:00Z",
     publishedAt: null,
     tldr: null,
   });
@@ -243,6 +249,10 @@ test("library source forms preserve Origin", () => {
     }),
   );
   assert.ok(!html.includes("Recently accessed"));
+  assert.ok(html.includes(`href="/intelligence/items/${itemId}"`));
+  assert.match(html, /Single source/);
+  assert.match(html, />Report<\/td>/);
+  assert.match(html, />18 Oct<\/time>/);
   const forms = html.match(
     /<form[^>]*action="\/intelligence\/items\/open"[^>]*>/g,
   );
