@@ -12,8 +12,8 @@ import MoreIcon from "@/assets/icons/more.svg";
 import LocalDate from "@/components/LocalDate";
 import useAnchoredPopover from "@/lib/hooks/useAnchoredPopover";
 import COLORS from "@/styles/colors";
+import { SecondaryButton, Tag } from "@/styles/controls";
 import { popoverSurface } from "@/styles/popover";
-import { SecondaryButton, Tag } from "./styles";
 import { displayUrl, formatTimeAgo, getCrawlHealth } from "./view";
 
 type SourcesTableProps = {

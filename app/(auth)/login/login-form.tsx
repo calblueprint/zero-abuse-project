@@ -17,7 +17,6 @@ import {
   SubmitButton,
 } from "@/components/auth/ui";
 import { setSessionValue, useSessionValue } from "../session-value";
-import { VerificationExpired } from "../sign-up/sign-up-form";
 
 const EMAIL_KEY = "zap-login-email";
 

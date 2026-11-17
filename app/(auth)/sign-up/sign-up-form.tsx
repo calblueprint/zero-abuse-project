@@ -1,9 +1,9 @@
 "use client";
 
-import { FormEvent, useState, useSyncExternalStore } from "react";
-import { resendVerification, signUp } from "@/actions/auth/actions";
+import type { FormEvent } from "react";
+import { useState } from "react";
+import { signUp } from "@/actions/auth/actions";
 import {
-  Body,
   CenterLink,
   ErrorLink,
   ErrorText,
@@ -23,44 +23,8 @@ import { setSessionValue, useSessionValue } from "../session-value";
 
 const EMAIL_KEY = "zap-signup-email";
 
-export function VerificationExpired() {
-  const email = useSyncExternalStore(
-    () => () => {},
-    () => localStorage.getItem(EMAIL_KEY) ?? "",
-    () => "",
-  );
-  return (
-    <div>
-      <Eyebrow>Welcome to ZAP</Eyebrow>
-      <Heading>Verification link expired</Heading>
-      <Body style={{ textAlign: "center", lineHeight: "20px" }}>
-        Request a new verification link for
-      </Body>
-
-      <Body
-        style={{
-          textAlign: "center",
-          color: "#20252B",
-          fontWeight: 500,
-          lineHeight: "20px",
-        }}
-      >
-        {email}
-      </Body>
-      <form action={resendVerification}>
-        <input type="hidden" name="email" value={email} />
-        <SubmitButton pendingLabel="Sending…">
-          Send a new verification email
-        </SubmitButton>
-      </form>
-      <CenterLink href="/login">Back to sign in</CenterLink>
-    </div>
-  );
-}
-
 export function SignUpForm({ error }: { error?: string }) {
   const email = useSessionValue(EMAIL_KEY);
-  localStorage.setItem(EMAIL_KEY, email.trim());
   const [password, setPassword] = useState("");
   const [submitted, setSubmitted] = useState(error === "invalid-password");
 
@@ -87,7 +51,7 @@ export function SignUpForm({ error }: { error?: string }) {
 
   return (
     <form action={signUp} onSubmit={onSubmit} noValidate>
-      <Eyebrow>Welcome to Zap</Eyebrow>
+      <Eyebrow>Welcome to ZAP</Eyebrow>
       <Heading>Create account</Heading>
       <Fields>
         <Field>

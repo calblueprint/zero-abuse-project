@@ -114,7 +114,6 @@ const Shell = styled.div<{ $appearance?: AuthAppearance }>`
       --auth-eyebrow-size: 13px;
       --auth-eyebrow-weight: 400;
       --auth-center-link-margin: 20px;
-      background-color: #f7f8fb;
       overflow: hidden;
       background-color: #ffffff;
     `}

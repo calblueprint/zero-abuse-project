@@ -35,7 +35,7 @@ const RecentlyAccessed = load("../components/home/RecentlyAccessed.tsx", {
   "@/components/home/styles": styles,
 }).default;
 
-test("welcome history renders actual items in order using the tracked source-opening route", () => {
+test("welcome history renders actual items in order with links to their detail pages", () => {
   const items = [
     {
       itemId: "aa000061-2001-4000-8000-000000000001",
@@ -55,13 +55,9 @@ test("welcome history renders actual items in order using the tracked source-ope
   );
   assert.match(html, /First source/);
   assert.match(html, /Second source/);
-  assert.equal(
-    (html.match(/action="\/intelligence\/items\/open"/g) ?? []).length,
-    2,
-  );
-  for (const item of items) assert.ok(html.includes(`value="${item.itemId}"`));
-  assert.equal((html.match(/method="POST"/g) ?? []).length, 2);
-  assert.equal((html.match(/rel="noopener"/g) ?? []).length, 2);
+  for (const item of items) {
+    assert.ok(html.includes(`href="/intelligence/items/${item.itemId}"`));
+  }
   assert.doesNotMatch(html, /noreferrer|Today|Yesterday/);
 });
 

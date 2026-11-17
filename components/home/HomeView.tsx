@@ -14,6 +14,7 @@ import COLORS from "@/styles/colors";
 type HomeViewProps = {
   firstName: string;
   lastName: string;
+  email: string;
   isAdmin: boolean;
   today: string;
   trends: LatestTrend[];
@@ -24,6 +25,7 @@ type HomeViewProps = {
 export default function HomeView({
   firstName,
   lastName,
+  email,
   isAdmin,
   today,
   trends,
@@ -31,7 +33,12 @@ export default function HomeView({
   recentlyAccessedItems,
 }: HomeViewProps) {
   return (
-    <AppShell firstName={firstName} lastName={lastName} isAdmin={isAdmin}>
+    <AppShell
+      firstName={firstName}
+      lastName={lastName}
+      email={email}
+      isAdmin={isAdmin}
+    >
       <HomeCard>
         <Glow src={HomeGlow} alt="" width={1040} height={290} />
         <Header>

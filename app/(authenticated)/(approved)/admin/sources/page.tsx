@@ -26,6 +26,7 @@ export default async function AdminSourcesPage() {
     <AppShell
       firstName={admin.firstName}
       lastName={admin.lastName}
+      email={admin.email}
       isAdmin={admin.isAdmin}
     >
       <SourcesView

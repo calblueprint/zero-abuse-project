@@ -27,31 +27,15 @@ import {
 } from "@/components/auth/ui";
 import COLORS from "@/styles/colors";
 
-type OnboardingFormProps = {
-  action?: (
-    prevState: OnboardingState,
-    formData: FormData,
-  ) => Promise<OnboardingState>;
-  initialFields?: OnboardingFields & { email?: string };
-  submitLabel?: string;
-  showEmail?: boolean;
-  splitSteps?: boolean;
-  email?: string;
-};
-
 const stepOneFields = ["firstName", "lastName", "phone"] as const;
 
-export default function OnboardingForm({
-  action = submitOnboarding,
-  initialFields,
-  submitLabel = "Continue",
-  showEmail = false,
-  splitSteps = false,
-  email,
-}: OnboardingFormProps) {
-  const initialState: OnboardingState = { fields: initialFields };
+const initialState: OnboardingState = {};
 
-  const [state, formAction, isPending] = useActionState(action, initialState);
+export default function OnboardingForm({ email }: { email: string }) {
+  const [state, formAction, isPending] = useActionState(
+    submitOnboarding,
+    initialState,
+  );
   const [step, setStep] = useState<1 | 2>(1);
   const [stepErrors, setStepErrors] = useState<OnboardingErrors | null>(null);
   const [lastState, setLastState] = useState(state);
@@ -79,7 +63,7 @@ export default function OnboardingForm({
       errors[field] = stepErrors[field];
     });
   }
-  const onStepOne = splitSteps && step === 1;
+  const onStepOne = step === 1;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     if (!onStepOne) {
@@ -103,28 +87,15 @@ export default function OnboardingForm({
 
   return (
     <form action={formAction} onSubmit={handleSubmit} noValidate>
-      {splitSteps && (
-        <>
-          <Eyebrow>{step === 1 ? "1 of 2" : "2 of 2"}</Eyebrow>
-          <StepHeading ref={headingRef} tabIndex={-1}>
-            {step === 1 ? "Your details" : "Your organization"}
-          </StepHeading>
-          {email ? (
-            <Body
-              style={{
-                textAlign: "center",
-                color: "#20252B",
-                fontWeight: 500,
-                lineHeight: "20px",
-              }}
-            >
-              {email}
-            </Body>
-          ) : null}
-        </>
-      )}
+      <Eyebrow>{step === 1 ? "1 of 2" : "2 of 2 · Optional"}</Eyebrow>
+      <StepHeading ref={headingRef} tabIndex={-1}>
+        {step === 1 ? "Your details" : "Your organization"}
+      </StepHeading>
+      <Body style={{ textAlign: "center", overflowWrap: "anywhere" }}>
+        {email}
+      </Body>
 
-      <StepFields hidden={splitSteps && step !== 1}>
+      <StepFields hidden={step !== 1}>
         <TextField
           name="firstName"
           label="First name"
@@ -159,7 +130,7 @@ export default function OnboardingForm({
         />
       </StepFields>
 
-      <StepFields hidden={splitSteps && step !== 2}>
+      <StepFields hidden={step !== 2}>
         <TextField
           name="organization"
           label="Organization (optional)"
@@ -171,24 +142,13 @@ export default function OnboardingForm({
         />
         <TextField
           name="role"
-          label={splitSteps ? "Job title (optional)" : "Role (optional)"}
+          label="Job title (optional)"
           placeholder="Your role"
           autoComplete="organization-title"
           defaultValue={state.fields?.role}
           maxLength={onboardingFieldLimits.role}
           error={errors.role}
         />
-        {showEmail && (
-          <TextField
-            name="email"
-            label="Email"
-            type="email"
-            autoComplete="email"
-            defaultValue={state.fields?.email}
-            required
-            error={state.errors?.email}
-          />
-        )}
       </StepFields>
 
       {errors.form && <FormMessage role="alert">{errors.form}</FormMessage>}
@@ -198,10 +158,10 @@ export default function OnboardingForm({
         <PrimaryButton type="submit">Continue</PrimaryButton>
       ) : (
         <PrimaryButton type="submit" disabled={isPending}>
-          {isPending ? "Saving..." : splitSteps ? "Finish setup" : submitLabel}
+          {isPending ? "Saving..." : "Finish setup"}
         </PrimaryButton>
       )}
-      {splitSteps && step === 2 && (
+      {step === 2 && (
         <BackButton
           type="button"
           onClick={() => setStep(1)}
@@ -220,7 +180,7 @@ function TextField({
   error,
   ...inputProps
 }: {
-  name: keyof OnboardingFields | "email";
+  name: keyof OnboardingFields;
   label: string;
   error?: string;
 } & Omit<ComponentProps<typeof Input>, "id" | "name">) {
@@ -265,7 +225,7 @@ const FormMessage = styled(ErrorText)`
 const BackButton = styled(TextButton)`
   display: block;
   width: 100%;
+  text-align: center;
   margin-top: 16px;
   color: ${COLORS.muted};
-  text-align: center;
 `;

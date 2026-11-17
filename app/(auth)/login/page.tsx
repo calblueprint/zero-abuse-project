@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { StatusBlock } from "@/components/auth/ui";
 import { getVerifiedAuthUser } from "@/lib/auth/user";
-import { VerificationExpired } from "../sign-up/sign-up-form";
+import VerificationExpired from "../verification-needed/expired-form";
 import { LoginForm } from "./login-form";
 
 type LoginPageProps = {

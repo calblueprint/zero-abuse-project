@@ -20,3 +20,10 @@ export function toIsoTimestamp(value: string | null): string | null {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
+
+export function getInitials(firstName: string, lastName: string): string {
+  return [firstName, lastName]
+    .map(name => Array.from(name.trim())[0] ?? "")
+    .join("")
+    .toUpperCase();
+}

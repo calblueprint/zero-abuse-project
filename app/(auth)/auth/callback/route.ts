@@ -2,8 +2,15 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
 
-function safeNextPath(next: string | null) {
-  return next?.startsWith("/") && !next.startsWith("//") ? next : "/";
+function safeNextPath(requestUrl: URL) {
+  const next = requestUrl.searchParams.get("next");
+  if (!next?.startsWith("/")) return "/";
+  try {
+    const target = new URL(next, requestUrl);
+    return target.origin === requestUrl.origin ? next : "/";
+  } catch {
+    return "/";
+  }
 }
 
 function redirectAfterRecovery(url: URL) {
@@ -86,7 +93,7 @@ export async function GET(request: NextRequest) {
         ? "/update-password"
         : isEmailChange
           ? "/profile"
-          : safeNextPath(requestUrl.searchParams.get("next"));
+          : safeNextPath(requestUrl);
       const redirectUrl = new URL(nextPath, requestUrl);
 
       if (isPasswordRecovery) {
@@ -110,18 +117,18 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  if (requestUrl.searchParams.get("flow") === "recovery") {
+    const loginUrl = new URL("/login", requestUrl);
+    loginUrl.searchParams.set("error", "invalid-reset-link");
+    return redirectAfterRecovery(loginUrl);
+  }
+
   if (requestedEmail) {
     const response = await continueEmailChange(requestUrl, requestedEmail);
 
     if (response) {
       return response;
     }
-  }
-
-  if (requestUrl.searchParams.get("flow") === "recovery") {
-    const loginUrl = new URL("/login", requestUrl);
-    loginUrl.searchParams.set("error", "invalid-reset-link");
-    return redirectAfterRecovery(loginUrl);
   }
 
   const loginUrl = new URL("/login", requestUrl);

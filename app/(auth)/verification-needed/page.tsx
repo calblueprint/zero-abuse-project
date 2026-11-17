@@ -1,12 +1,10 @@
 import { redirect } from "next/navigation";
-import { resendVerification } from "@/actions/auth/actions";
 import {
   Body,
   CenterLink,
   ErrorText,
   Eyebrow,
   Heading,
-  SubmitButton,
 } from "@/components/auth/ui";
 import { ResendVerificationButton } from "./resend-button";
 
@@ -62,10 +60,8 @@ export default async function VerificationNeededPage({
           New verification link sent.
         </Body>
       ) : null}
-      <ResendVerificationButton
-        email={email}
-        coolingDown={message === "resent"}
-      />
+      <ResendVerificationButton email={email} />
+      <CenterLink href="/sign-up">Use a different email</CenterLink>
       <CenterLink href="/login">Back to sign in</CenterLink>
     </div>
   );

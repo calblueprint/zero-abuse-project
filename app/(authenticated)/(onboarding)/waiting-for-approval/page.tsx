@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import { signOut } from "@/actions/auth/actions";
-import { Body, CenterButton, Eyebrow, Heading } from "@/components/auth/ui";
+import {
+  Body,
+  CenterButton,
+  Eyebrow,
+  Heading,
+  PrimaryButton,
+} from "@/components/auth/ui";
 import { requireAccessUser } from "@/lib/auth/access";
 
 export default async function WaitingForApprovalPage() {
@@ -31,6 +37,9 @@ export default async function WaitingForApprovalPage() {
       >
         {user.email}
       </Body>
+      <form action="/waiting-for-approval" method="get">
+        <PrimaryButton type="submit">Check again</PrimaryButton>
+      </form>
       <form action={signOut}>
         <CenterButton type="submit">Sign out</CenterButton>
       </form>
