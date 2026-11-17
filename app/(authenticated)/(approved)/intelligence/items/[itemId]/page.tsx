@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import AppShell from "@/components/AppShell";
 import IntelItemView from "@/components/intelligence-item/IntelItemView";
 import { getIntelligenceItem } from "@/db/queries/intelligence-item";
 import { requireApprovedUser } from "@/lib/auth/access";
@@ -15,11 +16,13 @@ export default async function IntelItemPage({
   const item = await getIntelligenceItem(itemId);
   if (!item) notFound();
   return (
-    <IntelItemView
-      item={item}
+    <AppShell
       firstName={user.firstName}
       lastName={user.lastName}
+      email={user.email}
       isAdmin={user.isAdmin}
-    />
+    >
+      <IntelItemView key={item.itemId} item={item} isAdmin={user.isAdmin} />
+    </AppShell>
   );
 }

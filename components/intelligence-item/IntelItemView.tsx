@@ -4,12 +4,13 @@ import type { IntelligenceItemDetail } from "@/db/queries/intelligence-item";
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { unstable_rethrow } from "next/navigation";
 import styled from "styled-components";
 import { updateIntelItemSummary } from "@/app/(authenticated)/(approved)/intelligence/items/[itemId]/actions";
 import ChevronDownSmallIcon from "@/assets/icons/chevron-down-small.svg";
 import MoreIcon from "@/assets/icons/more.svg";
-import AppShell, { Card } from "@/components/AppShell";
+import { Card } from "@/components/AppShell";
+import { OpenSourceForm } from "@/components/intelligence-library/ViewSourceButton";
 import Toast, { useToast } from "@/components/Toast";
 import COLORS from "@/styles/colors";
 
@@ -49,16 +50,11 @@ function formatIntelType(value: string | null): string | null {
 
 export default function IntelItemView({
   item,
-  firstName,
-  lastName,
   isAdmin,
 }: {
   item: IntelligenceItemDetail;
-  firstName: string;
-  lastName: string;
   isAdmin: boolean;
 }) {
-  const router = useRouter();
   const { toast, showToast } = useToast();
   const [editing, setEditing] = useState(false);
   const [summary, setSummary] = useState(item.summary);
@@ -83,23 +79,21 @@ export default function IntelItemView({
           setSummary(result.summary ?? draft.trim());
           setEditedAt(result.editedAt ?? editedAt);
           setEditing(false);
-          router.refresh();
         }
-      } catch {
+      } catch (error) {
+        unstable_rethrow(error);
         showToast("Unable to save the summary. Please try again.");
       }
     });
   }
 
   return (
-    <AppShell firstName={firstName} lastName={lastName} isAdmin={isAdmin}>
+    <>
       <DetailCard>
         <Column>
           <TopRow>
             <Breadcrumb aria-label="Breadcrumb">
-              <Link href="/intelligence-library?view=items">
-                Intelligence library
-              </Link>
+              <Link href="/intelligence-library">Intelligence library</Link>
               <span>/</span>
               <Link href="/intelligence-library?view=items">
                 Intelligence items
@@ -108,13 +102,15 @@ export default function IntelItemView({
               <span aria-current="page">Item</span>
             </Breadcrumb>
             <Actions>
-              <ActionButton
-                type="button"
-                onClick={save}
-                disabled={!editing || pending}
-              >
-                {pending ? "Saving…" : "Save"}
-              </ActionButton>
+              {isAdmin && (
+                <ActionButton
+                  type="button"
+                  onClick={save}
+                  disabled={!editing || pending || !draft.trim()}
+                >
+                  {pending ? "Saving…" : "Save"}
+                </ActionButton>
+              )}
               {/* TODO: Enable pattern association when its data model and flow exist. */}
               <PatternButton type="button" disabled>
                 Add to pattern
@@ -132,32 +128,34 @@ export default function IntelItemView({
           <SummarySection aria-labelledby="summary-heading">
             <SectionHeader>
               <h2 id="summary-heading">Summary</h2>
-              {editing ? (
-                <SmallButton
-                  type="button"
-                  disabled={pending}
-                  onClick={() => {
-                    setDraft(summary ?? "");
-                    setEditing(false);
-                  }}
-                >
-                  Cancel
-                </SmallButton>
-              ) : (
-                <SmallButton
-                  type="button"
-                  onClick={() => {
-                    setDraft(summary ?? "");
-                    setEditing(true);
-                  }}
-                >
-                  Edit
-                </SmallButton>
-              )}
+              {isAdmin &&
+                (editing ? (
+                  <SmallButton
+                    type="button"
+                    disabled={pending}
+                    onClick={() => {
+                      setDraft(summary ?? "");
+                      setEditing(false);
+                    }}
+                  >
+                    Cancel
+                  </SmallButton>
+                ) : (
+                  <SmallButton
+                    type="button"
+                    onClick={() => {
+                      setDraft(summary ?? "");
+                      setEditing(true);
+                    }}
+                  >
+                    Edit
+                  </SmallButton>
+                ))}
             </SectionHeader>
             {editing ? (
               <SummaryInput
                 aria-label="Summary"
+                maxLength={10000}
                 value={draft}
                 onChange={event => setDraft(event.target.value)}
                 disabled={pending}
@@ -177,13 +175,7 @@ export default function IntelItemView({
                 Add source
               </ActionButton>
             </SectionHeader>
-            <form
-              action="/intelligence/items/open"
-              method="POST"
-              target="_blank"
-              rel="noopener"
-            >
-              <input type="hidden" name="itemId" value={item.itemId} />
+            <OpenSourceForm itemId={item.itemId}>
               <SourceRow
                 type="submit"
                 aria-label={`Open source: ${item.sourceName}`}
@@ -205,7 +197,7 @@ export default function IntelItemView({
                   />
                 </Chevron>
               </SourceRow>
-            </form>
+            </OpenSourceForm>
           </SourcesSection>
           <PatternsSection aria-labelledby="patterns-heading">
             <h2 id="patterns-heading">Used in patterns</h2>
@@ -215,7 +207,7 @@ export default function IntelItemView({
         </Column>
       </DetailCard>
       <Toast toast={toast} />
-    </AppShell>
+    </>
   );
 }
 

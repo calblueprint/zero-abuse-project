@@ -2,6 +2,7 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { itelItems, sources } from "@/db/schema";
+import { toIsoTimestamp } from "@/lib/utils";
 
 // Each intel item currently has one source_id. There is no multi-source relation.
 export async function getIntelligenceItem(itemId: string) {
@@ -20,7 +21,13 @@ export async function getIntelligenceItem(itemId: string) {
     .innerJoin(sources, eq(itelItems.sourceId, sources.sourceId))
     .where(eq(itelItems.itemId, itemId))
     .limit(1);
-  return item ?? null;
+  return item
+    ? {
+        ...item,
+        publishedAt: toIsoTimestamp(item.publishedAt),
+        editedAt: toIsoTimestamp(item.editedAt),
+      }
+    : null;
 }
 
 export type IntelligenceItemDetail = NonNullable<

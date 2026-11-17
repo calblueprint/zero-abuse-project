@@ -12,12 +12,12 @@ import Modal from "@/components/Modal";
 import Toast, { useToast } from "@/components/Toast";
 import { toSearchParams } from "@/lib/validation/search-params";
 import COLORS from "@/styles/colors";
+import { PrimaryButton, SecondaryButton, TextButton } from "@/styles/controls";
 import { deactivateSource, reactivateSource } from "./actions";
 import AddSourceForm from "./AddSourceForm";
 import SourcesTable from "./SourcesTable";
 import SourcesToolbar from "./SourcesToolbar";
 import SourceTabs from "./SourceTabs";
-import { PrimaryButton, SecondaryButton, TextButton } from "./styles";
 import {
   applySourceView,
   countSourceView,

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { itelItems } from "@/db/schema";
-import { requireApprovedUser } from "@/lib/auth/access";
+import { requireAdmin } from "@/lib/auth/access";
 import { isUuid } from "@/lib/validation/uuid";
 
 export type SummaryUpdateResult = {
@@ -18,7 +18,7 @@ export async function updateIntelItemSummary(
   itemId: string,
   summary: string,
 ): Promise<SummaryUpdateResult> {
-  await requireApprovedUser();
+  await requireAdmin();
   if (!isUuid(itemId))
     return { ok: false, message: "Invalid intelligence item ID." };
   if (typeof summary !== "string" || !summary.trim()) {

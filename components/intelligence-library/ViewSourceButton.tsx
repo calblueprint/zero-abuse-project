@@ -1,16 +1,33 @@
+import type { CSSProperties, ReactNode } from "react";
 import styled from "styled-components";
 
 export default function ViewSourceButton({ itemId }: { itemId: string }) {
+  return (
+    <OpenSourceForm itemId={itemId} style={{ display: "inline" }}>
+      <SourceButton type="submit">View source</SourceButton>
+    </OpenSourceForm>
+  );
+}
+
+export function OpenSourceForm({
+  itemId,
+  children,
+  style,
+}: {
+  itemId: string;
+  children: ReactNode;
+  style?: CSSProperties;
+}) {
   return (
     <form
       action="/intelligence/items/open"
       method="POST"
       rel="noopener"
-      style={{ display: "inline" }}
+      style={style}
       target="_blank"
     >
       <input name="itemId" type="hidden" value={itemId} />
-      <SourceButton type="submit">View source</SourceButton>
+      {children}
     </form>
   );
 }
