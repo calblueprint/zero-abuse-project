@@ -59,7 +59,7 @@ export default function DetailsForm({
         return {
           fields: {
             ...parseOnboardingFormData(formData).fields,
-            email: String(formData.get("email") ?? ""),
+            email: String(formData.get("email") ?? profile.email),
           },
           errors: { form: "Something went wrong. Please try again." },
         };
@@ -103,7 +103,8 @@ export default function DetailsForm({
   const fieldProps = (name: FieldName): FieldProps => ({
     id: `${id}-${name}`,
     name,
-    defaultValue: fields?.[name],
+    defaultValue:
+      fields?.[name] ?? (name === "email" ? profile.email : undefined),
     error: errors?.[name],
     errorId: `${id}-${name}-error`,
   });
@@ -223,7 +224,7 @@ function EmailField({
         <EmailInput
           ref={ref}
           id={field.id}
-          name={field.name}
+          name={editable ? field.name : undefined}
           type="email"
           autoComplete="email"
           defaultValue={field.defaultValue}

@@ -42,14 +42,17 @@ export async function submitProfileUpdate(
 ): Promise<ProfileState> {
   const user = await requireApprovedUser();
   const result = parseOnboardingFormData(formData);
-  const email = String(formData.get("email") ?? "")
+  const submittedEmail = formData.get("email");
+  const email = String(submittedEmail ?? user.email)
     .trim()
     .toLowerCase();
-  const emailError = validateEmail(email);
+  const fields =
+    submittedEmail === null ? result.fields : { ...result.fields, email };
+  const emailError = submittedEmail === null ? undefined : validateEmail(email);
 
   if (!result.success || emailError) {
     return {
-      fields: { ...result.fields, email },
+      fields,
       errors: {
         ...(!result.success && result.errors),
         ...(emailError && { email: emailError }),
@@ -59,15 +62,15 @@ export async function submitProfileUpdate(
 
   let currentEmail = user.email.trim().toLowerCase();
   try {
-    // Fetch the latest Auth state only when the submitted email differs from the verified session.
-    if (email !== currentEmail) {
+    // An explicit edit can match an outdated email in the session.
+    if (submittedEmail !== null) {
       ({ email: currentEmail } = await getAuthEmailState());
     }
     await updateUserProfile(user.userId, result.data);
   } catch (error) {
     console.error("Profile update failed:", error);
     return {
-      fields: { ...result.fields, email },
+      fields,
       errors: { form: "Something went wrong. Please try again." },
     };
   }
@@ -89,7 +92,7 @@ export async function submitProfileUpdate(
   if (error) {
     console.error("Email change request failed:", error);
     return {
-      fields: { ...result.fields, email },
+      fields,
       errors: { email: "We couldn't start your email change. Try again." },
       message: "Your other changes were saved.",
     };

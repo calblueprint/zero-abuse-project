@@ -72,6 +72,7 @@ test("initials trim spaces and keep characters outside the BMP whole", () => {
 
 function loadProfileActions({
   currentEmail = "jiwoo@example.org",
+  sessionEmail = currentEmail,
   pendingEmail = null,
   updateUserError = null,
   resendError = null,
@@ -103,7 +104,7 @@ function loadProfileActions({
     "@/lib/auth/access": {
       requireApprovedUser: async () => ({
         userId: "user-1",
-        email: currentEmail,
+        email: sessionEmail,
       }),
     },
     "@/lib/auth/user": {
@@ -142,10 +143,9 @@ test("saving without an email change skips the extra Auth request", async () => 
   const { actions, calls } = loadProfileActions({
     emailStateError: new Error("Unexpected Auth request"),
   });
-  const result = await actions.submitProfileUpdate(
-    {},
-    profileForm(" Jiwoo@Example.org "),
-  );
+  const form = profileForm("jiwoo@example.org");
+  form.delete("email");
+  const result = await actions.submitProfileUpdate({}, form);
 
   assert.equal(result.status, "saved");
   assert.equal(calls.profile.length, 1);
@@ -166,6 +166,22 @@ test("a new email starts the change and reports where the link went", async () =
   assert.deepEqual(calls.cookies, [
     ["email-change-requested", "new@example.org"],
   ]);
+});
+
+test("an explicit change back to the session email still checks current Auth state", async () => {
+  const { actions, calls } = loadProfileActions({
+    currentEmail: "new@example.org",
+    sessionEmail: "jiwoo@example.org",
+  });
+
+  const result = await actions.submitProfileUpdate(
+    {},
+    profileForm("jiwoo@example.org"),
+  );
+
+  assert.equal(result.status, "email-change-sent");
+  assert.equal(result.pendingEmail, "jiwoo@example.org");
+  assert.equal(calls.updateUser[0][0].email, "jiwoo@example.org");
 });
 
 test("a failed email change keeps the other edits and has no status", async () => {
