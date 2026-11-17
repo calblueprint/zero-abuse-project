@@ -6,6 +6,8 @@ import { getAuthEmailState } from "@/lib/auth/user";
 import { toIsoTimestamp } from "@/lib/utils";
 import ProfileView from "./ProfileView";
 
+export const metadata = { title: "Profile" };
+
 export default async function ProfilePage() {
   const user = await requireApprovedUser();
   const [profile, emailState] = await Promise.all([

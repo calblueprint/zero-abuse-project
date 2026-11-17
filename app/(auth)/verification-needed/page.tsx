@@ -8,6 +8,8 @@ import {
 } from "@/components/auth/ui";
 import { ResendVerificationButton } from "./resend-button";
 
+export const metadata = { title: "Verify your email" };
+
 type VerificationNeededPageProps = {
   searchParams: Promise<{
     email?: string;

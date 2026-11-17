@@ -9,6 +9,8 @@ import {
 } from "@/components/auth/ui";
 import { requireAccessUser } from "@/lib/auth/access";
 
+export const metadata = { title: "Access pending" };
+
 export default async function WaitingForApprovalPage() {
   const user = await requireAccessUser();
 

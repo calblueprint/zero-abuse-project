@@ -4,6 +4,8 @@ import { getVerifiedAuthUser } from "@/lib/auth/user";
 import VerificationExpired from "../verification-needed/expired-form";
 import { LoginForm } from "./login-form";
 
+export const metadata = { title: "Sign in" };
+
 type LoginPageProps = {
   searchParams: Promise<{ error?: string; message?: string }>;
 };

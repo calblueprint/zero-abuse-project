@@ -3,6 +3,8 @@ import { signOut } from "@/actions/auth/actions";
 import { Body, CenterButton, Eyebrow, Heading } from "@/components/auth/ui";
 import { requireAccessUser } from "@/lib/auth/access";
 
+export const metadata = { title: "Access declined" };
+
 export default async function AccessRejectedPage() {
   const user = await requireAccessUser();
 

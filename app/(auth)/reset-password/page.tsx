@@ -1,5 +1,7 @@
 import { CheckEmail, ResetPasswordForm } from "./reset-password-form";
 
+export const metadata = { title: "Reset your password" };
+
 type ResetPasswordPageProps = {
   searchParams: Promise<{ error?: string; message?: string }>;
 };
