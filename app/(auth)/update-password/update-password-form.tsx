@@ -5,6 +5,7 @@ import { signOut, updatePassword } from "@/actions/auth/actions";
 import {
   CenterButton,
   ErrorText,
+  Eyebrow,
   Field,
   Fields,
   Heading,
@@ -44,6 +45,7 @@ export function UpdatePasswordForm({ error }: { error?: string }) {
 
   return (
     <form action={updatePassword} onSubmit={onSubmit}>
+      <Eyebrow>Account recovery</Eyebrow>
       <Heading>Reset password</Heading>
       <Fields>
         <Field>

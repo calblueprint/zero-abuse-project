@@ -31,7 +31,7 @@ const stepOneFields = ["firstName", "lastName", "phone"] as const;
 
 const initialState: OnboardingState = {};
 
-export default function OnboardingForm() {
+export default function OnboardingForm({ email }: { email: string }) {
   const [state, formAction, isPending] = useActionState(
     submitOnboarding,
     initialState,
@@ -89,12 +89,10 @@ export default function OnboardingForm() {
     <form action={formAction} onSubmit={handleSubmit} noValidate>
       <Eyebrow>{step === 1 ? "1 of 2" : "2 of 2 · Optional"}</Eyebrow>
       <StepHeading ref={headingRef} tabIndex={-1}>
-        {step === 1 ? "Welcome to ZAP" : "Your organization"}
+        {step === 1 ? "Your details" : "Your organization"}
       </StepHeading>
-      <Body>
-        {step === 1
-          ? "Tell us a little about yourself."
-          : "Add a little context for your team."}
+      <Body style={{ textAlign: "center", overflowWrap: "anywhere" }}>
+        {email}
       </Body>
 
       <StepFields hidden={step !== 1}>
@@ -144,7 +142,7 @@ export default function OnboardingForm() {
         />
         <TextField
           name="role"
-          label="Role (optional)"
+          label="Job title (optional)"
           placeholder="Your role"
           autoComplete="organization-title"
           defaultValue={state.fields?.role}
@@ -160,7 +158,7 @@ export default function OnboardingForm() {
         <PrimaryButton type="submit">Continue</PrimaryButton>
       ) : (
         <PrimaryButton type="submit" disabled={isPending}>
-          {isPending ? "Saving..." : "Continue"}
+          {isPending ? "Saving..." : "Finish setup"}
         </PrimaryButton>
       )}
       {step === 2 && (
@@ -226,6 +224,8 @@ const FormMessage = styled(ErrorText)`
 
 const BackButton = styled(TextButton)`
   display: block;
+  width: 100%;
+  text-align: center;
   margin-top: 16px;
   color: ${COLORS.muted};
 `;
