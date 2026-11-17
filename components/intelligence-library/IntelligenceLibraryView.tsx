@@ -62,6 +62,18 @@ export default function IntelligenceLibraryView({
 }) {
   const [view, setView] = useState<"patterns" | "items">(initialView);
   const [hasViewedItems, setHasViewedItems] = useState(initialView === "items");
+  function selectView(nextView: typeof view) {
+    const url = new URL(window.location.href);
+    if (nextView === "items") {
+      url.searchParams.set("view", "items");
+      setHasViewedItems(true);
+    } else {
+      url.searchParams.delete("view");
+    }
+    window.history.replaceState(null, "", url);
+    setView(nextView);
+  }
+
   const [status, setStatus] = useState<Status>("All patterns");
   const [sort, setSort] = useState<string>("Most recent");
   const [search, setSearch] = useState("");
@@ -165,17 +177,14 @@ export default function IntelligenceLibraryView({
           <LibrarySwitch aria-label="Library view">
             <SwitchOption
               $active={view === "patterns"}
-              onClick={() => setView("patterns")}
+              onClick={() => selectView("patterns")}
               type="button"
             >
               Emerging patterns <MutedCount>{patterns.length}</MutedCount>
             </SwitchOption>
             <SwitchOption
               $active={view === "items"}
-              onClick={() => {
-                setView("items");
-                setHasViewedItems(true);
-              }}
+              onClick={() => selectView("items")}
               type="button"
             >
               Intelligence items{" "}

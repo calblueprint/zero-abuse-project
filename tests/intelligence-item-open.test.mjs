@@ -176,7 +176,7 @@ test("preserves authentication redirects during a history write", async t => {
   await assert.rejects(POST(request()), error => error === redirectError);
 });
 
-test("library source forms preserve Origin", () => {
+test("library links to item details and source forms preserve Origin", () => {
   function loadComponent(path) {
     const exports = {};
     const code = ts.transpileModule(
@@ -195,6 +195,10 @@ test("library source forms preserve Origin", () => {
         if (name.startsWith("./"))
           return loadComponent(
             `../components/intelligence-library/${name.slice(2)}.tsx`,
+          );
+        if (name === "@/lib/intelligence-library/format-intel-type")
+          return loadComponent(
+            "../lib/intelligence-library/format-intel-type.ts",
           );
         if (name === "@/lib/intelligence-library/filters")
           return loadComponent("../lib/intelligence-library/filters.ts");
@@ -232,6 +236,8 @@ test("library source forms preserve Origin", () => {
     itemId,
     title,
     sourceName: "Test source",
+    intelType: '["Report"]',
+    updatedAt: "2026-10-18T00:00:00Z",
     publishedAt: null,
     tldr: null,
   });
@@ -243,6 +249,10 @@ test("library source forms preserve Origin", () => {
     }),
   );
   assert.ok(!html.includes("Recently accessed"));
+  assert.ok(html.includes(`href="/intelligence/items/${itemId}"`));
+  assert.match(html, /Single source/);
+  assert.match(html, />Report<\/td>/);
+  assert.match(html, />18 Oct<\/time>/);
   const forms = html.match(
     /<form[^>]*action="\/intelligence\/items\/open"[^>]*>/g,
   );
@@ -252,4 +262,51 @@ test("library source forms preserve Origin", () => {
     assert.match(form, /rel="noopener"/);
     assert.doesNotMatch(form, /noreferrer/);
   }
+});
+
+test("only admins can save a shared intelligence summary", async t => {
+  const code = ts.transpileModule(
+    readFileSync(
+      new URL(
+        "../app/(authenticated)/(approved)/intelligence/items/[itemId]/actions.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    { compilerOptions: { module: ts.ModuleKind.CommonJS } },
+  ).outputText;
+  const denied = new Error("Admin access required");
+  const requireAdmin = t.mock.fn(async () => {
+    throw denied;
+  });
+  const update = t.mock.fn(() => ({
+    set: () => ({
+      where: () => ({ returning: async () => [{ itemId }] }),
+    }),
+  }));
+  const modules = {
+    "next/cache": { revalidatePath() {} },
+    "drizzle-orm": { eq() {} },
+    "@/db": { db: { update } },
+    "@/db/schema": { itelItems: { itemId: "item_id" } },
+    "@/lib/auth/access": { requireAdmin },
+    "@/lib/validation/uuid": { isUuid },
+  };
+  const exports = {};
+  runInNewContext(code, { exports, require: name => modules[name] });
+
+  await assert.rejects(
+    exports.updateIntelItemSummary(itemId, "Edited by a member"),
+    error => error === denied,
+  );
+  assert.equal(update.mock.callCount(), 0);
+
+  requireAdmin.mock.mockImplementation(async () => {});
+  const result = await exports.updateIntelItemSummary(
+    itemId,
+    "  Edited by an admin  ",
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.summary, "Edited by an admin");
+  assert.equal(update.mock.callCount(), 1);
 });

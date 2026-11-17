@@ -1,4 +1,5 @@
 import type { IntelligenceLibraryItem } from "@/db/queries/intelligence-library";
+import Link from "next/link";
 import styled from "styled-components";
 import {
   RowMeta,
@@ -25,28 +26,20 @@ export default function RecentlyAccessed({
         <List>
           {items.map(item => (
             <Item key={item.itemId}>
-              <form
-                action="/intelligence/items/open"
-                method="POST"
-                target="_blank"
-                rel="noopener"
-              >
-                <input name="itemId" type="hidden" value={item.itemId} />
-                <RowText>
-                  <ItemTitle
-                    as="button"
-                    type="submit"
-                    title={item.title ?? "Untitled intelligence item"}
-                  >
-                    {item.title ?? "Untitled intelligence item"}
-                  </ItemTitle>
-                  <Meta>
-                    <span>Intelligence item</span>
-                    <span>·</span>
-                    <span>{item.sourceName}</span>
-                  </Meta>
-                </RowText>
-              </form>
+              <RowText>
+                <ItemTitle
+                  as={Link}
+                  href={`/intelligence/items/${item.itemId}`}
+                  title={item.title ?? "Untitled intelligence item"}
+                >
+                  {item.title ?? "Untitled intelligence item"}
+                </ItemTitle>
+                <Meta>
+                  <span>Intelligence item</span>
+                  <span>·</span>
+                  <span>{item.sourceName}</span>
+                </Meta>
+              </RowText>
             </Item>
           ))}
         </List>
@@ -88,13 +81,9 @@ const Item = styled.li`
 `;
 
 const ItemTitle = styled(RowTitle)`
+  display: block;
+  text-decoration: none;
   max-width: 100%;
-  padding: 0;
-  border: none;
-  background: none;
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
 
   &:hover {
     text-decoration: underline;

@@ -26,6 +26,7 @@ export type IntelligenceLibraryItem = {
   sourceName: string;
   sourceUrl: string;
   publishedAt: string | null;
+  updatedAt: string | null;
   title: string | null;
   tldr: string | null;
   exploitationType: string | null;
@@ -44,6 +45,9 @@ export const intelligenceLibraryItemSelection = {
   sourceName: sources.name,
   sourceUrl: itelItems.sourceUrl,
   publishedAt: itelItems.publishedAt,
+  updatedAt: sql<
+    string | null
+  >`coalesce(${itelItems.editedAt}, ${itelItems.addedAt}, ${itelItems.publishedAt})`,
   title: itelItems.title,
   tldr: itelItems.tldr,
   exploitationType: itelItems.exploitationType,
