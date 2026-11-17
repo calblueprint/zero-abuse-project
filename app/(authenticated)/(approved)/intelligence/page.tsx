@@ -7,6 +7,8 @@ import {
 import { requireApprovedUser } from "@/lib/auth/access";
 import { parseIntelligenceFilters } from "@/lib/intelligence-library/filters";
 
+export const metadata = { title: "Intelligence items" };
+
 type IntelligenceLibraryPageProps = {
   searchParams: Promise<SearchParams>;
 };

@@ -8,6 +8,8 @@ import {
 } from "@/components/auth/ui";
 import { requireApprovedUser } from "@/lib/auth/access";
 
+export const metadata = { title: "Welcome" };
+
 export default async function WelcomePage() {
   const user = await requireApprovedUser();
 

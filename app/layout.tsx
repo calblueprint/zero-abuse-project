@@ -11,8 +11,8 @@ const sans = Inter({
 
 // site metadata - what shows up on embeds
 export const metadata: Metadata = {
-  title: "Project Name",
-  description: "Description of project",
+  title: { default: "ZAP", template: "%s | ZAP" },
+  description: "Zero Abuse Project’s intelligence platform.",
 };
 
 export default function RootLayout({

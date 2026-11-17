@@ -6,6 +6,8 @@ import { requireAdmin } from "@/lib/auth/access";
 import { toIsoTimestamp } from "@/lib/utils";
 import SourcesView from "./SourcesView";
 
+export const metadata = { title: "Sources" };
+
 export default async function AdminSourcesPage() {
   const admin = await requireAdmin();
   const sourceList = await db

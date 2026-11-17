@@ -5,6 +5,8 @@ import { getIntelligenceItem } from "@/db/queries/intelligence-item";
 import { requireApprovedUser } from "@/lib/auth/access";
 import { isUuid } from "@/lib/validation/uuid";
 
+export const metadata = { title: "Intelligence item" };
+
 export default async function IntelItemPage({
   params,
 }: {

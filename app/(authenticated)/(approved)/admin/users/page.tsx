@@ -17,6 +17,8 @@ import PeopleSortDropdown from "./PeopleSortDropdown";
 import RejectRequestButton from "./RejectRequest";
 import ReviewAccessRequest from "./ReviewAccessRequest";
 
+export const metadata = { title: "People" };
+
 const accessCategories = ["admin", "member", "revoked", "pending"] as const;
 
 type TabKey = "requests" | "all" | "admins" | "revoked";

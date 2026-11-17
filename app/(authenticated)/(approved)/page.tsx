@@ -3,6 +3,8 @@ import { getRecentlyAccessedItems } from "@/db/queries/recently-accessed";
 import { getLatestTrends } from "@/db/queries/trends";
 import { requireApprovedUser } from "@/lib/auth/access";
 
+export const metadata = { title: "Home" };
+
 export default async function Home() {
   const user = await requireApprovedUser();
   const [{ trends, total }, recentlyAccessedItems] = await Promise.all([

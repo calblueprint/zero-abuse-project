@@ -8,6 +8,8 @@ import { requireApprovedUser } from "@/lib/auth/access";
 import { getEmergingPatterns } from "@/lib/intelligence-library/emerging-patterns";
 import { parseIntelligenceFilters } from "@/lib/intelligence-library/filters";
 
+export const metadata = { title: "Intelligence Library" };
+
 export default async function IntelligenceLibraryPreviewPage({
   searchParams,
 }: {
