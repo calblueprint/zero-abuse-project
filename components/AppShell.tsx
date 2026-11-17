@@ -5,32 +5,23 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styled from "styled-components";
-import TopBar from "@/components/TopBar";
+import TopBar, { ADMIN_TABS, isActive, TABS } from "@/components/TopBar";
 import COLORS from "@/styles/colors";
 import { dmSans } from "@/styles/fonts";
 
 type AppShellProps = {
   firstName: string;
   lastName: string;
+  email: string;
   isAdmin: boolean;
   children: ReactNode;
 };
 
-const NAV = [
-  { href: "/", label: "Home" },
-  { href: "/intelligence-library", label: "Intelligence library" },
-];
-
-const isActive = (pathname: string, href: string) =>
-  href === "/"
-    ? pathname === "/"
-    : pathname === href || pathname.startsWith(`${href}/`);
-
-// Figma's "Sidebar closed" layout: the top bar over one full-width card.
 // Pages render their content inside a styled(Card).
 export default function AppShell({
   firstName,
   lastName,
+  email,
   isAdmin,
   children,
 }: AppShellProps) {
@@ -38,9 +29,17 @@ export default function AppShell({
   const [open, setOpen] = useState(false);
   return (
     <Canvas className={dmSans.className}>
-      <Sidebar $open={open} aria-hidden={!open}>
+      <TopBar
+        firstName={firstName}
+        lastName={lastName}
+        email={email}
+        isAdmin={isAdmin}
+        open={open}
+        onToggle={() => setOpen(current => !current)}
+      />
+      <Sidebar id="app-sidebar" $open={open} inert={!open}>
         <SidebarNav aria-label="Main">
-          {NAV.map(item => {
+          {(isAdmin ? [...TABS, ...ADMIN_TABS] : TABS).map(item => {
             const active = isActive(pathname, item.href);
             return (
               <SidebarLink
@@ -55,41 +54,46 @@ export default function AppShell({
           })}
           <GroupHeader>
             <GroupLabel>Saved groups</GroupLabel>
-            <Plus type="button" aria-label="New group">
+            <Plus type="button" aria-label="New group" disabled>
               +
             </Plus>
           </GroupHeader>
         </SidebarNav>
       </Sidebar>
-      <Column>
-        <TopBar
-          firstName={firstName}
-          lastName={lastName}
-          isAdmin={isAdmin}
-          open={open}
-          onToggle={() => setOpen(current => !current)}
-        />
-        {children}
-      </Column>
+      <Content>{children}</Content>
     </Canvas>
   );
 }
 
 const Canvas = styled.div`
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas: "sidebar header" "sidebar content";
+
+  > header {
+    grid-area: header;
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas: "header" "sidebar" "content";
+  }
   min-height: 100vh;
   padding: 0 12px 12px;
   background: ${COLORS.canvas};
 `;
 
-const Column = styled.div`
+const Content = styled.div`
+  grid-area: content;
   display: flex;
   flex: 1;
   flex-direction: column;
   min-width: 0;
 `;
 const Sidebar = styled.aside<{ $open: boolean }>`
+  grid-area: sidebar;
   width: ${({ $open }) => ($open ? "248px" : "0")};
   flex: none;
   padding: ${({ $open }) => ($open ? "72px 16px 24px" : "72px 0 24px")};
@@ -100,6 +104,16 @@ const Sidebar = styled.aside<{ $open: boolean }>`
     width 220ms ease,
     padding 220ms ease,
     opacity 220ms ease;
+
+  @media (max-width: 600px) {
+    display: ${({ $open }) => ($open ? "block" : "none")};
+    width: auto;
+    padding: 0 8px 12px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 `;
 const SidebarNav = styled.nav`
   display: flex;
@@ -139,7 +153,7 @@ const Plus = styled.button`
   color: ${COLORS.secondaryText};
   font-size: 18px;
   line-height: 20px;
-  cursor: pointer;
+  cursor: not-allowed;
 `;
 
 export const Card = styled.main`

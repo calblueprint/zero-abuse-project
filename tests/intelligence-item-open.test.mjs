@@ -204,6 +204,8 @@ test("library source forms preserve Origin", () => {
           return loadComponent("../lib/validation/search-params.ts");
         if (name === "@/lib/validation/uuid")
           return loadComponent("../lib/validation/uuid.ts");
+        if (name === "@/components/Tabs")
+          return loadComponent("../components/Tabs.tsx");
         if (name === "@/styles/colors")
           return loadComponent("../styles/colors.ts");
         return require(name);

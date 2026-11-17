@@ -9,7 +9,7 @@ import type { IntelligenceFilters } from "@/lib/intelligence-library/filters";
 import type { PatternFilters } from "@/lib/intelligence-library/pattern-filters";
 import { useMemo, useState } from "react";
 import styled from "styled-components";
-import AppShell from "@/components/AppShell";
+import AppShell, { Card } from "@/components/AppShell";
 import {
   emptyPatternFilters,
   matchesPatternFilters,
@@ -45,6 +45,7 @@ export default function IntelligenceLibraryView({
   initialView = "patterns",
   firstName,
   lastName,
+  email,
   isAdmin,
   referenceDate = new Date(),
 }: {
@@ -55,6 +56,7 @@ export default function IntelligenceLibraryView({
   initialView?: "patterns" | "items";
   firstName: string;
   lastName: string;
+  email: string;
   isAdmin: boolean;
   referenceDate?: Date;
 }) {
@@ -151,7 +153,12 @@ export default function IntelligenceLibraryView({
   };
 
   return (
-    <AppShell firstName={firstName} lastName={lastName} isAdmin={isAdmin}>
+    <AppShell
+      firstName={firstName}
+      lastName={lastName}
+      email={email}
+      isAdmin={isAdmin}
+    >
       <Panel aria-labelledby="intelligence-library-title">
         <PageHeader>
           <Title id="intelligence-library-title">Intelligence library</Title>
@@ -262,18 +269,15 @@ export default function IntelligenceLibraryView({
   );
 }
 
-const Panel = styled.main`
-  display: flex;
-  min-height: calc(100vh - 72px);
-  width: 100%;
-  flex-direction: column;
+const Panel = styled(Card)`
   gap: 24px;
-  border: 1px solid ${COLORS.borderDefault};
-  border-radius: 24px;
-  background: ${COLORS.surface};
-  box-shadow:
-    0 8px 120px rgba(77, 117, 204, 0.07),
-    0 4px 40px -2px rgba(77, 117, 204, 0.07);
+
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid ${COLORS.actionNavy};
+    outline-offset: 2px;
+  }
+
   padding: 36px 48px 24px;
   @media (max-width: 720px) {
     padding: 28px 20px 20px;

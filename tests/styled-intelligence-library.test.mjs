@@ -31,9 +31,21 @@ function load(path, modules = {}) {
 const colors = load("../styles/colors.ts");
 const TopBar = load("../components/TopBar.tsx", {
   "@/styles/colors": colors,
+  "@/styles/popover": load("../styles/popover.ts", {
+    "@/styles/colors": colors,
+  }),
+  "@/lib/utils": load("../lib/utils.ts"),
+  "@/lib/hooks/useAnchoredPopover": load("../lib/hooks/useAnchoredPopover.ts"),
+  "@/actions/auth/actions": { signOut: async () => {} },
   "@/assets/icons/sidebar-toggle.svg": "/sidebar.svg",
   "next/navigation": { usePathname: () => "/intelligence-library" },
   "next/image": props => React.createElement("img", props),
+});
+const AppShell = load("../components/AppShell.tsx", {
+  "@/components/TopBar": TopBar,
+  "@/styles/colors": colors,
+  "@/styles/fonts": { dmSans: { className: "dm-sans-test" } },
+  "next/navigation": { usePathname: () => "/intelligence-library" },
 });
 const sourceButton = load(
   "../components/intelligence-library/ViewSourceButton.tsx",
@@ -45,6 +57,9 @@ const libraryStyles = load("../components/intelligence-library/styles.tsx", {
 const libraryModules = {
   "@/styles/colors": colors,
   "@/lib/intelligence-library/pattern-filters": filters,
+  "@/components/Tabs": load("../components/Tabs.tsx", {
+    "@/styles/colors": colors,
+  }),
   "./styles": libraryStyles,
 };
 const PatternCard = load(
@@ -159,8 +174,7 @@ function pageHarness(isAdmin = true) {
       "./IntelligenceItemsView": IntelligenceItemsView,
       "./PatternToolbar": PatternToolbar,
       "@/components/intelligence-library/ViewSourceButton": sourceButton,
-      "@/components/TopBar": TopBar,
-      "@/styles/fonts": { dmSans: { className: "dm-sans-test" } },
+      "@/components/AppShell": AppShell,
     },
   );
   return () => {
@@ -178,6 +192,7 @@ function pageHarness(isAdmin = true) {
       ],
       firstName: "Nataliia",
       lastName: "Kulieshova",
+      email: "nataliia@example.org",
       isAdmin,
     });
   };
@@ -258,6 +273,43 @@ test("shared navigation exposes admin tabs only to admins and loads the shared f
   }
 });
 
+test("opening the sidebar exposes navigation without losing admin links", () => {
+  for (const isAdmin of [true, false]) {
+    const shell = statefulComponent("../components/AppShell.tsx", {
+      "@/components/TopBar": TopBar,
+      "@/styles/colors": colors,
+      "@/styles/fonts": { dmSans: { className: "dm-sans-test" } },
+      "next/navigation": { usePathname: () => "/intelligence-library" },
+    });
+    const props = {
+      firstName: "Alex",
+      lastName: "Ng",
+      email: "alex@example.org",
+      isAdmin,
+    };
+    const closed = shell(props);
+    assert.match(
+      renderToStaticMarkup(closed),
+      /id="app-sidebar"[^>]* inert=""/,
+    );
+    closed.props.children[0].props.onToggle();
+    const html = renderToStaticMarkup(shell(props));
+    assert.match(html, /aria-expanded="true"/);
+    const sidebar = html.match(
+      /<aside\b[^>]*id="app-sidebar"[^>]*>[\s\S]*?<\/aside>/,
+    )?.[0];
+    assert.ok(sidebar);
+    assert.doesNotMatch(sidebar, /\binert=/);
+    assert.match(
+      sidebar,
+      /<a(?=[^>]*href="\/intelligence-library")(?=[^>]*aria-current="page")/,
+    );
+    assert.equal(sidebar.includes('href="/admin/sources"'), isAdmin);
+    assert.equal(sidebar.includes('href="/admin/users"'), isAdmin);
+    assert.match(html, /href="\/profile"/);
+  }
+});
+
 test("shared top bar derives initials from names, trimming spaces and preserving Unicode", () => {
   for (const [firstName, lastName, expected] of [
     ["Nataliia", "Kulieshova", "NK"],
@@ -269,10 +321,13 @@ test("shared top bar derives initials from names, trimming spaces and preserving
       React.createElement(TopBar.default, {
         firstName,
         lastName,
+        email: "person@example.org",
         isAdmin: false,
       }),
     );
-    const avatar = html.match(/<a\b[^>]*aria-label="Profile"[^>]*>(.*?)<\/a>/);
+    const avatar = html.match(
+      /<button\b[^>]*aria-label="Account menu"[^>]*>(.*?)<\/button>/,
+    );
     assert.ok(avatar);
     assert.equal(avatar[1], expected);
   }
