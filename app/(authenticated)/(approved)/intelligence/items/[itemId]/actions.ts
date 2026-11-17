@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
+import { recordRecentlyAccessed } from "@/db/queries/recently-accessed";
 import { itelItems } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/access";
 import { isUuid } from "@/lib/validation/uuid";
@@ -46,5 +47,12 @@ export async function updateIntelItemSummary(
       ok: false,
       message: "Unable to save the summary. Please try again.",
     };
+  }
+}
+
+export async function recordIntelItemVisit(itemId: string): Promise<void> {
+  if (!isUuid(itemId)) return;
+  if (await recordRecentlyAccessed(itemId)) {
+    revalidatePath("/");
   }
 }

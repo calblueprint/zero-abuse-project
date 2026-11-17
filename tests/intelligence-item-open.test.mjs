@@ -284,8 +284,11 @@ test("only admins can save a shared intelligence summary", async t => {
       where: () => ({ returning: async () => [{ itemId }] }),
     }),
   }));
+  const recordVisit = t.mock.fn(async () => true);
+  const revalidatePath = t.mock.fn();
   const modules = {
-    "next/cache": { revalidatePath() {} },
+    "next/cache": { revalidatePath },
+    "@/db/queries/recently-accessed": { recordRecentlyAccessed: recordVisit },
     "drizzle-orm": { eq() {} },
     "@/db": { db: { update } },
     "@/db/schema": { itelItems: { itemId: "item_id" } },
@@ -309,4 +312,10 @@ test("only admins can save a shared intelligence summary", async t => {
   assert.equal(result.ok, true);
   assert.equal(result.summary, "Edited by an admin");
   assert.equal(update.mock.callCount(), 1);
+  revalidatePath.mock.resetCalls();
+  await exports.recordIntelItemVisit("invalid");
+  assert.equal(recordVisit.mock.callCount(), 0);
+  await exports.recordIntelItemVisit(itemId);
+  assert.equal(recordVisit.mock.callCount(), 1);
+  assert.equal(revalidatePath.mock.calls[0].arguments[0], "/");
 });

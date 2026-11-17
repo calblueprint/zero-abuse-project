@@ -1,12 +1,15 @@
 "use client";
 
 import type { IntelligenceItemDetail } from "@/db/queries/intelligence-item";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import styled from "styled-components";
-import { updateIntelItemSummary } from "@/app/(authenticated)/(approved)/intelligence/items/[itemId]/actions";
+import {
+  recordIntelItemVisit,
+  updateIntelItemSummary,
+} from "@/app/(authenticated)/(approved)/intelligence/items/[itemId]/actions";
 import ChevronDownSmallIcon from "@/assets/icons/chevron-down-small.svg";
 import MoreIcon from "@/assets/icons/more.svg";
 import { Card } from "@/components/AppShell";
@@ -40,6 +43,14 @@ export default function IntelItemView({
   const [draft, setDraft] = useState(item.summary ?? "");
   const [editedAt, setEditedAt] = useState(item.editedAt);
   const [pending, startTransition] = useTransition();
+  const { itemId } = item;
+  // Record displayed pages after mount so prefetching does not change history.
+  useEffect(() => {
+    void recordIntelItemVisit(itemId).catch(error => {
+      console.error("Unable to record intelligence item visit:", error);
+    });
+  }, [itemId]);
+
   const metadata = [
     formatIntelType(item.intelType),
     formatDate(item.publishedAt),
