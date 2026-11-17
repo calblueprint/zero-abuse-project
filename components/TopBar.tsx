@@ -16,19 +16,21 @@ type TopBarProps = {
   lastName: string;
   email: string;
   isAdmin: boolean;
+  open?: boolean;
+  onToggle?: () => void;
 };
 
-const TABS = [
+export const TABS = [
   { href: "/", label: "Home" },
   { href: "/intelligence-library", label: "Intelligence library" },
 ];
 
-const ADMIN_TABS = [
+export const ADMIN_TABS = [
   { href: "/admin/sources", label: "Sources" },
   { href: "/admin/users", label: "People" },
 ];
 
-const isActive = (pathname: string, href: string) =>
+export const isActive = (pathname: string, href: string) =>
   href === "/"
     ? pathname === "/"
     : pathname === href || pathname.startsWith(`${href}/`);
@@ -38,6 +40,8 @@ export default function TopBar({
   lastName,
   email,
   isAdmin,
+  open = false,
+  onToggle,
 }: TopBarProps) {
   const pathname = usePathname();
   const tabs = isAdmin ? [...TABS, ...ADMIN_TABS] : TABS;
@@ -46,26 +50,34 @@ export default function TopBar({
   return (
     <Bar>
       <Side>
-        {/* TODO: Enable this toggle when the sidebar is implemented. */}
-        <SidebarToggle type="button" aria-label="Toggle sidebar" disabled>
+        <SidebarToggle
+          type="button"
+          aria-label="Toggle sidebar"
+          aria-expanded={open}
+          aria-controls={onToggle ? "app-sidebar" : undefined}
+          disabled={!onToggle}
+          onClick={onToggle}
+        >
           <Image src={SidebarToggleIcon} alt="" width={18} height={18} />
         </SidebarToggle>
       </Side>
-      <Tabs aria-label="Main">
-        {tabs.map(tab => {
-          const active = isActive(pathname, tab.href);
-          return (
-            <Tab
-              key={tab.href}
-              href={tab.href}
-              $active={active}
-              aria-current={active ? "page" : undefined}
-            >
-              {tab.label}
-            </Tab>
-          );
-        })}
-      </Tabs>
+      {open ? null : (
+        <Tabs aria-label="Main">
+          {tabs.map(tab => {
+            const active = isActive(pathname, tab.href);
+            return (
+              <Tab
+                key={tab.href}
+                href={tab.href}
+                $active={active}
+                aria-current={active ? "page" : undefined}
+              >
+                {tab.label}
+              </Tab>
+            );
+          })}
+        </Tabs>
+      )}
       <Side $end>
         {/* TODO: Connect Help to the support flow when it is implemented. */}
         <Help>Help</Help>
@@ -102,6 +114,10 @@ const Bar = styled.header`
   gap: 16px;
   height: 60px;
   padding: 0 28px;
+
+  @media (max-width: 600px) {
+    padding: 0 8px;
+  }
 `;
 
 const Side = styled.div<{ $end?: boolean }>`
@@ -123,6 +139,11 @@ const SidebarToggle = styled.button`
   border: none;
   border-radius: 10px;
   background: none;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: rgba(32, 37, 43, 0.12);
+  }
 `;
 
 const Tabs = styled.nav`

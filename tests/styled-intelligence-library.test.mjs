@@ -41,6 +41,12 @@ const TopBar = load("../components/TopBar.tsx", {
   "next/navigation": { usePathname: () => "/intelligence-library" },
   "next/image": props => React.createElement("img", props),
 });
+const AppShell = load("../components/AppShell.tsx", {
+  "@/components/TopBar": TopBar,
+  "@/styles/colors": colors,
+  "@/styles/fonts": { dmSans: { className: "dm-sans-test" } },
+  "next/navigation": { usePathname: () => "/intelligence-library" },
+});
 const sourceButton = load(
   "../components/intelligence-library/ViewSourceButton.tsx",
 );
@@ -168,8 +174,7 @@ function pageHarness(isAdmin = true) {
       "./IntelligenceItemsView": IntelligenceItemsView,
       "./PatternToolbar": PatternToolbar,
       "@/components/intelligence-library/ViewSourceButton": sourceButton,
-      "@/components/TopBar": TopBar,
-      "@/styles/fonts": { dmSans: { className: "dm-sans-test" } },
+      "@/components/AppShell": AppShell,
     },
   );
   return () => {
@@ -265,6 +270,51 @@ test("shared navigation exposes admin tabs only to admins and loads the shared f
     assert.ok(libraryLink);
     assert.match(libraryLink, /aria-current="page"/);
     assert.match(html, /class="[^"]*dm-sans-test/);
+  }
+});
+
+test("sidebar state survives page navigation and preserves admin links", () => {
+  for (const isAdmin of [true, false]) {
+    let pathname = "/";
+    // Each call mounts a fresh shell with the same loaded module.
+    const { default: shell } = load("../components/AppShell.tsx", {
+      react: { useState: initialize => [initialize(), () => {}] },
+      "@/components/TopBar": TopBar,
+      "@/styles/colors": colors,
+      "@/styles/fonts": { dmSans: { className: "dm-sans-test" } },
+      "next/navigation": { usePathname: () => pathname },
+    });
+    const props = {
+      firstName: "Alex",
+      lastName: "Ng",
+      email: "alex@example.org",
+      isAdmin,
+    };
+    const closed = shell(props);
+    assert.match(
+      renderToStaticMarkup(closed),
+      /id="app-sidebar"[^>]* inert=""/,
+    );
+    closed.props.children[0].props.onToggle();
+    pathname = "/intelligence-library";
+    const opened = shell(props);
+    const html = renderToStaticMarkup(opened);
+    assert.match(html, /aria-expanded="true"/);
+    const sidebar = html.match(
+      /<aside\b[^>]*id="app-sidebar"[^>]*>[\s\S]*?<\/aside>/,
+    )?.[0];
+    assert.ok(sidebar);
+    assert.doesNotMatch(sidebar, /\binert=/);
+    assert.match(
+      sidebar,
+      /<a(?=[^>]*href="\/intelligence-library")(?=[^>]*aria-current="page")/,
+    );
+    assert.equal(sidebar.includes('href="/admin/sources"'), isAdmin);
+    assert.equal(sidebar.includes('href="/admin/users"'), isAdmin);
+    assert.match(html, /href="\/profile"/);
+    opened.props.children[0].props.onToggle();
+    pathname = "/profile";
+    assert.match(renderToStaticMarkup(shell(props)), /aria-expanded="false"/);
   }
 });
 
