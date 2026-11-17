@@ -17,6 +17,9 @@ type AppShellProps = {
   children: ReactNode;
 };
 
+// Keep the preference when navigation remounts the shell in this tab.
+let sidebarOpen = false;
+
 // Pages render their content inside a styled(Card).
 export default function AppShell({
   firstName,
@@ -26,7 +29,7 @@ export default function AppShell({
   children,
 }: AppShellProps) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => sidebarOpen);
   return (
     <Canvas className={dmSans.className}>
       <TopBar
@@ -35,7 +38,10 @@ export default function AppShell({
         email={email}
         isAdmin={isAdmin}
         open={open}
-        onToggle={() => setOpen(current => !current)}
+        onToggle={() => {
+          sidebarOpen = !open;
+          setOpen(sidebarOpen);
+        }}
       />
       <Sidebar id="app-sidebar" $open={open} inert={!open}>
         <SidebarNav aria-label="Main">

@@ -273,13 +273,16 @@ test("shared navigation exposes admin tabs only to admins and loads the shared f
   }
 });
 
-test("opening the sidebar exposes navigation without losing admin links", () => {
+test("sidebar state survives page navigation and preserves admin links", () => {
   for (const isAdmin of [true, false]) {
-    const shell = statefulComponent("../components/AppShell.tsx", {
+    let pathname = "/";
+    // Each call mounts a fresh shell with the same loaded module.
+    const { default: shell } = load("../components/AppShell.tsx", {
+      react: { useState: initialize => [initialize(), () => {}] },
       "@/components/TopBar": TopBar,
       "@/styles/colors": colors,
       "@/styles/fonts": { dmSans: { className: "dm-sans-test" } },
-      "next/navigation": { usePathname: () => "/intelligence-library" },
+      "next/navigation": { usePathname: () => pathname },
     });
     const props = {
       firstName: "Alex",
@@ -293,7 +296,9 @@ test("opening the sidebar exposes navigation without losing admin links", () => 
       /id="app-sidebar"[^>]* inert=""/,
     );
     closed.props.children[0].props.onToggle();
-    const html = renderToStaticMarkup(shell(props));
+    pathname = "/intelligence-library";
+    const opened = shell(props);
+    const html = renderToStaticMarkup(opened);
     assert.match(html, /aria-expanded="true"/);
     const sidebar = html.match(
       /<aside\b[^>]*id="app-sidebar"[^>]*>[\s\S]*?<\/aside>/,
@@ -307,6 +312,9 @@ test("opening the sidebar exposes navigation without losing admin links", () => 
     assert.equal(sidebar.includes('href="/admin/sources"'), isAdmin);
     assert.equal(sidebar.includes('href="/admin/users"'), isAdmin);
     assert.match(html, /href="\/profile"/);
+    opened.props.children[0].props.onToggle();
+    pathname = "/profile";
+    assert.match(renderToStaticMarkup(shell(props)), /aria-expanded="false"/);
   }
 });
 
