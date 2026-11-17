@@ -46,6 +46,7 @@ export default function IntelligenceLibraryView({
   initialView = "patterns",
   firstName,
   lastName,
+  email,
   isAdmin,
   referenceDate = new Date(),
 }: {
@@ -56,6 +57,7 @@ export default function IntelligenceLibraryView({
   initialView?: "patterns" | "items";
   firstName: string;
   lastName: string;
+  email: string;
   isAdmin: boolean;
   referenceDate?: Date;
 }) {
@@ -153,7 +155,12 @@ export default function IntelligenceLibraryView({
 
   return (
     <Canvas className={dmSans.className}>
-      <TopBar firstName={firstName} lastName={lastName} isAdmin={isAdmin} />
+      <TopBar
+        firstName={firstName}
+        lastName={lastName}
+        email={email}
+        isAdmin={isAdmin}
+      />
       <Panel aria-labelledby="intelligence-library-title">
         <PageHeader>
           <Title id="intelligence-library-title">Intelligence library</Title>

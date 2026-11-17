@@ -11,8 +11,8 @@ import SlidersIcon from "@/assets/icons/sliders.svg";
 import SelectMenu from "@/components/SelectMenu";
 import useAnchoredPopover from "@/lib/hooks/useAnchoredPopover";
 import COLORS from "@/styles/colors";
+import { PrimaryButton } from "@/styles/controls";
 import { popoverSurface } from "@/styles/popover";
-import { PrimaryButton } from "./styles";
 import { SOURCE_TIERS, SOURCE_TYPES } from "./validation";
 import { SORT_LABELS, SOURCE_SORTS } from "./view";
 

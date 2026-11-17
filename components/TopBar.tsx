@@ -3,13 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
+import { signOut } from "@/actions/auth/actions";
 import SidebarToggleIcon from "@/assets/icons/sidebar-toggle.svg";
+import useAnchoredPopover from "@/lib/hooks/useAnchoredPopover";
+import { getInitials } from "@/lib/utils";
 import COLORS from "@/styles/colors";
+import { popoverSurface } from "@/styles/popover";
 
 type TopBarProps = {
   firstName: string;
   lastName: string;
+  email: string;
   isAdmin: boolean;
 };
 
@@ -28,14 +33,15 @@ const isActive = (pathname: string, href: string) =>
     ? pathname === "/"
     : pathname === href || pathname.startsWith(`${href}/`);
 
-export default function TopBar({ firstName, lastName, isAdmin }: TopBarProps) {
+export default function TopBar({
+  firstName,
+  lastName,
+  email,
+  isAdmin,
+}: TopBarProps) {
   const pathname = usePathname();
   const tabs = isAdmin ? [...TABS, ...ADMIN_TABS] : TABS;
-  // Array.from keeps characters outside the BMP whole.
-  const initials = [firstName, lastName]
-    .map(name => Array.from(name.trim())[0] ?? "")
-    .join("")
-    .toUpperCase();
+  const menu = useAnchoredPopover({ align: "end" });
 
   return (
     <Bar>
@@ -63,9 +69,28 @@ export default function TopBar({ firstName, lastName, isAdmin }: TopBarProps) {
       <Side $end>
         {/* TODO: Connect Help to the support flow when it is implemented. */}
         <Help>Help</Help>
-        <Avatar href="/profile" aria-label="Profile">
-          {initials}
+        <Avatar {...menu.anchorProps} type="button" aria-label="Account menu">
+          {getInitials(firstName, lastName)}
         </Avatar>
+        <Menu {...menu.popoverProps}>
+          <Identity>
+            <MenuName>
+              {firstName} {lastName}
+            </MenuName>
+            <MenuEmail>{email}</MenuEmail>
+          </Identity>
+          <Divider />
+          <MenuLink href="/profile" onClick={menu.close}>
+            Profile
+          </MenuLink>
+          {/* TODO: Connect Help to the support flow when it is implemented. */}
+          <MenuButton type="button" disabled>
+            Help
+          </MenuButton>
+          <form action={signOut}>
+            <MenuButton type="submit">Sign out</MenuButton>
+          </form>
+        </Menu>
       </Side>
     </Bar>
   );
@@ -131,18 +156,102 @@ const Help = styled.span`
   line-height: 20px;
 `;
 
-const Avatar = styled(Link)`
+const Avatar = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
   width: 34px;
   height: 34px;
+  padding: 0;
   border: 1px solid ${COLORS.borderDefault};
   border-radius: 999px;
   background: ${COLORS.surface};
   color: ${COLORS.secondaryText};
+  font: inherit;
   font-size: 13px;
   font-weight: 500;
   line-height: 18px;
+  cursor: pointer;
+`;
+
+const Menu = styled.div`
+  ${popoverSurface}
+  width: max-content;
+  min-width: 220px;
+  max-width: calc(100vw - 24px);
+  padding: 8px;
+  border-radius: 14px;
+  box-shadow: 0 24px 32px rgba(0, 0, 0, 0.16);
+
+  &:popover-open {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+`;
+
+const Identity = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+`;
+
+const MenuName = styled.p`
+  color: ${COLORS.inkText};
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+`;
+
+const MenuEmail = styled.p`
+  color: ${COLORS.secondaryText};
+  font-size: 13px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+`;
+
+const Divider = styled.hr`
+  height: 1px;
+  margin: 0;
+  border: none;
+  background: ${COLORS.divider};
+`;
+
+const menuItem = css`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: ${COLORS.inkText};
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    background: ${COLORS.canvas};
+    outline: none;
+  }
+
+  &:disabled {
+    color: ${COLORS.mutedText};
+    cursor: not-allowed;
+  }
+`;
+
+const MenuLink = styled(Link)`
+  ${menuItem}
+`;
+
+const MenuButton = styled.button`
+  ${menuItem}
 `;
