@@ -1,11 +1,13 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import type { FormEvent } from "react";
+import { useState } from "react";
 import { signUp } from "@/actions/auth/actions";
 import {
   CenterLink,
   ErrorLink,
   ErrorText,
+  Eyebrow,
   Field,
   Fields,
   Heading,
@@ -15,6 +17,7 @@ import {
   PasswordRules,
   SubmitButton,
 } from "@/components/auth/ui";
+import { validateEmail } from "@/lib/validation/email";
 import { passwordIsValid } from "@/lib/validation/password";
 import { setSessionValue, useSessionValue } from "../session-value";
 
@@ -25,22 +28,30 @@ export function SignUpForm({ error }: { error?: string }) {
   const [password, setPassword] = useState("");
   const [submitted, setSubmitted] = useState(error === "invalid-password");
 
+  const [emailError, setEmailError] = useState(
+    error === "invalid-email" ? "Enter a valid email address." : undefined,
+  );
   const emailInvalid =
-    error === "email-already-registered" || error === "invalid-email";
+    Boolean(emailError) || error === "email-already-registered";
   const passwordInvalid = submitted && !passwordIsValid(password);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
-    if (!passwordIsValid(password)) {
+    const nextEmailError = validateEmail(email);
+
+    if (nextEmailError || !passwordIsValid(password)) {
       event.preventDefault();
+      setEmailError(nextEmailError);
       setSubmitted(true);
       return;
     }
 
+    setEmailError(undefined);
     setSessionValue(EMAIL_KEY, email.trim());
   }
 
   return (
-    <form action={signUp} onSubmit={onSubmit}>
+    <form action={signUp} onSubmit={onSubmit} noValidate>
+      <Eyebrow>Welcome to ZAP</Eyebrow>
       <Heading>Create account</Heading>
       <Fields>
         <Field>
@@ -55,7 +66,10 @@ export function SignUpForm({ error }: { error?: string }) {
             value={email}
             $invalid={emailInvalid}
             aria-invalid={emailInvalid}
-            onChange={event => setSessionValue(EMAIL_KEY, event.target.value)}
+            onChange={event => {
+              setSessionValue(EMAIL_KEY, event.target.value);
+              setEmailError(undefined);
+            }}
             required
           />
           {error === "email-already-registered" ? (
@@ -64,9 +78,7 @@ export function SignUpForm({ error }: { error?: string }) {
               <ErrorLink href="/login">Log in instead.</ErrorLink>
             </ErrorText>
           ) : null}
-          {error === "invalid-email" ? (
-            <ErrorText role="alert">Enter a valid email address.</ErrorText>
-          ) : null}
+          {emailError ? <ErrorText role="alert">{emailError}</ErrorText> : null}
         </Field>
         <Field>
           <Label htmlFor="password">Password</Label>

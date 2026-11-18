@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getVerifiedAuthUser } from "@/lib/auth/user";
 import { SignUpForm } from "./sign-up-form";
 
+export const metadata = { title: "Create account" };
+
 type SignUpPageProps = {
   searchParams: Promise<{ error?: string }>;
 };

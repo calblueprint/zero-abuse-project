@@ -3,6 +3,8 @@ import { getUserProfile } from "@/actions/supabase/profile";
 import OnboardingForm from "@/app/(authenticated)/(onboarding)/onboarding/OnboardingForm";
 import { requireVerifiedAuthUser } from "@/lib/auth/user";
 
+export const metadata = { title: "Set up your profile" };
+
 export default async function OnboardingPage() {
   const user = await requireVerifiedAuthUser();
   const profile = await getUserProfile(user.id);
@@ -11,5 +13,5 @@ export default async function OnboardingPage() {
     redirect("/");
   }
 
-  return <OnboardingForm splitSteps />;
+  return <OnboardingForm email={user.email} />;
 }

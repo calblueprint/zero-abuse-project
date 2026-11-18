@@ -4,7 +4,7 @@ import hashlib
 import json
 
 from scripts.intelligence.extractor import SYSTEM_PROMPT
-from scripts.intelligence.models import IntelligenceAssessment, ScreeningDecision
+from scripts.intelligence.models import ExtractedIntelligenceAssessment, ScreeningDecision
 from scripts.intelligence.screening import PREVIEW_LIMITS, SCREENING_MAX_TOKENS, SCREENING_PROMPT
 from scripts.models import Article
 
@@ -27,7 +27,7 @@ def assessment_key(model: str, screening_model: str | None = None) -> str:
     configuration = {
         "model": model,
         "prompt": SYSTEM_PROMPT,
-        "schema": IntelligenceAssessment.model_json_schema(),
+        "schema": ExtractedIntelligenceAssessment.model_json_schema(),
         "screening_model": screening_model if screening_model is not None else model,
         "screening_prompt": SCREENING_PROMPT,
         "screening_schema": ScreeningDecision.model_json_schema(),

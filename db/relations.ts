@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm/relations";
 import {
   itelItems,
+  itemLocations,
   savedGroups,
   sources,
   trendMetrics,
@@ -46,7 +47,8 @@ export const trendMetricsRelations = relations(trendMetrics, ({ one }) => ({
   }),
 }));
 
-export const itelItemsRelations = relations(itelItems, ({ one }) => ({
+export const itelItemsRelations = relations(itelItems, ({ one, many }) => ({
+  locations: many(itemLocations),
   source: one(sources, {
     fields: [itelItems.sourceId],
     references: [sources.sourceId],
@@ -55,4 +57,11 @@ export const itelItemsRelations = relations(itelItems, ({ one }) => ({
 
 export const sourcesRelations = relations(sources, ({ many }) => ({
   itelItems: many(itelItems),
+}));
+
+export const itemLocationsRelations = relations(itemLocations, ({ one }) => ({
+  item: one(itelItems, {
+    fields: [itemLocations.itemId],
+    references: [itelItems.itemId],
+  }),
 }));

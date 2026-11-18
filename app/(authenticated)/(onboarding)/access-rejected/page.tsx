@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { signOut } from "@/actions/auth/actions";
-import { Body, Heading, PrimaryButton } from "@/components/auth/ui";
+import { Body, CenterButton, Eyebrow, Heading } from "@/components/auth/ui";
 import { requireAccessUser } from "@/lib/auth/access";
+
+export const metadata = { title: "Access declined" };
 
 export default async function AccessRejectedPage() {
   const user = await requireAccessUser();
@@ -16,10 +18,20 @@ export default async function AccessRejectedPage() {
 
   return (
     <div>
-      <Heading>Access not approved</Heading>
-      <Body>Your request to join ZAP wasn&apos;t approved.</Body>
+      <Eyebrow>Access request</Eyebrow>
+      <Heading>Access declined</Heading>
+      <Body
+        style={{
+          textAlign: "center",
+          color: "#20252B",
+          fontWeight: 500,
+          lineHeight: "20px",
+        }}
+      >
+        {user.email}
+      </Body>
       <form action={signOut}>
-        <PrimaryButton type="submit">Sign out</PrimaryButton>
+        <CenterButton type="submit">Sign out</CenterButton>
       </form>
     </div>
   );

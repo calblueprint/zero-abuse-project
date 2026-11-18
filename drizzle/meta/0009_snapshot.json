@@ -1,5 +1,5 @@
 {
-  "id": "9cb0ce19-9b55-48a0-8dda-16e864736a7b",
+  "id": "c4a7841c-d3fe-4675-b365-abf55ae9f908",
   "prevId": "cb630a46-9801-49b1-83d7-da3cc436384e",
   "version": "7",
   "dialect": "postgresql",
@@ -133,61 +133,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": true
-    },
-    "public.processed_pages": {
-      "name": "processed_pages",
-      "schema": "",
-      "columns": {
-        "source_url": {
-          "name": "source_url",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "content_hash": {
-          "name": "content_hash",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "assessment_key": {
-          "name": "assessment_key",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "relevance": {
-          "name": "relevance",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "relevance_reason": {
-          "name": "relevance_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "processed_at": {
-          "name": "processed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "processed_pages_relevance_check": {
-          "name": "processed_pages_relevance_check",
-          "value": "\"processed_pages\".\"relevance\" IN ('relevant', 'irrelevant')"
-        }
-      },
       "isRLSEnabled": true
     },
     "public.saved_groups": {
@@ -417,6 +362,12 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
+        "title": {
+          "name": "title",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
         "emerged_at": {
           "name": "emerged_at",
           "type": "timestamp with time zone",
@@ -438,7 +389,7 @@
         },
         "item_ids": {
           "name": "item_ids",
-          "type": "uuid",
+          "type": "uuid[]",
           "primaryKey": false,
           "notNull": false
         },

@@ -68,8 +68,22 @@
     {
       "idx": 9,
       "version": "7",
-      "when": 1794010942925,
-      "tag": "0009_cache_processed_pages",
+      "when": 1794011616971,
+      "tag": "0009_add_trend_title_item_ids",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794277473416,
+      "tag": "0010_item_locations",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794973774009,
+      "tag": "0011_cache_processed_pages",
       "breakpoints": true
     }
   ]

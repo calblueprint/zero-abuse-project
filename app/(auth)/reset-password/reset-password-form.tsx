@@ -8,6 +8,7 @@ import {
   Dialog,
   DialogTitle,
   ErrorText,
+  Eyebrow,
   Field,
   Fields,
   Heading,
@@ -34,8 +35,9 @@ export function ResetPasswordForm({ error }: { error?: string }) {
 
   return (
     <form action={requestPasswordReset} onSubmit={onSubmit}>
-      <Heading>Forgot password?</Heading>
-      <Body>Enter your email to receive a reset link.</Body>
+      <Eyebrow>Account Recovery</Eyebrow>
+      <Heading>Reset your password</Heading>
+      <Body>We’ll email you a password reset link.</Body>
       <Fields>
         <Field>
           <Label htmlFor="email">Organization email</Label>
@@ -93,8 +95,21 @@ export function CheckEmail({ resent }: { resent: boolean }) {
 
   return (
     <>
-      <Heading>Check your email</Heading>
-      <Body>If your email is registered, a reset link is on its way.</Body>
+      <Eyebrow>Account Recovery</Eyebrow>
+      <Heading>Check your inbox</Heading>
+      <Body style={{ textAlign: "center" }}>
+        If this email has an account, a reset link is on its way.
+      </Body>
+      <Body
+        style={{
+          textAlign: "center",
+          color: "#20252B",
+          fontWeight: 500,
+          lineHeight: "20px",
+        }}
+      >
+        {email}
+      </Body>
       {email ? (
         <form action={requestPasswordReset}>
           <input type="hidden" name="email" value={email} />
@@ -104,7 +119,7 @@ export function CheckEmail({ resent }: { resent: boolean }) {
           </SubmitButton>
         </form>
       ) : null}
-      <CenterLink href="/reset-password">Use a different email</CenterLink>
+      <CenterLink href="/login">Back to sign in</CenterLink>
       {open ? (
         <Overlay onMouseDown={closeResent}>
           <Dialog

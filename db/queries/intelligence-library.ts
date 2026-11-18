@@ -5,15 +5,19 @@ import {
   asc,
   desc,
   eq,
+  exists,
   gte,
+  ilike,
   inArray,
   isNotNull,
   lt,
   ne,
+  notExists,
+  or,
   sql,
 } from "drizzle-orm";
 import { db } from "@/db";
-import { itelItems, sources } from "@/db/schema";
+import { itelItems, itemLocations, sources } from "@/db/schema";
 import INTELLIGENCE_TAXONOMY from "@/lib/intelligence-library/taxonomy";
 
 export type IntelligenceLibraryItem = {
@@ -22,6 +26,7 @@ export type IntelligenceLibraryItem = {
   sourceName: string;
   sourceUrl: string;
   publishedAt: string | null;
+  updatedAt: string | null;
   title: string | null;
   tldr: string | null;
   exploitationType: string | null;
@@ -40,6 +45,9 @@ export const intelligenceLibraryItemSelection = {
   sourceName: sources.name,
   sourceUrl: itelItems.sourceUrl,
   publishedAt: itelItems.publishedAt,
+  updatedAt: sql<
+    string | null
+  >`coalesce(${itelItems.editedAt}, ${itelItems.addedAt}, ${itelItems.publishedAt})`,
   title: itelItems.title,
   tldr: itelItems.tldr,
   exploitationType: itelItems.exploitationType,
@@ -87,7 +95,25 @@ const getDynamicFilterValues = async (
 export const getIntelligenceLibraryItems = async (
   filters: IntelligenceFilters,
 ): Promise<IntelligenceLibraryItem[]> => {
+  const searchPattern = `%${filters.search.replace(/[\\%_]/g, "\\$&")}%`;
   const conditions = [
+    filters.search
+      ? or(
+          ...[
+            itelItems.title,
+            itelItems.tldr,
+            sources.name,
+            itelItems.exploitationType,
+            itelItems.platform,
+            itelItems.technology,
+            itelItems.affectedPopulation,
+            itelItems.offenderTactic,
+            itelItems.geography,
+            itelItems.intelType,
+            itelItems.zapRelevance,
+          ].map(column => ilike(column, searchPattern)),
+        )
+      : undefined,
     filters.hasInvalidSourceIds ? sql`false` : undefined,
     filters.exploitationTypes.length
       ? inArray(itelItems.exploitationType, filters.exploitationTypes)
@@ -105,7 +131,41 @@ export const getIntelligenceLibraryItems = async (
       ? inArray(itelItems.offenderTactic, filters.offenderTactics)
       : undefined,
     filters.geographies.length
-      ? inArray(itelItems.geography, filters.geographies)
+      ? or(
+          exists(
+            db
+              .select({ id: itemLocations.id })
+              .from(itemLocations)
+              .where(
+                and(
+                  eq(itemLocations.itemId, itelItems.itemId),
+                  or(
+                    inArray(itemLocations.countryCode, filters.geographies),
+                    inArray(
+                      sql`${itemLocations.rawExtracted}->>'country'`,
+                      filters.geographies,
+                    ),
+                    inArray(itemLocations.stateCode, filters.geographies),
+                    inArray(itemLocations.countyName, filters.geographies),
+                    inArray(itemLocations.city, filters.geographies),
+                    sql`${itemLocations.regions} && ARRAY[${sql.join(
+                      filters.geographies.map(value => sql`${value}`),
+                      sql`, `,
+                    )}]::text[]`,
+                  ),
+                ),
+              ),
+          ),
+          and(
+            notExists(
+              db
+                .select({ id: itemLocations.id })
+                .from(itemLocations)
+                .where(eq(itemLocations.itemId, itelItems.itemId)),
+            ),
+            inArray(itelItems.geography, filters.geographies),
+          ),
+        )
       : undefined,
     filters.intelTypes.length
       ? inArray(itelItems.intelType, filters.intelTypes)
@@ -132,7 +192,14 @@ export const getIntelligenceLibraryItems = async (
     .from(itelItems)
     .innerJoin(sources, eq(itelItems.sourceId, sources.sourceId))
     .where(and(...conditions))
-    .orderBy(desc(itelItems.publishedAt), desc(itelItems.itemId));
+    .orderBy(
+      filters.sort === "Oldest"
+        ? asc(itelItems.publishedAt)
+        : filters.sort === "Title"
+          ? asc(itelItems.title)
+          : sql`${itelItems.publishedAt} desc nulls last`,
+      desc(itelItems.itemId),
+    );
 };
 
 export async function getIntelligenceItemSourceUrl(
@@ -149,7 +216,35 @@ export async function getIntelligenceItemSourceUrl(
 
 export const getIntelligenceLibraryFilterOptions =
   async (): Promise<IntelligenceLibraryFilterOptions> => {
-    const geographies = await getDynamicFilterValues(itelItems.geography);
+    const locationValues = await db.execute<{ value: string }>(sql`
+      SELECT DISTINCT value FROM ${itemLocations}, LATERAL unnest(
+        ARRAY[${itemLocations.countryCode}, ${itemLocations.rawExtracted}->>'country', ${itemLocations.stateCode},
+          ${itemLocations.countyName}, ${itemLocations.city}] || ${itemLocations.regions}
+      ) AS locations(value) WHERE value IS NOT NULL AND value <> '' ORDER BY value
+    `);
+    const legacyGeographies = await db
+      .selectDistinct({ value: itelItems.geography })
+      .from(itelItems)
+      .where(
+        and(
+          isNotNull(itelItems.geography),
+          ne(itelItems.geography, ""),
+          notExists(
+            db
+              .select({ id: itemLocations.id })
+              .from(itemLocations)
+              .where(eq(itemLocations.itemId, itelItems.itemId)),
+          ),
+        ),
+      );
+    const geographies = [
+      ...new Set([
+        ...locationValues.rows.map(row => row.value),
+        ...legacyGeographies
+          .map(row => row.value)
+          .filter((value): value is string => value !== null),
+      ]),
+    ].sort();
     const zapRelevances = await getDynamicFilterValues(itelItems.zapRelevance);
     const sourceRows = await db
       .selectDistinct({ sourceId: sources.sourceId, name: sources.name })

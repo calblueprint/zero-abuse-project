@@ -5,6 +5,7 @@ import {
   Body,
   CenterLink,
   ErrorText,
+  Eyebrow,
   Field,
   Fields,
   Heading,
@@ -43,7 +44,8 @@ export function LoginForm({ error }: { error?: string }) {
         setSessionValue(EMAIL_KEY, email.trim());
       }}
     >
-      <Heading>Log in</Heading>
+      <Eyebrow>Welcome to ZAP</Eyebrow>
+      <Heading>Sign In</Heading>
       {error === "expired-session" ? (
         <Body role="status">
           Your session has expired. Please sign in again.
