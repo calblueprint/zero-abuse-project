@@ -8,7 +8,7 @@ from pydantic import BaseModel, ValidationError
 
 from scripts.intelligence.location_resolver import LocationResolver, get_default_resolver
 from scripts.intelligence.models import (
-    ExtractionResult, ExtractedIntelligenceAssessment, Geography, IntelligenceItem,
+    ExtractedIntelligenceItem, ExtractionResult, ExtractedIntelligenceAssessment, Geography, IntelligenceItem,
 )
 from scripts.models import Article
 
@@ -228,6 +228,22 @@ def _request_structured(
     return assessment
 
 
+def standardize_intelligence(
+    intel: ExtractedIntelligenceItem, resolver: LocationResolver,
+) -> IntelligenceItem:
+    """Resolve provider geography identically for websites and uploaded documents."""
+    return IntelligenceItem(
+        **intel.model_dump(exclude={"geography"}),
+        geography=[
+            Geography(
+                raw_extracted=geo.raw_extracted,
+                standardized=resolver.standardize(geo.raw_extracted),
+            )
+            for geo in intel.geography
+        ],
+    )
+
+
 def extract_intelligence(
     article: Article,
     client: instructor.Instructor,
@@ -254,16 +270,7 @@ def extract_intelligence(
     intel = assessment.intelligence
     resolved = None
     if intel is not None:
-        resolved = IntelligenceItem(
-            **intel.model_dump(exclude={"geography"}),
-            geography=[
-                Geography(
-                    raw_extracted=geo.raw_extracted,
-                    standardized=resolver.standardize(geo.raw_extracted),
-                )
-                for geo in intel.geography
-            ],
-        )
+        resolved = standardize_intelligence(intel, resolver)
     logger.info("Extracted article successfully.")
     return ExtractionResult(
         article=article, relevance=assessment.relevance,

@@ -1,12 +1,20 @@
 """Private subprocess protocol: file bytes on stdin, one JSON result on stdout."""
 import json
+import hashlib
+from contextlib import ExitStack
+from datetime import datetime
+from uuid import UUID
 import os
 import sys
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
+from scripts.ingestion.repository import PostgresRepository
 from scripts.documents.extract import DocumentError, MAX_BYTES, chunks, extract_sections
-from scripts.intelligence.extractor import INTELLIGENCE_PROMPT, _request_structured, create_client
-from scripts.intelligence.models import IntelligenceItem
+from scripts.intelligence.extractor import (
+    INTELLIGENCE_PROMPT, _request_structured, create_client, standardize_intelligence,
+)
+from scripts.intelligence.location_resolver import get_default_resolver
+from scripts.intelligence.models import ExtractedIntelligenceItem
 from scripts.models import Article
 
 
@@ -29,7 +37,9 @@ points based on relevance. Do not force a child-protection interpretation or inv
 connections. Return empty classification lists wherever no labels are supported."""
 
 
-def extract_document(sections, *, client, model, title):
+def extract_document(sections, *, client, model, title, resolver=None):
+    if resolver is None:
+        resolver = get_default_resolver()
     parts = list(chunks(sections))
     if len(parts) == 1:
         # Short documents go straight to intel extraction, with no preliminary call.
@@ -48,33 +58,63 @@ def extract_document(sections, *, client, model, title):
         text = "\n\n".join(notes)
     article = Article(article_text=text, title=title)
     intelligence = _request_structured(
-        client=client, model=model, response_model=IntelligenceItem,
+        client=client, model=model, response_model=ExtractedIntelligenceItem,
         system_prompt=DOCUMENT_PROMPT,
         user_content=f"Extract intel from this document:\n\n{article.article_text}",
         context={"article_text": article.article_text},
     )
-    return {"status": "ready", "intelligence": intelligence.model_dump(mode="json")}
+    return standardize_intelligence(intelligence, resolver)
+
+
+class DocumentMetadata(BaseModel):
+    uploaded_by: UUID
+    source_url: HttpUrl | None = None
+    published_at: datetime | None = None
+
+
+def ingest_document(data, filename, metadata, *, repository=None, client=None, model=None):
+    """Extract and save through the existing repository, retaining no source bytes."""
+    if not data or len(data) > MAX_BYTES:
+        raise DocumentError("Choose a nonempty file no larger than 8 MB.")
+    fingerprint = hashlib.sha256(data).hexdigest()
+    with ExitStack() as stack:
+        if repository is None:
+            repository = PostgresRepository.from_environment()
+            stack.callback(repository.close)
+        if repository.document_exists(fingerprint):
+            return {"status": "duplicate", "message": "This document is already in the library."}
+        sections = extract_sections(data, filename)
+        if client is None:
+            client = create_client(os.getenv("OPENAI_API_KEY"))
+            stack.callback(client.client.close)
+        intelligence = extract_document(
+            sections, client=client,
+            model=model or os.getenv("DOCUMENT_INTEL_MODEL") or "openrouter/free", title=filename,
+        )
+        item_id = repository.save_document(
+            intelligence, upload_hash=fingerprint, filename=filename,
+            uploaded_by=str(metadata.uploaded_by),
+            source_url=str(metadata.source_url) if metadata.source_url else None,
+            published_at=metadata.published_at,
+        )
+        if item_id is None:
+            return {"status": "duplicate", "message": "This document is already in the library."}
+        return {"status": "saved", "message": "Document added to the intelligence library.", "itemId": item_id}
 
 
 def main():
     try:
-        # Unix worker limits complement the parent's wall-clock timeout.
         import resource
         resource.setrlimit(resource.RLIMIT_CPU, (120, 120))
         resource.setrlimit(resource.RLIMIT_DATA, (768 * 1024 * 1024, 768 * 1024 * 1024))
         data = sys.stdin.buffer.read(MAX_BYTES + 1)
-        sections = extract_sections(data, sys.argv[1])
-        client = create_client(os.getenv("OPENAI_API_KEY"))
-        try:
-            result = extract_document(sections, client=client,
-                model=(os.getenv("DOCUMENT_INTEL_MODEL") or "openrouter/free"), title=sys.argv[1])
-        finally:
-            client.client.close()
+        metadata = DocumentMetadata.model_validate_json(sys.argv[2])
+        result = ingest_document(data, sys.argv[1], metadata)
         print(json.dumps(result))
     except DocumentError as exc:
         print(json.dumps({"status": "failed", "message": str(exc)}))
     except Exception:
-        # Do not log source contents, provider exceptions, or file bytes.
+        # Never log source contents, provider exceptions, or file bytes.
         print(json.dumps({"status": "failed", "message": "Document processing failed. Check server configuration or try uploading again."}))
 
 

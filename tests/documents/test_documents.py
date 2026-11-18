@@ -7,8 +7,8 @@ from unittest.mock import Mock
 from zipfile import ZipFile
 
 from scripts.documents.extract import DocumentError, MAX_BYTES, chunks, extract_sections
-from scripts.documents.cli import SectionSummary, extract_document
-from scripts.intelligence.models import IntelligenceItem
+from scripts.documents.cli import DocumentMetadata, SectionSummary, extract_document, ingest_document
+from scripts.intelligence.models import IntelligenceItem, ExtractedIntelligenceItem
 from tests.intelligence.test_intelligence_unit import valid_intelligence
 
 
@@ -94,7 +94,6 @@ class ExtractionTests(unittest.TestCase):
             IntelligenceItem(**valid_intelligence()),
         ]
         result = extract_document(["A" * 12_000, "Later section"], client=client, model="test", title="Report")
-        self.assertEqual(result["status"], "ready")
         calls = client.chat.completions.create.call_args_list
         self.assertEqual(len(calls), 3)
         final_text = calls[-1].kwargs["messages"][1]["content"]
@@ -108,15 +107,23 @@ class ExtractionTests(unittest.TestCase):
             title="Garden planning", summary="The document explains planting schedules.",
         ))
         result = extract_document(["Plant tomatoes in spring."], client=client, model="test", title="Gardening")
-        self.assertEqual(result["status"], "ready")
-        self.assertEqual(result["intelligence"]["title"], "Garden planning")
-        self.assertEqual(result["intelligence"]["zap_program_relevance"], [])
+        self.assertEqual(result.title, "Garden planning")
+        self.assertEqual(result.zap_program_relevance, [])
         self.assertEqual(client.chat.completions.create.call_count, 1)
         messages = client.chat.completions.create.call_args.kwargs["messages"]
         self.assertIn("Plant tomatoes in spring.", messages[1]["content"])
         self.assertIn("regardless of its connection", messages[0]["content"])
         self.assertNotIn("For irrelevant pages return intelligence=null", messages[0]["content"])
-        self.assertIs(client.chat.completions.create.call_args.kwargs["response_model"], IntelligenceItem)
+        self.assertIs(client.chat.completions.create.call_args.kwargs["response_model"], ExtractedIntelligenceItem)
+
+    def test_document_geography_uses_the_shared_resolver(self):
+        client = Mock()
+        client.chat.completions.create.return_value = ExtractedIntelligenceItem(**valid_intelligence(
+            geography=[{"raw_extracted": {"country_code": "US", "state": "CA", "city": "Oakland"}}],
+        ))
+        result = extract_document(["A report from Oakland, California."], client=client, model="test", title="Report")
+        self.assertEqual(result.geography[0].raw_extracted.city, "Oakland")
+        self.assertEqual(result.geography[0].standardized.county_fips, "06001")
 
     def test_failed_section_does_not_generate_partial_intel(self):
         client = Mock()

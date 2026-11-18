@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
@@ -17,57 +16,18 @@ const compiled = ts.transpileModule(source, {
 }).outputText;
 
 function setup({
-  duplicate = false,
-  concurrentDuplicate = false,
-  result = {
-    status: "ready",
-    intelligence: {
-      title: "Research",
-      summary: "Child protection findings",
-      platform: [],
-    },
-  },
+  result = { status: "saved", message: "Document added.", itemId: "new-id" },
 } = {}) {
-  const writes = [];
-  let processed = 0;
-  let selects = 0;
-  const db = {
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          limit: async () => {
-            selects++;
-            return duplicate || (concurrentDuplicate && selects === 2)
-              ? [{ id: "existing" }]
-              : [];
-          },
-        }),
-      }),
-    }),
-    execute: async () => {},
-    insert: table => ({
-      values: values => ({
-        returning: async () => {
-          writes.push({ table, values });
-          return [{ id: "new-id" }];
-        },
-      }),
-    }),
-    transaction: async callback => callback(db),
-  };
+  const calls = [];
   const modules = {
-    "node:crypto": { createHash },
     "next/navigation": { unstable_rethrow: () => {} },
-    "drizzle-orm": { eq: () => {}, sql: () => {} },
-    "@/db": { db },
-    "@/db/schema": { itelItems: {}, sources: {} },
     "@/lib/auth/access": {
       requireApprovedUser: async () => ({ userId: "approved-user" }),
     },
     "@/lib/intelligence-library/process-document": {
       DocumentProcessingError: class extends Error {},
-      processDocument: async () => {
-        processed++;
+      processDocument: async (...args) => {
+        calls.push(args);
         return result;
       },
     },
@@ -85,7 +45,7 @@ function setup({
     URL,
     Date,
   });
-  return { post: exports.POST, writes, processed: () => processed };
+  return { post: exports.POST, calls, processed: () => calls.length };
 }
 
 function request({
@@ -97,7 +57,6 @@ function request({
 } = {}) {
   const form = new FormData();
   form.set("file", new File([text], filename));
-  form.set("sourceName", "Publisher");
   form.set("sourceUrl", url);
   form.set("publishedDate", date);
   return new Request("http://localhost/intelligence/upload", {
@@ -138,40 +97,35 @@ test("bounds multipart size before processing", async () => {
   assert.equal(state.processed(), 0);
 });
 
-test("existing hash avoids model calls and database writes", async () => {
-  const state = setup({ duplicate: true });
-  const response = await state.post(request());
-  assert.equal((await response.json()).status, "duplicate");
-  assert.equal(state.processed(), 0);
-  assert.equal(state.writes.length, 0);
-});
-
-test("failed documents leave no database rows", async () => {
-  const state = setup({ result: { status: "failed", message: "Reason" } });
-  assert.equal((await (await state.post(request())).json()).status, "failed");
-  assert.equal(state.writes.length, 0);
-});
-
-test("saves intel and metadata without storing original bytes or full text", async () => {
+test("forwards the authenticated uploader and optional metadata to Python", async () => {
   const state = setup();
-  const response = await state.post(request());
+  const response = await state.post(
+    request({ url: "https://example.org/report", date: "2026-11-17" }),
+  );
   assert.equal((await response.json()).status, "saved");
-  const item = state.writes[1].values;
-  assert.equal(item.sourceUrl, null);
-  assert.equal(item.publishedAt, null);
-  assert.equal(item.uploadFilename, "report.txt");
-  assert.equal(item.uploadHash.length, 64);
-  assert.equal(item.tldr, "Child protection findings");
-  assert.equal(state.writes[0].values.addedBy, "approved-user");
-  assert.ok(!JSON.stringify(state.writes).includes("Private full source text"));
+  const [bytes, filename, metadata] = state.calls[0];
+  assert.equal(bytes.toString(), "Private full source text");
+  assert.equal(filename, "report.txt");
+  assert.equal(metadata.uploaded_by, "approved-user");
+  assert.equal(metadata.source_url, "https://example.org/report");
+  assert.equal(metadata.published_at, "2026-11-17T00:00:00.000Z");
   assert.equal(response.headers.get("cache-control"), "no-store");
 });
 
-test("concurrent duplicate check avoids inserting another source or item", async () => {
-  const state = setup({ concurrentDuplicate: true });
-  assert.equal(
-    (await (await state.post(request())).json()).status,
-    "duplicate",
-  );
-  assert.equal(state.writes.length, 0);
+test("missing source URL and date stay unknown", async () => {
+  const state = setup();
+  await state.post(request());
+  assert.equal(state.calls[0][2].source_url, null);
+  assert.equal(state.calls[0][2].published_at, null);
+});
+
+test("returns repository outcomes without a separate TypeScript save", async () => {
+  for (const status of ["saved", "duplicate", "failed"]) {
+    const result = { status, message: "Repository result" };
+    const state = setup({ result });
+    const response = await state.post(request());
+    assert.deepEqual(await response.json(), result);
+    assert.equal(response.status, status === "failed" ? 422 : 200);
+    assert.equal(state.processed(), 1);
+  }
 });

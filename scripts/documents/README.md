@@ -6,13 +6,16 @@ Uploaded documents bypass relevance checking.
 
 This branch includes `pranav/improveWebsiteFilter`: websites retain preview screening,
 full relevance assessment, and the processing cache. Document imports use the shared
-structured-output helper directly with the `IntelligenceItem` schema, so website
+structured-output helper with the raw `ExtractedIntelligenceItem` schema and the shared geography resolver, so website
 relevance decisions and the URL processing cache are never used for uploads.
+Both inputs save through the same Python repository item writer. The Next.js
+upload endpoint handles authentication and validation, then delegates processing
+and persistence to Python.
 
 ## Setup
 
 Install `requirements.txt` into the project's `.venv` and apply migration
-`0010_ephemeral_document_intel` with `pnpm db:migrate`. Set the existing
+`0012_ephemeral_document_intel` with `pnpm db:migrate`. Set the existing
 `DATABASE_URL` and `OPENAI_API_KEY` server environment variables. Optionally set
 `DOCUMENT_PYTHON` to an absolute Python interpreter path and `DOCUMENT_INTEL_MODEL`
 to a structured-output model. No storage bucket or extra service is needed.
@@ -43,9 +46,17 @@ extraction. Longer documents are summarized section by section, with every secti
 contributing to the final intel item. There is no relevance decision or rejection;
 unsupported classifications remain empty. Any section failure aborts the import
 rather than saving an incomplete summary. The application stores only the generated
-intel item, supplied source metadata, filename, SHA-256 file hash, and normal
+intel item, supplied source URL/date, filename, SHA-256 file hash, and normal
 source/audit timestamps. A source URL is optional; unknown publication dates remain
 unknown. Library cards without URLs have no source-download action.
+
+All new imports use one **Uploaded documents** source. It is created lazily with a
+stable UUID by the repository, inside the first item's transaction. A database lock
+serializes first-time creation across workers; an item failure rolls back source
+creation too. Later imports reuse that source and create only intel items. The
+source's `added_by` identifies its initial creator, rather than each document's
+uploader. Existing per-document sources from earlier versions are left intact.
+No additional schema migration is required for this refactor.
 
 Identical file bytes are deduplicated against saved intel items, including concurrent
 saves (transaction lock and unique hash constraint). Modified files or differently
@@ -57,13 +68,14 @@ is needed because this implementation never creates temporary files.
 ## Verification
 
 ```sh
-.venv/bin/python -B -m unittest tests.documents.test_documents -v
+.venv/bin/python -B -m unittest tests.documents.test_documents tests.documents.test_persistence -v
 pnpm run test:documents
 pnpm run tsc
 pnpm run lint
 ```
 
 Tests cover all formats, malformed/oversized files, archive limits, table/chapter
-order, scanned PDFs, direct extraction of unrelated documents, full-document summaries, and safe subprocess failures without external
+order, scanned PDFs, direct extraction of unrelated documents, full-document summaries, shared source reuse, transactional rollback, shared item
+field mapping, and safe subprocess failures without external
 provider calls. A live model/database smoke test requires configured credentials
 and an approved account.

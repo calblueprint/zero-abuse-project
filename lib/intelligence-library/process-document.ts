@@ -2,14 +2,16 @@ import "server-only";
 import { spawn } from "node:child_process";
 import path from "node:path";
 
+export type DocumentMetadata = {
+  uploaded_by: string;
+  source_url: string | null;
+  published_at: string | null;
+};
+
 export type DocumentResult = {
-  status: "ready" | "failed";
-  message?: string;
-  intelligence?: {
-    title: string;
-    summary: string;
-    [key: string]: unknown;
-  };
+  status: "saved" | "duplicate" | "failed";
+  message: string;
+  itemId?: string;
 };
 
 let activeProcesses = 0;
@@ -20,6 +22,7 @@ export class DocumentProcessingError extends Error {}
 export async function processDocument(
   bytes: Buffer,
   filename: string,
+  metadata: DocumentMetadata,
   signal?: AbortSignal,
 ) {
   if (activeProcesses >= 2) {
@@ -33,7 +36,13 @@ export async function processDocument(
       const child = spawn(
         process.env.DOCUMENT_PYTHON ||
           path.join(process.cwd(), ".venv/bin/python"),
-        ["-B", "-m", "scripts.documents.cli", filename],
+        [
+          "-B",
+          "-m",
+          "scripts.documents.cli",
+          filename,
+          JSON.stringify(metadata),
+        ],
         {
           cwd: process.cwd(),
           signal,
@@ -72,13 +81,14 @@ export async function processDocument(
           if (code !== 0 || output.length > 128_000)
             throw new DocumentProcessingError();
           const result = JSON.parse(output) as DocumentResult;
-          if (!["ready", "failed"].includes(result.status))
+          if (
+            !["saved", "duplicate", "failed"].includes(result.status) ||
+            typeof result.message !== "string"
+          )
             throw new DocumentProcessingError();
           if (
-            result.status === "ready" &&
-            (!result.intelligence ||
-              typeof result.intelligence.title !== "string" ||
-              typeof result.intelligence.summary !== "string")
+            result.status === "saved" &&
+            (typeof result.itemId !== "string" || !result.itemId)
           )
             throw new DocumentProcessingError();
           resolve(result);

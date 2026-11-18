@@ -66,6 +66,7 @@ export default function DocumentUpload() {
           style={{ display: "grid", gap: "0.75rem", maxWidth: 560 }}
         >
           <legend>Document details</legend>
+          <p>Imports are saved under the Uploaded documents source.</p>
           <label>
             File (up to 8 MB)
             <input
@@ -74,10 +75,6 @@ export default function DocumentUpload() {
               required
               type="file"
             />
-          </label>
-          <label>
-            Source or publisher (optional)
-            <input maxLength={255} name="sourceName" />
           </label>
           <label>
             Original source URL (optional)

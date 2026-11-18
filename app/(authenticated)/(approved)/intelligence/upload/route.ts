@@ -1,8 +1,4 @@
 import { unstable_rethrow } from "next/navigation";
-import { createHash } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { itelItems, sources } from "@/db/schema";
 import { requireApprovedUser } from "@/lib/auth/access";
 import {
   DocumentProcessingError,
@@ -69,31 +65,21 @@ export async function POST(request: Request) {
       400,
     );
   }
-  const sourceName = form.get("sourceName");
   const sourceUrl = form.get("sourceUrl");
   const publishedDate = form.get("publishedDate");
-  if (
-    [sourceName, sourceUrl, publishedDate].some(
-      value => typeof value !== "string",
-    )
-  ) {
+  if ([sourceUrl, publishedDate].some(value => typeof value !== "string")) {
     return json({ message: "Invalid source metadata." }, 400);
   }
-  const name = String(sourceName).trim() || filename;
   const url = String(sourceUrl).trim();
   const date = String(publishedDate).trim();
   if (
-    name.length > 255 ||
     url.length > 2048 ||
     (date &&
       (!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
         Number.isNaN(Date.parse(date)) ||
         new Date(date).toISOString().slice(0, 10) !== date))
   ) {
-    return json(
-      { message: "Invalid source name, URL, or publication date." },
-      400,
-    );
+    return json({ message: "Invalid source URL or publication date." }, 400);
   }
   if (url) {
     try {
@@ -115,78 +101,18 @@ export async function POST(request: Request) {
     }
   }
   const bytes = Buffer.from(await file.arrayBuffer());
-  const hash = createHash("sha256").update(bytes).digest("hex");
   try {
-    const [existing] = await db
-      .select({ id: itelItems.itemId })
-      .from(itelItems)
-      .where(eq(itelItems.uploadHash, hash))
-      .limit(1);
-    if (existing)
-      return json({
-        status: "duplicate",
-        message: "This document is already in the library.",
-      });
-    const result = await processDocument(bytes, filename, request.signal);
-    if (result.status !== "ready")
-      return json(result, result.status === "failed" ? 422 : 200);
-    const intel = result.intelligence!;
-    const itemId = await db.transaction(async tx => {
-      await tx.execute(
-        sql`select pg_advisory_xact_lock(hashtextextended(${hash}, 0))`,
-      );
-      const [duplicate] = await tx
-        .select({ id: itelItems.itemId })
-        .from(itelItems)
-        .where(eq(itelItems.uploadHash, hash))
-        .limit(1);
-      if (duplicate) return null;
-      const [source] = await tx
-        .insert(sources)
-        .values({
-          name,
-          type: "document",
-          isActive: true,
-          addedBy: user.userId,
-          addedAt: new Date().toISOString(),
-        })
-        .returning({ id: sources.sourceId });
-      const labels = (key: string) => JSON.stringify(intel[key]);
-      const [item] = await tx
-        .insert(itelItems)
-        .values({
-          sourceId: source.id,
-          sourceUrl: url || null,
-          uploadHash: hash,
-          uploadFilename: filename,
-          publishedAt: date ? new Date(date).toISOString() : null,
-          addedAt: new Date().toISOString(),
-          title: intel.title,
-          tldr: intel.summary,
-          exploitationType: labels("exploitation_type"),
-          platform: labels("platform"),
-          technology: labels("technology"),
-          affectedPopulation: labels("affected_population"),
-          offenderTactic: labels("offender_tactic"),
-          geography: labels("geography"),
-          intelType: labels("intel_type"),
-          zapRelevance: labels("zap_program_relevance"),
-        })
-        .returning({ id: itelItems.itemId });
-      return item.id;
-    });
-    return json(
-      itemId
-        ? {
-            status: "saved",
-            message: "Document added to the intelligence library.",
-            itemId,
-          }
-        : {
-            status: "duplicate",
-            message: "This document is already in the library.",
-          },
+    const result = await processDocument(
+      bytes,
+      filename,
+      {
+        uploaded_by: user.userId,
+        source_url: url || null,
+        published_at: date ? new Date(date).toISOString() : null,
+      },
+      request.signal,
     );
+    return json(result, result.status === "failed" ? 422 : 200);
   } catch (error) {
     unstable_rethrow(error);
     if (error instanceof DocumentProcessingError) {

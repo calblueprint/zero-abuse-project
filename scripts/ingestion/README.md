@@ -233,3 +233,12 @@ python -B -m unittest tests.ingestion.test_ingestion tests.scraper.test_scraper 
 
 These tests use fixture HTTP responses, mocked intelligence extraction, and test
 repositories. They do not make provider calls or modify a live database.
+
+## Shared document persistence
+
+`PostgresRepository.save_intelligence()` retains the website relevance/URL guards.
+Document imports call `save_document()` with a validated `IntelligenceItem` and
+upload metadata. Both delegate to the same `_save_item()` writer for field mapping,
+classification serialization, duplicate protection, transactions, and insertion.
+Uploads reuse one lazily-created **Uploaded documents** source; they do not enter
+the website screening or processing cache. See [document imports](../documents/README.md).

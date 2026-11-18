@@ -192,6 +192,8 @@ test("library links to item details and source forms preserve Origin", () => {
     runInNewContext(code, {
       exports,
       require(name) {
+        if (name === "next/navigation")
+          return { useRouter: () => ({ refresh() {} }) };
         if (name.startsWith("./"))
           return loadComponent(
             `../components/intelligence-library/${name.slice(2)}.tsx`,
@@ -236,6 +238,7 @@ test("library links to item details and source forms preserve Origin", () => {
     itemId,
     title,
     sourceName: "Test source",
+    sourceUrl,
     intelType: '["Report"]',
     updatedAt: "2026-10-18T00:00:00Z",
     publishedAt: null,
