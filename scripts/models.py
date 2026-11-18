@@ -17,6 +17,7 @@ class Article(BaseModel):
         description="Publisher or site name reported by the source, when available.",
     )
     title: str | None = None
+    meta_description: str | None = None
     author: str | None = None
     published_at: datetime | None = None
 

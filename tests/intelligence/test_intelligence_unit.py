@@ -25,6 +25,7 @@ from scripts.intelligence.extractor import (
 )
 from scripts.intelligence.models import (
     ExtractedLocation,
+    IntelligenceAssessment,
     IntelligenceItem,
     StandardizedUSLocation,
 )
@@ -64,7 +65,27 @@ def valid_intelligence(**overrides):
     }
 
 
+def valid_assessment(**overrides):
+    return {
+        "relevance": "relevant",
+        "relevance_reason": "The report concerns child protection.",
+        "intelligence": valid_intelligence(),
+        **overrides,
+    }
+
+
 class ModelTests(unittest.TestCase):
+    def test_assessment_requires_consistent_decision_and_nonblank_reason(self):
+        for overrides in [
+            {"relevance": "relevant", "intelligence": None},
+            {"relevance": "irrelevant"},
+            {"relevance": "maybe"},
+            {"relevance_reason": "   "},
+        ]:
+            with self.subTest(overrides=overrides), self.assertRaises(ValidationError):
+                IntelligenceAssessment(**valid_assessment(**overrides))
+
+
     def test_county_mentions_do_not_support_a_same_named_city(self):
         raw = {
             "country_code": "US",
@@ -233,16 +254,16 @@ class ExtractionTests(unittest.TestCase):
         result = extract_intelligence(
             article,
             client=self.make_client(
-                [json.dumps(valid_intelligence(zap_program_relevance=relevance))]
+                [json.dumps(valid_assessment(intelligence=valid_intelligence(zap_program_relevance=relevance)))]
             ),
             model="requested-test-model",
         )
         self.assertEqual(result.intelligence.zap_program_relevance, relevance)
 
     def test_success_preserves_source_without_extraction_metadata(self):
-        result = self.extract(self.make_client([json.dumps(valid_intelligence())]))
+        result = self.extract(self.make_client([json.dumps(valid_assessment(intelligence=valid_intelligence()))]))
         self.assertEqual(result.article, self.article)
-        self.assertEqual(set(result.model_dump()), {"article", "intelligence"})
+        self.assertEqual(set(result.model_dump()), {"article", "intelligence", "relevance", "relevance_reason"})
         request = self.requests[0]
         self.assertEqual(request["response_format"]["type"], "json_schema")
         self.assertTrue(request["provider"]["require_parameters"])
@@ -254,7 +275,7 @@ class ExtractionTests(unittest.TestCase):
                 {"raw_extracted": {"county": "Alameda County", "state": "CA"}},
             ]
         )
-        result = self.extract(self.make_client([json.dumps(data)]))
+        result = self.extract(self.make_client([json.dumps(valid_assessment(intelligence=data))]))
         city, county = result.intelligence.geography
         assert city.standardized is not None
         assert county.standardized is not None
@@ -286,7 +307,7 @@ class ExtractionTests(unittest.TestCase):
         del incomplete["geography"][0]["raw_extracted"]["state"]
         del incomplete["geography"][0]["raw_extracted"]["country_code"]
         result = self.extract(
-            self.make_client([json.dumps(incomplete), json.dumps(complete)])
+            self.make_client([json.dumps(valid_assessment(intelligence=incomplete)), json.dumps(valid_assessment(intelligence=complete))])
         )
         self.assertEqual(len(self.requests), 2)
         location = result.intelligence.geography[0].standardized
@@ -303,7 +324,7 @@ class ExtractionTests(unittest.TestCase):
             "region": "West Coast of the United States",
         }
         data = valid_intelligence(geography=[{"raw_extracted": raw}])
-        result = self.extract(self.make_client([json.dumps(data)]))
+        result = self.extract(self.make_client([json.dumps(valid_assessment(intelligence=data))]))
         geography = result.intelligence.geography[0]
         self.assertEqual(geography.raw_extracted.model_dump(), raw)
         assert geography.standardized is not None
@@ -337,7 +358,7 @@ class ExtractionTests(unittest.TestCase):
         corrected = json.loads(json.dumps(incorrect))
         corrected["geography"][0]["raw_extracted"]["city"] = None
         result = self.extract(
-            self.make_client([json.dumps(incorrect), json.dumps(corrected)])
+            self.make_client([json.dumps(valid_assessment(intelligence=incorrect)), json.dumps(valid_assessment(intelligence=corrected))])
         )
         self.assertEqual(len(self.requests), 2)
         self.assertIn("only as a county", json.dumps(self.requests[1]["messages"]))
@@ -366,20 +387,20 @@ class ExtractionTests(unittest.TestCase):
             ]
         )
         with self.assertRaises(ExtractionError):
-            self.extract(self.make_client([json.dumps(data)]))
+            self.extract(self.make_client([json.dumps(valid_assessment(intelligence=data))]))
         self.assertEqual(len(self.requests), 4)
 
     def test_persistently_omitted_location_context_fails_validation(self):
         data = valid_intelligence(geography=[{"raw_extracted": {"city": "Oakland"}}])
         del data["geography"][0]["raw_extracted"]["state"]
         with self.assertRaisesRegex(ExtractionError, "raw_extracted.state"):
-            self.extract(self.make_client([json.dumps(data)]))
+            self.extract(self.make_client([json.dumps(valid_assessment(intelligence=data))]))
         self.assertEqual(len(self.requests), 4)
 
     def test_partial_geography_keeps_the_original_county_in_serialized_output(self):
         raw = {"city": "Oakland", "county": "Almeda", "state": "CA"}
         data = valid_intelligence(geography=[{"raw_extracted": raw}])
-        result = self.extract(self.make_client([json.dumps(data)]))
+        result = self.extract(self.make_client([json.dumps(valid_assessment(intelligence=data))]))
         geography = result.model_dump(mode="json")["intelligence"]["geography"][0]
         self.assertEqual(geography["raw_extracted"]["county"], "Almeda")
         standardized = geography["standardized"]
@@ -399,7 +420,7 @@ class ExtractionTests(unittest.TestCase):
         data = valid_intelligence(
             geography=[{"raw_extracted": location} for location in locations]
         )
-        result = self.extract(self.make_client([json.dumps(data)]))
+        result = self.extract(self.make_client([json.dumps(valid_assessment(intelligence=data))]))
         geography = result.model_dump(mode="json")["intelligence"]["geography"]
         self.assertEqual(len(geography), 4)
         for supplied, actual in zip(locations, geography):
@@ -423,7 +444,7 @@ class ExtractionTests(unittest.TestCase):
             ]
         )
         with self.assertRaises(ExtractionError):
-            self.extract(self.make_client([json.dumps(data)]))
+            self.extract(self.make_client([json.dumps(valid_assessment(intelligence=data))]))
 
     def test_missing_reference_data_fails_before_provider_call(self):
         client = Mock()
@@ -448,13 +469,28 @@ class ExtractionTests(unittest.TestCase):
         with patch("scripts.intelligence.extractor.get_default_resolver") as default:
             result = extract_intelligence(
                 self.article,
-                self.make_client([json.dumps(data)]),
+                self.make_client([json.dumps(valid_assessment(intelligence=data))]),
                 resolver=resolver,
             )
         default.assert_not_called()
         resolver.standardize.assert_called_once()
         assert result.intelligence.geography[0].standardized is not None
         self.assertEqual(result.intelligence.geography[0].standardized.state_code, "CA")
+
+    def test_irrelevant_page_returns_reason_without_intelligence(self):
+        result = self.extract(self.make_client([json.dumps(valid_assessment(
+            relevance="irrelevant", relevance_reason="Unrelated sports results.", intelligence=None,
+        ))]))
+        self.assertEqual(result.relevance, "irrelevant")
+        self.assertIsNone(result.intelligence)
+
+
+    def test_missing_relevance_is_not_accepted(self):
+        data = valid_assessment()
+        del data["relevance"]
+        with self.assertRaises(ExtractionError):
+            self.extract(self.make_client([json.dumps(data)]))
+
 
     def test_malformed_json_fails_after_bounded_retries(self):
         with self.assertRaises(ExtractionError):
@@ -478,7 +514,7 @@ class ExtractionTests(unittest.TestCase):
 
     def test_json_only_provider_falls_back_and_still_validates(self):
         client = self.make_client(
-            ["{}", json.dumps(valid_intelligence())],
+            ["{}", json.dumps(valid_assessment(intelligence=valid_intelligence()))],
             initial_error=self.json_only_error(),
         )
         result = self.extract(client)
@@ -519,7 +555,7 @@ class ExtractionTests(unittest.TestCase):
         data = valid_intelligence()
         del data["affected_population"]
         self.extract(
-            self.make_client([json.dumps(data), json.dumps(valid_intelligence())])
+            self.make_client([json.dumps(valid_assessment(intelligence=data)), json.dumps(valid_assessment(intelligence=valid_intelligence()))])
         )
         self.assertEqual(len(self.requests), 2)
 

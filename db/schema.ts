@@ -231,3 +231,28 @@ export const itemLocations = pgTable(
     ),
   ],
 ).enableRLS();
+
+export const processedPages = pgTable(
+  "processed_pages",
+  {
+    sourceUrl: text("source_url").primaryKey(),
+    contentHash: varchar("content_hash", { length: 64 }).notNull(),
+    assessmentKey: varchar("assessment_key", { length: 64 }).notNull(),
+    relevance: varchar("relevance", {
+      enum: ["relevant", "irrelevant"],
+    }).notNull(),
+    relevanceReason: text("relevance_reason").notNull(),
+    processedAt: timestamp("processed_at", {
+      withTimezone: true,
+      mode: "string",
+    })
+      .defaultNow()
+      .notNull(),
+  },
+  table => [
+    check(
+      "processed_pages_relevance_check",
+      sql`${table.relevance} IN ('relevant', 'irrelevant')`,
+    ),
+  ],
+).enableRLS();

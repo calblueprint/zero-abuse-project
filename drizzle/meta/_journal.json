@@ -78,6 +78,13 @@
       "when": 1794277473416,
       "tag": "0010_item_locations",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794973774009,
+      "tag": "0011_cache_processed_pages",
+      "breakpoints": true
     }
   ]
 }

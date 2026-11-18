@@ -13,7 +13,7 @@ python -m scripts.scraper.scrape_cli https://example.com/article
 ```
 
 The command prints the validated shared `Article` fields as JSON: URL, article
-text, source, title, author, and publication timestamp.
+text, source, title, meta description, author, and publication timestamp.
 
 Application code can use the same flow directly:
 
@@ -35,7 +35,7 @@ responses raise `FetchError`. The single-page CLI prints only the extracted
 page fields and reports failures without dumping raw HTML.
 
 `requests` streams the page with a 10 MB response limit, and Trafilatura
-extracts its main text, title, author, publication date, and available source
+extracts its main text, title, meta description, author, publication date, and available source
 metadata into the shared `Article` contract. JavaScript-rendered content may
 not be included.
 
@@ -54,9 +54,6 @@ When a response omits its character set, the fetcher detects the encoding from
 the bounded response body instead of relying on Requests' HTML default.
 
 ## Crawling
-
-To send scraped articles through intelligence extraction and save the results,
-use the callable [`ingest_url()` and `ingest_source()` functions](../ingestion/README.md).
 
 Run a crawl from a public listing page:
 
@@ -87,22 +84,28 @@ is recorded as an access failure. Successful page results use the final URL.
 The JSON result has `seed_url`, `pages`, `failures`, and `visited_urls` fields.
 Each page has the same fields as the single-page result. Each failure has
 `url`, `stage` (`access`, `fetch`, or `extract`), and `message`. An extraction
-failure on the seed or an article candidate still permits link discovery.
+failure on an article candidate still permits link discovery.
 Discovery-only index pages are not added to `pages`, and their extraction
 failures are not reported because their purpose is link traversal. The CLI
 exits with status 0 if at least one article was extracted, otherwise 1.
 
-Python callers can set `include_seed=False` to return the seed only when it
-matches the article filter. Source ingestion uses this option so starting listing
-pages can be traversed without becoming saved intelligence records.
+The crawler accepts ordinary HTML paths without requiring a news/blog section or
+publication date in the URL. Known index paths, category/tag/author/archive pages,
+and pagination are traversed for links without becoming article results. Login,
+account, checkout, search, contact, privacy/terms, and common non-HTML files remain
+excluded. Unknown page structures are candidates; the intelligence assessment
+rejects unrelated content and listings based on their extracted text.
 
-The crawler has separate article and traversal policies. The conservative
-article policy recognizes paths under blog, news, article, post, report, press,
-and date-based sections. The traversal policy also permits common index paths
-such as newsroom, releases, resources, publications, and updates so the crawler
-can reach their articles without returning the indexes as results. Tag,
-category, author, archive, pagination, login, common file, and unrelated
-top-level URLs are excluded. The seed is always attempted.
+Defaults are 20 attempted pages and depth 2, enough to reach a document through an
+intermediate listing. At most three URL variants per hostname and path are queued
+(`max_query_variants`); the page and depth limits also bound pagination. The seed
+is always attempted but is returned only if it passes the article filter. Python
+callers can explicitly set `include_seed=True` to return an extractable listing
+seed as well. Redirect destinations are evaluated using their final URL.
+
+Scraping alone does not assess relevance or save anything. Use
+[`ingest_url()` or `ingest_source()`](../ingestion/README.md) to assess relevance
+and save only relevant content. Both use the same admission rule.
 
 Supply separate filters for a source with a different URL structure:
 
@@ -148,5 +151,5 @@ set is known. Page and robots responses have independent size limits.
 Run the offline checks without fetching external websites:
 
 ```bash
-python3 -B -m unittest discover -s tests -v
+python3 -B -m unittest tests.scraper.test_scraper tests.intelligence.test_intelligence_unit tests.intelligence.test_screening tests.ingestion.test_ingestion -v
 ```

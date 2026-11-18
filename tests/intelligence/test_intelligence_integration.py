@@ -35,7 +35,25 @@ class ProviderExtractionTests(unittest.TestCase):
             client=self.client,
             model=self.model,
         )
+        self.assertEqual(result.relevance, "relevant", result.relevance_reason)
+        self.assertIsNotNone(result.intelligence)
         return set(result.intelligence.zap_program_relevance)
+
+    def test_unrelated_content_and_relevant_headline_listings_are_rejected(self):
+        for text in [
+            "The city football team won its final match by three goals.",
+            "A company announced faster AI chips for enterprise accounting software.",
+            "A prosecution for an adult tax fraud scheme resulted in a fine.",
+            "News index. Read more: New research on child exploitation. "
+            "Read more: Survivor support guide. Subscribe. Next page.",
+        ]:
+            with self.subTest(text=text):
+                result = extract_intelligence(
+                    Article(url=HttpUrl("https://example.com/page"), article_text=text),
+                    client=self.client, model=self.model,
+                )
+                self.assertEqual(result.relevance, "irrelevant", result.relevance_reason)
+                self.assertIsNone(result.intelligence)
 
     def test_social_platform_risk_is_relevant_to_prevention_and_education(self):
         relevance = self.extract_relevance(

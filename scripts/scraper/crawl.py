@@ -12,7 +12,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Crawl public article pages on one hostname.")
     parser.add_argument("url", help="public starting URL, e.g. https://example.com/blog")
     parser.add_argument("--max-pages", type=int, default=20)
-    parser.add_argument("--max-depth", type=int, default=1)
+    parser.add_argument("--max-depth", type=int, default=2)
     parser.add_argument("--delay", type=float, default=1.0, help="minimum seconds between requests")
     args = parser.parse_args()
     try:
