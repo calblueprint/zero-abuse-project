@@ -4,9 +4,11 @@ import type {
   IntelligenceLibraryFilterOptions,
   IntelligenceLibraryItem,
 } from "@/db/queries/intelligence-library";
-import type { EmergingPattern } from "@/lib/intelligence-library/emerging-patterns";
 import type { IntelligenceFilters } from "@/lib/intelligence-library/filters";
-import type { PatternFilters } from "@/lib/intelligence-library/pattern-filters";
+import type {
+  EmergingPattern,
+  PatternFilters,
+} from "@/lib/intelligence-library/pattern-filters";
 import { useMemo, useState } from "react";
 import styled from "styled-components";
 import AppShell, { Card } from "@/components/AppShell";
@@ -29,13 +31,16 @@ import {
 type Status =
   "All patterns" | "Needs your review" | "Saved" | "Confirmed" | "Archived";
 const PAGE_SIZE = 4;
-const statusLabels: Status[] = [
-  "All patterns",
-  "Needs your review",
-  "Saved",
-  "Confirmed",
-  "Archived",
-];
+const statusMatches = {
+  "All patterns": () => true,
+  "Needs your review": (pattern: EmergingPattern) =>
+    pattern.reviewStatus === "Needs review" && !pattern.archived,
+  Saved: (pattern: EmergingPattern) => pattern.saved && !pattern.archived,
+  Confirmed: (pattern: EmergingPattern) =>
+    pattern.reviewStatus === "Confirmed" && !pattern.archived,
+  Archived: (pattern: EmergingPattern) => pattern.archived,
+};
+const statusLabels = Object.keys(statusMatches) as Status[];
 
 export default function IntelligenceLibraryView({
   initialPatterns,
@@ -82,58 +87,44 @@ export default function IntelligenceLibraryView({
   const [appliedFilters, setAppliedFilters] =
     useState<PatternFilters>(emptyPatternFilters);
   const counts = useMemo(
-    () => ({
-      "All patterns": patterns.length,
-      "Needs your review": patterns.filter(
-        p => p.reviewStatus === "Needs review" && !p.archived,
-      ).length,
-      Saved: patterns.filter(p => p.saved && !p.archived).length,
-      Confirmed: patterns.filter(
-        p => p.reviewStatus === "Confirmed" && !p.archived,
-      ).length,
-      Archived: patterns.filter(p => p.archived).length,
-    }),
+    () =>
+      Object.fromEntries(
+        statusLabels.map(label => [
+          label,
+          patterns.filter(statusMatches[label]).length,
+        ]),
+      ),
     [patterns],
   );
-  const searchedPatterns = useMemo(
-    () =>
-      patterns.filter(p =>
-        [p.title, p.description, p.topic, p.platform, p.population].some(
-          value => value.toLowerCase().includes(search.trim().toLowerCase()),
-        ),
-      ),
-    [patterns, search],
-  );
-  const globallyFiltered = useMemo(
-    () =>
-      searchedPatterns.filter(p =>
-        matchesPatternFilters(p, appliedFilters, referenceDate),
-      ),
-    [searchedPatterns, appliedFilters, referenceDate],
-  );
+  const searchedPatterns = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return patterns.filter(pattern =>
+      [
+        pattern.title,
+        pattern.description,
+        pattern.topic,
+        ...pattern.platforms,
+        ...pattern.populations,
+      ].some(value => value.toLowerCase().includes(query)),
+    );
+  }, [patterns, search]);
   const filtered = useMemo(
     () =>
-      globallyFiltered.filter(p =>
-        status === "Needs your review"
-          ? p.reviewStatus === "Needs review" && !p.archived
-          : status === "Saved"
-            ? p.saved && !p.archived
-            : status === "Confirmed"
-              ? p.reviewStatus === "Confirmed" && !p.archived
-              : status === "Archived"
-                ? Boolean(p.archived)
-                : true,
+      searchedPatterns.filter(
+        pattern =>
+          statusMatches[status](pattern) &&
+          matchesPatternFilters(pattern, appliedFilters, referenceDate),
       ),
-    [globallyFiltered, status],
+    [searchedPatterns, status, appliedFilters, referenceDate],
   );
   const sorted = useMemo(
     () =>
       [...filtered].sort((a, b) =>
         sort === "Oldest"
-          ? a.surfacedAt.localeCompare(b.surfacedAt)
+          ? (a.surfacedAt ?? "").localeCompare(b.surfacedAt ?? "")
           : sort === "Most supporting items"
             ? b.supportingItemCount - a.supportingItemCount
-            : b.surfacedAt.localeCompare(a.surfacedAt),
+            : (b.surfacedAt ?? "").localeCompare(a.surfacedAt ?? ""),
       ),
     [filtered, sort],
   );

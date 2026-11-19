@@ -1,7 +1,7 @@
 import type {
   EmergingPattern,
   PatternPriority,
-} from "@/lib/intelligence-library/emerging-patterns";
+} from "@/lib/intelligence-library/pattern-filters";
 import styled from "styled-components";
 import COLORS from "@/styles/colors";
 import {
@@ -23,13 +23,15 @@ export default function PatternCard({
       <PatternSummary>
         <PatternTitle>{pattern.title}</PatternTitle>
         <Description>{pattern.description}</Description>
-        <Meta>
-          Surfaced{" "}
-          {new Date(`${pattern.surfacedAt}T00:00:00Z`).toLocaleDateString(
-            "en-GB",
-            { day: "numeric", month: "short", timeZone: "UTC" },
-          )}
-        </Meta>
+        {pattern.surfacedAt && (
+          <Meta>
+            Surfaced{" "}
+            {new Date(`${pattern.surfacedAt}T00:00:00Z`).toLocaleDateString(
+              "en-GB",
+              { day: "numeric", month: "short", timeZone: "UTC" },
+            )}
+          </Meta>
+        )}
       </PatternSummary>
       <Evidence>
         <EvidenceTitle>
@@ -43,7 +45,6 @@ export default function PatternCard({
           <ReviewDot $confirmed={pattern.reviewStatus === "Confirmed"} />
           {pattern.reviewStatus}
         </ReviewLine>
-        {pattern.reviewedBy && <Meta>{pattern.reviewedBy}</Meta>}
       </ReviewCell>
       <Bookmark
         aria-label={pattern.saved ? "Remove saved pattern" : "Save pattern"}

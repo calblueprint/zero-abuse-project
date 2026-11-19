@@ -1,8 +1,9 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
+import { siteUrl } from "@/lib/auth/site-url";
 import { validateEmail } from "@/lib/validation/email";
 import { passwordIsValid } from "@/lib/validation/password";
 
@@ -17,16 +18,6 @@ function redirectWithCode(
 ) {
   const searchParams = new URLSearchParams({ [key]: code });
   redirect(`${path}?${searchParams}`);
-}
-
-async function siteUrl() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-
-  if (configuredUrl) {
-    return configuredUrl;
-  }
-
-  return (await headers()).get("origin") ?? "http://localhost:3000";
 }
 
 export async function signIn(formData: FormData) {

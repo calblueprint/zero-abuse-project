@@ -1,16 +1,13 @@
 import type { SearchParams } from "@/lib/validation/search-params";
 import IntelligenceLibraryView from "@/components/intelligence-library/IntelligenceLibraryView";
-import {
-  getIntelligenceLibraryFilterOptions,
-  getIntelligenceLibraryItems,
-} from "@/db/queries/intelligence-library";
+import { getIntelligenceItemsViewData } from "@/db/queries/intelligence-library";
+import { getEmergingPatterns } from "@/db/queries/trends";
 import { requireApprovedUser } from "@/lib/auth/access";
-import { getEmergingPatterns } from "@/lib/intelligence-library/emerging-patterns";
 import { parseIntelligenceFilters } from "@/lib/intelligence-library/filters";
 
 export const metadata = { title: "Intelligence Library" };
 
-export default async function IntelligenceLibraryPreviewPage({
+export default async function IntelligenceLibraryPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
@@ -18,16 +15,15 @@ export default async function IntelligenceLibraryPreviewPage({
   const user = await requireApprovedUser();
   const params = await searchParams;
   const filters = parseIntelligenceFilters(params);
-  const [patterns, intelligenceItems, options] = await Promise.all([
+  const [patterns, { items, options }] = await Promise.all([
     getEmergingPatterns(),
-    getIntelligenceLibraryItems(filters),
-    getIntelligenceLibraryFilterOptions(),
+    getIntelligenceItemsViewData(filters),
   ]);
 
   return (
     <IntelligenceLibraryView
       initialPatterns={patterns}
-      intelligenceItems={intelligenceItems}
+      intelligenceItems={items}
       itemFilters={filters}
       itemFilterOptions={options}
       initialView={params.view === "items" ? "items" : "patterns"}

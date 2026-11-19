@@ -214,7 +214,7 @@ export async function getIntelligenceItemSourceUrl(
   return item?.sourceUrl ?? null;
 }
 
-export const getIntelligenceLibraryFilterOptions =
+const getIntelligenceLibraryFilterOptions =
   async (): Promise<IntelligenceLibraryFilterOptions> => {
     const locationValues = await db.execute<{ value: string }>(sql`
       SELECT DISTINCT value FROM ${itemLocations}, LATERAL unnest(
@@ -264,3 +264,13 @@ export const getIntelligenceLibraryFilterOptions =
       sources: sourceRows,
     };
   };
+
+export async function getIntelligenceItemsViewData(
+  filters: IntelligenceFilters,
+) {
+  const [items, options] = await Promise.all([
+    getIntelligenceLibraryItems(filters),
+    getIntelligenceLibraryFilterOptions(),
+  ]);
+  return { items, options };
+}

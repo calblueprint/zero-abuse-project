@@ -1,7 +1,9 @@
 "use client";
 
-import type { EmergingPattern } from "@/lib/intelligence-library/emerging-patterns";
-import type { PatternFilters } from "@/lib/intelligence-library/pattern-filters";
+import type {
+  EmergingPattern,
+  PatternFilters,
+} from "@/lib/intelligence-library/pattern-filters";
 import type { InputHTMLAttributes } from "react";
 import { useMemo, useState } from "react";
 import {

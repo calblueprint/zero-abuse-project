@@ -12,8 +12,8 @@ import { formatIntelType } from "@/lib/intelligence-library/format-intel-type";
 import COLORS from "@/styles/colors";
 import ItemToolbar from "./ItemToolbar";
 import LibraryStatusTabs from "./LibraryStatusTabs";
+import OpenSourceForm from "./OpenSourceForm";
 import { BookmarkIcon, Description } from "./styles";
-import { OpenSourceForm } from "./ViewSourceButton";
 
 type ItemStatus = "All items" | "Saved" | "Verified" | "Archived";
 const itemStatuses: ItemStatus[] = [
