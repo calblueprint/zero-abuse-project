@@ -57,6 +57,12 @@ const libraryStyles = load("../components/intelligence-library/styles.tsx", {
   "@/styles/colors": colors,
 });
 const libraryModules = {
+  "./DocumentUpload": load(
+    "../components/intelligence-library/DocumentUpload.tsx",
+    {
+      "next/navigation": { useRouter: () => ({ refresh() {} }) },
+    },
+  ),
   "@/lib/intelligence-library/format-intel-type": load(
     "../lib/intelligence-library/format-intel-type.ts",
   ),
@@ -204,6 +210,7 @@ function pageHarness(
           itemId: "aa000061-2001-4000-8000-000000000001",
           title: "Test item",
           sourceName: "Test source",
+          sourceUrl: "https://example.org/source",
           publishedAt: null,
         },
       ],
@@ -607,6 +614,7 @@ test("item bookmarks populate Saved and do not populate Verified or Archived", (
           itemId: "item-1",
           title: "Test item",
           sourceName: "Test source",
+          sourceUrl: "https://example.org/source",
           publishedAt: null,
         },
       ],

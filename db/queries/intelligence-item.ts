@@ -15,6 +15,8 @@ export async function getIntelligenceItem(itemId: string) {
       publishedAt: itelItems.publishedAt,
       editedAt: itelItems.editedAt,
       sourceName: sources.name,
+      sourceUrl: itelItems.sourceUrl,
+      uploadFilename: itelItems.uploadFilename,
       sourceType: sources.type,
     })
     .from(itelItems)

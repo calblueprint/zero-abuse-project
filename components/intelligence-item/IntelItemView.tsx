@@ -168,10 +168,12 @@ export default function IntelItemView({
             <OpenSourceForm itemId={item.itemId}>
               <SourceRow
                 type="submit"
+                disabled={!item.sourceUrl}
                 aria-label={`Open source: ${item.sourceName}`}
               >
                 <SourceText>
                   <strong>{item.sourceName}</strong>
+                  {item.uploadFilename && <span>{item.uploadFilename}</span>}
                   <span>
                     {[item.sourceType, formatDate(item.publishedAt, false)]
                       .filter(Boolean)

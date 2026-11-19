@@ -130,7 +130,9 @@ export const itelItems = pgTable(
   {
     itemId: uuid("item_id").defaultRandom().primaryKey().notNull(),
     sourceId: uuid("source_id").defaultRandom().notNull(),
-    sourceUrl: varchar("source_url").notNull(),
+    sourceUrl: varchar("source_url"),
+    uploadHash: varchar("upload_hash", { length: 64 }).unique(),
+    uploadFilename: varchar("upload_filename"),
     publishedAt: timestamp("published_at", {
       withTimezone: true,
       mode: "string",

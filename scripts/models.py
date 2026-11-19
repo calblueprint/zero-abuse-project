@@ -10,7 +10,7 @@ class Article(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    url: HttpUrl = Field(description="Final URL of the scraped article.")
+    url: HttpUrl | None = Field(default=None, description="Final URL of a web article; absent for uploaded documents.")
     article_text: str = Field(min_length=1, description="Cleaned article text.")
     source: str | None = Field(
         default=None,

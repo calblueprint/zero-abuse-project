@@ -69,3 +69,5 @@ jobs:
       ################################
       - name: Run TypeScript compiler (tsc)
         run: pnpm run tsc
+      - name: Test document upload route
+        run: pnpm run test:documents
