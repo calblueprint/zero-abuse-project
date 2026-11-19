@@ -102,11 +102,23 @@ def ingest_document(data, filename, metadata, *, repository=None, client=None, m
         return {"status": "saved", "message": "Document added to the intelligence library.", "itemId": item_id}
 
 
+def apply_resource_limits():
+    import resource
+
+    limits = [(resource.RLIMIT_CPU, 120)]
+    # Darwin rejects finite RLIMIT_DATA values, even when its reported hard
+    # limit is unlimited. Keep the CPU and parent-process wall timeout on macOS.
+    if sys.platform == "linux":
+        limits.append((resource.RLIMIT_DATA, 768 * 1024 * 1024))
+    for resource_id, requested in limits:
+        _, hard = resource.getrlimit(resource_id)
+        limit = requested if hard == resource.RLIM_INFINITY else min(requested, hard)
+        resource.setrlimit(resource_id, (limit, limit))
+
+
 def main():
     try:
-        import resource
-        resource.setrlimit(resource.RLIMIT_CPU, (120, 120))
-        resource.setrlimit(resource.RLIMIT_DATA, (768 * 1024 * 1024, 768 * 1024 * 1024))
+        apply_resource_limits()
         data = sys.stdin.buffer.read(MAX_BYTES + 1)
         metadata = DocumentMetadata.model_validate_json(sys.argv[2])
         result = ingest_document(data, sys.argv[1], metadata)

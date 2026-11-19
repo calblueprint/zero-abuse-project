@@ -3,11 +3,11 @@ import json
 import subprocess
 import sys
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from zipfile import ZipFile
 
 from scripts.documents.extract import DocumentError, MAX_BYTES, chunks, extract_sections
-from scripts.documents.cli import DocumentMetadata, SectionSummary, extract_document, ingest_document
+from scripts.documents.cli import SectionSummary, apply_resource_limits, extract_document
 from scripts.intelligence.models import IntelligenceItem, ExtractedIntelligenceItem
 from tests.intelligence.test_intelligence_unit import valid_intelligence
 
@@ -18,6 +18,28 @@ def archive(entries):
         for name, text in entries.items():
             z.writestr(name, text)
     return output.getvalue()
+
+
+class ResourceLimitTests(unittest.TestCase):
+    def test_macos_skips_unsupported_data_limit(self):
+        import resource
+        def set_limit(resource_id, limit):
+            if resource_id == resource.RLIMIT_DATA:
+                raise ValueError("current limit exceeds maximum limit")
+        with patch("scripts.documents.cli.sys.platform", "darwin"), \
+             patch("resource.getrlimit", return_value=(resource.RLIM_INFINITY, resource.RLIM_INFINITY)), \
+             patch("resource.setrlimit", side_effect=set_limit) as setter:
+            apply_resource_limits()
+        setter.assert_called_once_with(resource.RLIMIT_CPU, (120, 120))
+
+    def test_linux_keeps_memory_limit_and_respects_existing_hard_limits(self):
+        import resource
+        with patch("scripts.documents.cli.sys.platform", "linux"), \
+             patch("resource.getrlimit", side_effect=[(30, 60), (128 * 1024 * 1024, 256 * 1024 * 1024)]), \
+             patch("resource.setrlimit") as setter:
+            apply_resource_limits()
+        self.assertEqual(setter.call_args_list[0].args, (resource.RLIMIT_CPU, (60, 60)))
+        self.assertEqual(setter.call_args_list[1].args, (resource.RLIMIT_DATA, (256 * 1024 * 1024, 256 * 1024 * 1024)))
 
 
 class ReaderTests(unittest.TestCase):

@@ -34,8 +34,9 @@ file, extracted full text, section findings, or request body is written to disk 
 the database by this feature. Text is sent to the existing OpenRouter model provider
 for extraction; that provider's data handling is separate from application storage.
 
-The subprocess has a 240-second wall timeout, 120 seconds of CPU time, and a 768 MB
-data limit. At most two document subprocesses run per Node instance. EPUB chapters
+The subprocess has a 240-second wall timeout and up to 120 seconds of CPU time.
+Linux workers also enforce a 768 MB data limit. macOS does not support this memory
+limit, so it uses the CPU and wall timeout along with the file/text size limits. At most two document subprocesses run per Node instance. EPUB chapters
 are read in spine order directly from ZIP; chapter links and external resources are
 never fetched. DOCX paragraphs and tables are read in order. Scanned/empty PDF pages
 require OCR, which is not included. Limits: 8 MB, 300 PDF pages, 120,000 extracted
