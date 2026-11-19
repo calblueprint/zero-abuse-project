@@ -1,66 +1,12 @@
-// Keep these values aligned with the extraction contract in
-// scripts/intelligence/enums.py. Geography is excluded because the extractor
-// returns structured country and jurisdiction values. ZAP relevance is a
-// project-specific database field rather than an extraction enum.
+import taxonomy from "@/scripts/intelligence/taxonomy.json";
+
 const INTELLIGENCE_TAXONOMY = {
-  exploitationTypes: [
-    "financial sextortion",
-    "AI-generated CSAM",
-    "online grooming",
-    "deepfake abuse",
-    "offender networks",
-    "nihilistic violent networks",
-    "other",
-  ],
-  platforms: [
-    "Roblox",
-    "Discord",
-    "Telegram",
-    "Snapchat",
-    "Instagram",
-    "other",
-  ],
-  technologies: [
-    "generative AI",
-    "deepfakes/synthetic media",
-    "cryptocurrency",
-    "encrypted messaging",
-    "gaming platforms",
-    "social media",
-    "emerging technology",
-    "other",
-  ],
-  affectedPopulations: [
-    "children",
-    "adolescents",
-    "boys",
-    "girls",
-    "male survivors",
-    "other",
-  ],
-  offenderTactics: [
-    "grooming",
-    "recruitment",
-    "coercion",
-    "threats",
-    "financial demands",
-    "impersonation",
-    "image manipulation",
-    "payment demands",
-    "networked offending",
-    "other",
-  ],
-  intelTypes: [
-    "research finding",
-    "case/prosecution",
-    "court decision",
-    "legislation",
-    "policy/regulatory change",
-    "platform update",
-    "safety update",
-    "professional guidance",
-    "other",
-  ],
-} as const;
+  exploitationTypes: Object.values(taxonomy.exploitationTypes),
+  platforms: Object.values(taxonomy.platforms),
+  technologies: Object.values(taxonomy.technologies),
+  affectedPopulations: Object.values(taxonomy.affectedPopulations),
+  offenderTactics: Object.values(taxonomy.offenderTactics),
+  intelTypes: Object.values(taxonomy.intelTypes),
+};
 
 export default INTELLIGENCE_TAXONOMY;

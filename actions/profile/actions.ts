@@ -2,23 +2,14 @@
 
 import type { OnboardingState } from "@/actions/onboarding/validation";
 import { revalidatePath } from "next/cache";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { parseOnboardingFormData } from "@/actions/onboarding/validation";
 import { updateUserProfile } from "@/actions/supabase/profile";
 import { createSupabaseServerClient } from "@/actions/supabase/server";
 import { requireApprovedUser } from "@/lib/auth/access";
+import { siteUrl } from "@/lib/auth/site-url";
 import { getAuthEmailState } from "@/lib/auth/user";
 import { validateEmail } from "@/lib/validation/email";
-
-async function siteUrl() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-
-  if (configuredUrl) {
-    return configuredUrl;
-  }
-
-  return (await headers()).get("origin") ?? "http://localhost:3000";
-}
 
 export type ProfileState = OnboardingState & {
   status?: "saved" | "email-change-sent";

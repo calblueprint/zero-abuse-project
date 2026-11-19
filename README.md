@@ -133,3 +133,10 @@ import { items } from "@/db/schema";
 
 const allItems = await db.select().from(items);
 ```
+
+### Demo emerging patterns
+
+Run [`scripts/seed-emerging-patterns.sql`](scripts/seed-emerging-patterns.sql)
+in the SQL Editor for your development Supabase project. The script inserts
+three labeled demo patterns into `public.trends`. The dashboard and intelligence
+library both read this table. Rerunning the script leaves existing rows intact.

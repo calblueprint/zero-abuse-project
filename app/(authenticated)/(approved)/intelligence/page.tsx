@@ -1,9 +1,6 @@
 import type { SearchParams } from "@/lib/validation/search-params";
 import IntelligenceItemsView from "@/components/intelligence-library/IntelligenceItemsView";
-import {
-  getIntelligenceLibraryFilterOptions,
-  getIntelligenceLibraryItems,
-} from "@/db/queries/intelligence-library";
+import { getIntelligenceItemsViewData } from "@/db/queries/intelligence-library";
 import { requireApprovedUser } from "@/lib/auth/access";
 import { parseIntelligenceFilters } from "@/lib/intelligence-library/filters";
 
@@ -18,10 +15,7 @@ export default async function IntelligenceLibraryPage({
 }: IntelligenceLibraryPageProps) {
   await requireApprovedUser();
   const filters = parseIntelligenceFilters(await searchParams);
-  const [items, options] = await Promise.all([
-    getIntelligenceLibraryItems(filters),
-    getIntelligenceLibraryFilterOptions(),
-  ]);
+  const { items, options } = await getIntelligenceItemsViewData(filters);
 
   return (
     <IntelligenceItemsView filters={filters} items={items} options={options} />

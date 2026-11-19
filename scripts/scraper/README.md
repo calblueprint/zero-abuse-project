@@ -143,10 +143,3 @@ set is known. Page and robots responses have independent size limits.
 | `crawl.py` | CLI options and JSON output. |
 | `scrape_cli.py` | Single-page CLI options and JSON output. |
 | `__init__.py` | Public imports. |
-| `tests/scraper/test_scraper.py` | Offline checks using fixture responses and the real extractor. |
-
-Run the offline checks without fetching external websites:
-
-```bash
-python3 -B -m unittest discover -s tests -v
-```

@@ -13,7 +13,7 @@ import {
 import ChevronDownSmallIcon from "@/assets/icons/chevron-down-small.svg";
 import MoreIcon from "@/assets/icons/more.svg";
 import { Card } from "@/components/AppShell";
-import { OpenSourceForm } from "@/components/intelligence-library/ViewSourceButton";
+import OpenSourceForm from "@/components/intelligence-library/OpenSourceForm";
 import Toast, { useToast } from "@/components/Toast";
 import { formatIntelType } from "@/lib/intelligence-library/format-intel-type";
 import COLORS from "@/styles/colors";

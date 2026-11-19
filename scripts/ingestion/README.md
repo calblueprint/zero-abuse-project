@@ -130,12 +130,3 @@ Use a dedicated database connection for each concurrently running ingestion call
 `PostgresRepository(connection)` requires an idle connection with `autocommit=True`;
 connections with autocommit disabled or an open transaction are rejected.
 No credentials are loaded, connections opened, or requests made on import.
-
-## Offline verification
-
-```bash
-python -B -m unittest tests.ingestion.test_ingestion tests.scraper.test_scraper tests.intelligence.test_intelligence_unit -v
-```
-
-These tests use fixture HTTP responses, mocked intelligence extraction, and test
-repositories. They do not make provider calls or modify a live database.

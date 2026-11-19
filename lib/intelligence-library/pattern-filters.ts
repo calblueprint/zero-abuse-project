@@ -1,4 +1,25 @@
-import type { EmergingPattern } from "./emerging-patterns";
+export type PatternPriority = (typeof priorityOptions)[number];
+export type PatternReviewStatus = "Needs review" | "Confirmed";
+export type PatternEvidence = (typeof evidenceOptions)[number];
+export type PatternReview = (typeof reviewOptions)[number];
+
+export interface EmergingPattern {
+  id: string;
+  title: string;
+  description: string;
+  surfacedAt: string | null;
+  supportingItemCount: number;
+  sourceCount: number;
+  priority: PatternPriority;
+  reviewStatus: PatternReviewStatus;
+  review: PatternReview;
+  saved: boolean;
+  archived: boolean;
+  evidence: PatternEvidence;
+  topic: string;
+  platforms: string[];
+  populations: string[];
+}
 
 export type PatternFilters = {
   date: string;
@@ -52,9 +73,9 @@ export const getActiveFilterCount = (f: PatternFilters) =>
     f.population,
   ].filter(values => values.length > 0).length;
 export const getPatternFilterOptions = (p: EmergingPattern[]) => ({
-  topic: [...new Set(p.map(x => x.topic))],
-  platform: [...new Set(p.map(x => x.platform))],
-  population: [...new Set(p.map(x => x.population))],
+  topic: [...new Set(p.map(x => x.topic).filter(Boolean))],
+  platform: [...new Set(p.flatMap(x => x.platforms))],
+  population: [...new Set(p.flatMap(x => x.populations))],
 });
 export function matchesPatternFilters(
   p: EmergingPattern,
@@ -69,15 +90,18 @@ export function matchesPatternFilters(
   return (
     (!days ||
       f.date === "Custom date range" ||
-      p.surfacedAt >= cutoff.toISOString().slice(0, 10)) &&
+      (p.surfacedAt !== null &&
+        p.surfacedAt >= cutoff.toISOString().slice(0, 10))) &&
     (f.date !== "Custom date range" ||
-      ((!f.customFrom || p.surfacedAt >= f.customFrom) &&
-        (!f.customTo || p.surfacedAt <= f.customTo))) &&
+      ((!f.customFrom || (p.surfacedAt && p.surfacedAt >= f.customFrom)) &&
+        (!f.customTo || (p.surfacedAt && p.surfacedAt <= f.customTo)))) &&
     inSet(f.priorities, p.priority) &&
     inSet(f.evidence, p.evidence) &&
     inSet(f.review, p.review) &&
     inSet(f.topic, p.topic) &&
-    inSet(f.platform, p.platform) &&
-    inSet(f.population, p.population)
+    (!f.platform.length ||
+      p.platforms.some(value => f.platform.includes(value))) &&
+    (!f.population.length ||
+      p.populations.some(value => f.population.includes(value)))
   );
 }
